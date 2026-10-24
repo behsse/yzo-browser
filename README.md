@@ -138,13 +138,15 @@ electron/views.cjs       One native WebContentsView per loaded tab (and for Peek
 electron/extensions.cjs  Chrome extensions: Web Store, chrome.* APIs (tabs, actions, menus)
 electron/account.cjs     Yzo account: server connection, session encrypted by the system keychain
 electron/crypto.cjs      End-to-end encryption (scrypt, HKDF, AES-256-GCM, recovery key)
+electron/i18n.cjs        Translations for native menus and dialogs
 electron/preload.cjs     Narrow window.yzo bridge (state, window, shortcuts, Peek)
 src/sync/                Record projection, merging, sync loop (SyncProvider)
 scripts/after-*.cjs      electron-builder hooks: castLabs EVS VMP signing (vmp.cjs)
 scripts/build-preload.mjs Bundles the UI preload with extension icon support
 shared/shortcuts.json    Shortcut table (UI + main process)
+shared/locales/          UI translations, en.json (reference) and fr.json (UI + main process)
 src/state/               Model (types.ts), tree operations (tree.ts), reducer, persistence, React store
-src/lib/                 URL, command bar, themes, auto-archive, shortcuts, tab commands
+src/lib/                 URL, command bar, themes, auto-archive, shortcuts, tab commands, i18n
 src/ui/                  Sidebar, item tree, web area, panels, command bar, Peek, archive, space editor
 ```
 
@@ -156,6 +158,8 @@ The model follows the one observed in Arc's `StorableSidebar.json`. Every item l
 - **split views**.
 
 Every action goes through a pure reducer working on a copy; the previous state is never mutated.
+
+The interface is translated into English and French. The language follows the system's (`app.getLocale()` in the main process, `navigator.language` in the UI); any language other than French falls back to English. Strings live in [shared/locales/](shared/locales/): to add a language, copy `en.json`, translate every value and register the file in `src/lib/i18n.ts` and `electron/i18n.cjs`. The tests fail when a locale misses a key or changes a `{placeholder}`.
 
 Each loaded tab is a native `WebContentsView` managed by the main process ([electron/views.cjs](electron/views.cjs)). The UI only lays out empty placeholders (`ViewHost`) and sends their rectangles to the main process, which positions the pages there. Native views are drawn above all HTML: when an overlay opens (command bar, menus, floating sidebar, panels, Peek), visible pages are "frozen" (captured, replaced by their screenshot in the UI, then hidden) so the overlay shows on top without a visible jump.
 
@@ -173,7 +177,7 @@ Each loaded tab is a native `WebContentsView` managed by the main process ([elec
 
 - No Boosts, Easels or Little Arc. History and archive are not synced.
 - Forgotten password: email recovery (Resend) is not wired yet; the recovery key can already decrypt the vault, but its screen is still to be built.
-- The interface is in French only for now.
+- The interface is available in English and French only, and follows the system language (there is no in-app language setting yet).
 - Extensions: `chrome.runtime.onInstalled` does not fire under Electron; extensions that only create their context menus at that moment will have none. Chrome APIs not covered by Electron or `electron-chrome-extensions` remain unavailable.
 - Arc's default shortcuts could not be extracted from the binary. The ones above follow Chromium's and Arc's public conventions.
 - Without an EVS account, builds keep castLabs' development VMP signature: Netflix refuses playback.

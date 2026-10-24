@@ -1,4 +1,5 @@
 import type { PushRecord } from "../env";
+import { t } from "../lib/i18n";
 import { DEFAULT_THEME } from "../lib/theme";
 import { attach, collapseSplitIfNeeded, detach, isContainer, isSplit, isTab, makeItem, uid } from "../state/tree";
 import type { AppState, ContainerData, ID, ItemData, SidebarItem, Space, SpaceTheme, SyncMeta } from "../state/types";
@@ -327,7 +328,7 @@ function upsertSpace(draft: AppState, spaceId: ID, body: Record<string, unknown>
   draft.items[today.id] = today;
   const space: Space = {
     id: spaceId,
-    name: typeof body.name === "string" && body.name.trim() ? body.name : "Espace",
+    name: typeof body.name === "string" && body.name.trim() ? body.name : t("default.spaceFallback"),
     icon: typeof body.icon === "string" && body.icon ? body.icon : "🪐",
     theme,
     pinnedId,
@@ -379,7 +380,7 @@ function upsertItem(draft: AppState, itemId: ID, body: Record<string, unknown>, 
       lastActiveAt: previous?.lastActiveAt ?? now,
     };
   } else if (data.kind === "folder") {
-    next = { kind: "folder", title: typeof data.title === "string" ? data.title : "Dossier", collapsed: Boolean(data.collapsed) };
+    next = { kind: "folder", title: typeof data.title === "string" ? data.title : t("default.folderFallback"), collapsed: Boolean(data.collapsed) };
   } else if (data.kind === "split") {
     const previous = isSplit(existing) ? existing.data : null;
     next = {
@@ -474,7 +475,7 @@ export function repairTree(draft: AppState): void {
  */
 function ensureUsable(draft: AppState, now: number): void {
   if (!draft.spaceOrder.length) {
-    upsertSpace(draft, uid(), { name: "Personnel", icon: "🪐", theme: DEFAULT_THEME, pinnedId: uid() }, now);
+    upsertSpace(draft, uid(), { name: t("default.spaceName"), icon: "🪐", theme: DEFAULT_THEME, pinnedId: uid() }, now);
   }
   if (!draft.spaces[draft.window.focusedSpaceId]) draft.window.focusedSpaceId = draft.spaceOrder[0];
   for (const [spaceId, selection] of Object.entries(draft.window.selection)) {

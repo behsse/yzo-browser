@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { buildSuggestions, type Suggestion } from "../lib/commandBar";
+import { t, type MessageKey } from "../lib/i18n";
 import { displayHost } from "../lib/url";
 import { tabCommand } from "../lib/tabs";
 import { useStore } from "../state/store";
@@ -9,16 +10,16 @@ import { Icon, type IconName } from "./Icon";
 import type { CommandBarMode } from "./UiContext";
 
 const KIND_ICON: Record<Suggestion["kind"], IconName> = { tab: "tab", history: "clock", url: "globe", search: "search" };
-const KIND_HINT: Record<Suggestion["kind"], string> = {
-  tab: "Basculer vers l'onglet",
-  history: "Historique",
-  url: "Ouvrir",
-  search: "Rechercher",
+const KIND_HINT: Record<Suggestion["kind"], MessageKey> = {
+  tab: "commandBar.hintTab",
+  history: "commandBar.hintHistory",
+  url: "commandBar.hintUrl",
+  search: "commandBar.hintSearch",
 };
-const PLACEHOLDER: Record<CommandBarMode, string> = {
-  new: "Rechercher ou saisir une URL…",
-  current: "Modifier l'adresse…",
-  split: "Ouvrir dans un nouveau panneau…",
+const PLACEHOLDER: Record<CommandBarMode, MessageKey> = {
+  new: "commandBar.placeholderNew",
+  current: "commandBar.placeholderCurrent",
+  split: "commandBar.placeholderSplit",
 };
 
 /**
@@ -56,13 +57,13 @@ export function CommandBar({ mode, onClose }: { mode: CommandBarMode; onClose: (
 
   return (
     <div className="overlay" onMouseDown={onClose}>
-      <div className="command-bar" onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-label="Barre de commande">
+      <div className="command-bar" onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-label={t("commandBar.dialog")}>
         <div className="command-input">
           <Icon name="search" size={18} />
           <input
             autoFocus
             value={query}
-            placeholder={PLACEHOLDER[mode]}
+            placeholder={t(PLACEHOLDER[mode])}
             spellCheck={false}
             onFocus={(event) => event.currentTarget.select()}
             onChange={(event) => {
@@ -99,7 +100,7 @@ export function CommandBar({ mode, onClose }: { mode: CommandBarMode; onClose: (
                 </span>
                 <span className="suggestion-title">{s.title}</span>
                 {s.kind !== "search" && <span className="suggestion-host">{displayHost(s.url)}</span>}
-                <span className="suggestion-hint">{KIND_HINT[s.kind]}</span>
+                <span className="suggestion-hint">{t(KIND_HINT[s.kind])}</span>
               </li>
             ))}
           </ul>

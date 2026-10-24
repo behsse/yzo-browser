@@ -1,12 +1,17 @@
 import { useMemo, useState } from "react";
-import { THRESHOLD_LABELS } from "../lib/autoArchive";
+import { THRESHOLDS } from "../lib/autoArchive";
+import { locale, t, type MessageKey } from "../lib/i18n";
 import { displayHost } from "../lib/url";
 import { useStore } from "../state/store";
 import type { ArchiveEntry, AutoArchiveThreshold, SearchEngine } from "../state/types";
 import { Favicon } from "./Favicon";
 import { Icon } from "./Icon";
 
-const REASON_LABELS: Record<ArchiveEntry["reason"], string> = { manual: "Fermé", auto: "Auto-archivé", spaceDeleted: "Espace supprimé" };
+const REASON_LABELS: Record<ArchiveEntry["reason"], MessageKey> = {
+  manual: "archive.reasonManual",
+  auto: "archive.reasonAuto",
+  spaceDeleted: "archive.reasonSpaceDeleted",
+};
 
 /**
  * Groups archive entries by calendar day for display.
@@ -15,7 +20,7 @@ const REASON_LABELS: Record<ArchiveEntry["reason"], string> = { manual: "Fermé"
  */
 function groupByDay(entries: ArchiveEntry[]): [string, ArchiveEntry[]][] {
   const groups = new Map<string, ArchiveEntry[]>();
-  const format = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+  const format = new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long" });
   for (const entry of entries) {
     const label = format.format(entry.archivedAt);
     groups.set(label, [...(groups.get(label) ?? []), entry]);
@@ -39,30 +44,30 @@ export function ArchivePanel({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="overlay" onMouseDown={onClose}>
-      <div className="panel" onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-label="Archive et réglages">
+      <div className="panel" onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-label={t("archive.dialog")}>
         <header className="panel-header">
-          <h2>Archive</h2>
-          <button title="Fermer" onClick={onClose}>
+          <h2>{t("archive.title")}</h2>
+          <button title={t("common.close")} onClick={onClose}>
             <Icon name="close" />
           </button>
         </header>
 
         <section className="settings">
           <label>
-            Archiver les onglets inactifs après
+            {t("archive.autoArchiveAfter")}
             <select
               value={state.settings.autoArchive}
               onChange={(event) => dispatch({ type: "updateSettings", settings: { autoArchive: event.target.value as AutoArchiveThreshold } })}
             >
-              {Object.entries(THRESHOLD_LABELS).map(([value, label]) => (
+              {THRESHOLDS.map((value) => (
                 <option key={value} value={value}>
-                  {label}
+                  {t(`autoArchive.${value}`)}
                 </option>
               ))}
             </select>
           </label>
           <label>
-            Moteur de recherche
+            {t("archive.searchEngine")}
             <select
               value={state.settings.searchEngine}
               onChange={(event) => dispatch({ type: "updateSettings", settings: { searchEngine: event.target.value as SearchEngine } })}
@@ -74,10 +79,10 @@ export function ArchivePanel({ onClose }: { onClose: () => void }) {
           </label>
         </section>
 
-        <input className="panel-search" placeholder="Filtrer l'archive…" value={filter} onChange={(event) => setFilter(event.target.value)} autoFocus />
+        <input className="panel-search" placeholder={t("archive.filter")} value={filter} onChange={(event) => setFilter(event.target.value)} autoFocus />
 
         <div className="archive-list">
-          {!entries.length && <p className="muted">Aucun onglet archivé.</p>}
+          {!entries.length && <p className="muted">{t("archive.empty")}</p>}
           {groupByDay(entries).map(([day, group]) => (
             <div key={day}>
               <h3>{day}</h3>
@@ -87,11 +92,11 @@ export function ArchivePanel({ onClose }: { onClose: () => void }) {
                   <div className="archive-text">
                     <span className="row-title">{entry.title}</span>
                     <span className="muted">
-                      {displayHost(entry.url)} · {REASON_LABELS[entry.reason]} · {state.spaces[entry.spaceId]?.name ?? "espace supprimé"}
+                      {displayHost(entry.url)} · {t(REASON_LABELS[entry.reason])} · {state.spaces[entry.spaceId]?.name ?? t("archive.deletedSpace")}
                     </span>
                   </div>
-                  <button onClick={() => dispatch({ type: "restoreArchived", archiveId: entry.id, now: Date.now() })}>Restaurer</button>
-                  <button title="Supprimer définitivement" onClick={() => dispatch({ type: "deleteArchived", archiveId: entry.id })}>
+                  <button onClick={() => dispatch({ type: "restoreArchived", archiveId: entry.id, now: Date.now() })}>{t("archive.restore")}</button>
+                  <button title={t("archive.deleteForever")} onClick={() => dispatch({ type: "deleteArchived", archiveId: entry.id })}>
                     <Icon name="close" size={12} />
                   </button>
                 </div>

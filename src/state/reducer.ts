@@ -1,4 +1,5 @@
 import { isArchivable } from "../lib/autoArchive";
+import { t } from "../lib/i18n";
 import { DEFAULT_THEME } from "../lib/theme";
 import { applyRemote, markPushed, type LocalChanges, type RemoteRecord } from "../sync/records";
 import {
@@ -124,7 +125,7 @@ export function createInitialState(now: number): AppState {
   const favorites = makeItem<ContainerData>({ kind: "container", role: "favorites", spaceId: null }, now);
   state.items[favorites.id] = favorites;
   state.favoritesId = favorites.id;
-  addSpace(state, "Personnel", "🪐", DEFAULT_THEME, now);
+  addSpace(state, t("default.spaceName"), "🪐", DEFAULT_THEME, now);
   for (const [url, title] of [
     ["https://www.google.com/", "Google"],
     ["https://www.youtube.com/", "YouTube"],
@@ -152,7 +153,7 @@ function addSpace(draft: AppState, name: string, icon: string, theme: SpaceTheme
   const today = makeItem<ContainerData>({ kind: "container", role: "today", spaceId: id }, now);
   draft.items[pinned.id] = pinned;
   draft.items[today.id] = today;
-  const space: Space = { id, name: name.trim() || "Espace", icon: icon || "🪐", theme, pinnedId: pinned.id, todayId: today.id };
+  const space: Space = { id, name: name.trim() || t("default.spaceFallback"), icon: icon || "🪐", theme, pinnedId: pinned.id, todayId: today.id };
   draft.spaces[id] = space;
   draft.spaceOrder.push(id);
   draft.window.selection[id] = { itemId: null, focusedTabId: null };
@@ -443,7 +444,7 @@ export function reducer(state: AppState, action: Action): AppState {
     case "createFolder": {
       const space = draft.spaces[action.spaceId];
       if (!space) return state;
-      const folder = makeItem({ kind: "folder", title: action.title.trim() || "Nouveau dossier", collapsed: false }, action.now);
+      const folder = makeItem({ kind: "folder", title: action.title.trim() || t("default.folderName"), collapsed: false }, action.now);
       draft.items[folder.id] = folder;
       attach(draft, folder.id, space.pinnedId);
       return draft;

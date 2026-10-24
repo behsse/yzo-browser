@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { t } from "../lib/i18n";
 import { shortcutLabel } from "../lib/shortcuts";
 import { resolveAppearance, sidebarBackground } from "../lib/theme";
 import { displayHost } from "../lib/url";
@@ -29,13 +30,13 @@ function WindowControls() {
   if (!window.yzo) return null;
   return (
     <div className="window-controls no-drag">
-      <button title="Réduire" onClick={() => window.yzo?.windowControl("minimize")}>
+      <button title={t("window.minimize")} onClick={() => window.yzo?.windowControl("minimize")}>
         <Icon name="minimize" />
       </button>
-      <button title={maximized ? "Restaurer" : "Agrandir"} onClick={() => window.yzo?.windowControl("maximize")}>
+      <button title={maximized ? t("window.restore") : t("window.maximize")} onClick={() => window.yzo?.windowControl("maximize")}>
         <Icon name={maximized ? "restore" : "maximize"} />
       </button>
-      <button className="window-close" title="Fermer" onClick={() => window.yzo?.windowControl("close")}>
+      <button className="window-close" title={t("common.close")} onClick={() => window.yzo?.windowControl("close")}>
         <Icon name="close" />
       </button>
     </div>
@@ -85,13 +86,13 @@ function Favorites() {
                 x: event.clientX,
                 y: event.clientY,
                 entries: [
-                  { label: "Aperçu (Peek)", onSelect: () => ui.openPeek(tab.data.url) },
+                  { label: t("common.peek"), onSelect: () => ui.openPeek(tab.data.url) },
                   {
-                    label: "Retirer des favoris",
+                    label: t("sidebar.removeFromFavorites"),
                     onSelect: () => dispatch({ type: "moveItem", id, parentId: state.spaces[state.window.focusedSpaceId].todayId, index: 0 }),
                   },
                   "separator",
-                  { label: "Décharger", onSelect: () => dispatch({ type: "closeItem", id, now: Date.now() }) },
+                  { label: t("sidebar.unloadTab"), onSelect: () => dispatch({ type: "closeItem", id, now: Date.now() }) },
                 ],
               });
             }}
@@ -100,7 +101,7 @@ function Favorites() {
           </button>
         );
       })}
-      {!container.childrenIds.length && <span className="favorites-hint">Glissez un onglet ici</span>}
+      {!container.childrenIds.length && <span className="favorites-hint">{t("sidebar.favoritesHint")}</span>}
     </div>
   );
 }
@@ -115,10 +116,10 @@ function SpaceDock() {
   const sync = useSync();
   return (
     <div className="space-dock">
-      <button className="dock-button" title={`Archive et réglages (${shortcutLabel("openArchive")})`} onClick={ui.openArchive}>
+      <button className="dock-button" title={t("sidebar.archiveAndSettings", { shortcut: shortcutLabel("openArchive") })} onClick={ui.openArchive}>
         <Icon name="archive" size={15} />
       </button>
-      <button className={"dock-button" + (sync.status?.signedIn ? " dock-account-on" : "")} title={sync.status?.signedIn ? `Compte : ${sync.status.email}` : "Compte Yzo et synchronisation"} onClick={ui.openAccount}>
+      <button className={"dock-button" + (sync.status?.signedIn ? " dock-account-on" : "")} title={sync.status?.signedIn ? t("account.dockSignedIn", { email: sync.status.email ?? "" }) : t("account.dockSignedOut")} onClick={ui.openAccount}>
         <Icon name={sync.syncing ? "sync" : "user"} size={15} />
       </button>
       <div className="dock-spaces">
@@ -137,9 +138,9 @@ function SpaceDock() {
                   x: event.clientX,
                   y: event.clientY,
                   entries: [
-                    { label: "Modifier l'espace…", onSelect: () => ui.openSpaceEditor(id) },
+                    { label: t("space.editMenu"), onSelect: () => ui.openSpaceEditor(id) },
                     ...(state.spaceOrder.length > 1
-                      ? [{ label: "Supprimer l'espace", danger: true, onSelect: () => dispatch({ type: "deleteSpace", id, now: Date.now() }) }]
+                      ? [{ label: t("space.delete"), danger: true, onSelect: () => dispatch({ type: "deleteSpace", id, now: Date.now() }) }]
                       : []),
                   ],
                 });
@@ -150,7 +151,7 @@ function SpaceDock() {
           );
         })}
       </div>
-      <button className="dock-button" title="Nouvel espace" onClick={() => ui.openSpaceEditor("new")}>
+      <button className="dock-button" title={t("space.new")} onClick={() => ui.openSpaceEditor("new")}>
         <Icon name="plus" size={15} />
       </button>
     </div>
@@ -182,19 +183,19 @@ export function Sidebar({ floating = false }: { floating?: boolean }) {
     const entries: (MenuEntry | "separator")[] = installed.length
       ? installed.flatMap((ext) => [
           { label: `${ext.name} ${ext.version}`, disabled: true, onSelect: () => {} },
-          ...(ext.optionsUrl ? [{ label: "Options", onSelect: () => openTab(ext.optionsUrl!) }] : []),
+          ...(ext.optionsUrl ? [{ label: t("extensions.options"), onSelect: () => openTab(ext.optionsUrl!) }] : []),
           {
-            label: "Supprimer",
+            label: t("common.delete"),
             danger: true,
             onSelect: async () => {
               const removed = await window.yzo?.uninstallExtension(ext.id);
-              ui.showToast(removed ? `${ext.name} supprimée` : "Suppression impossible");
+              ui.showToast(removed ? t("extensions.removed", { name: ext.name }) : t("extensions.removeFailed"));
             },
           },
           "separator" as const,
         ])
-      : [{ label: "Aucune extension installée", disabled: true, onSelect: () => {} }, "separator" as const];
-    entries.push({ label: "Ajouter depuis le Chrome Web Store", onSelect: () => openTab(CHROME_WEB_STORE_URL) });
+      : [{ label: t("extensions.none"), disabled: true, onSelect: () => {} }, "separator" as const];
+    entries.push({ label: t("extensions.addFromStore"), onSelect: () => openTab(CHROME_WEB_STORE_URL) });
     ui.openMenu({ x: rect.left, y: rect.bottom + 4, entries });
   };
   const todayCount = state.items[space.todayId].childrenIds.length;
@@ -234,16 +235,16 @@ export function Sidebar({ floating = false }: { floating?: boolean }) {
           <WindowControls />
         </div>
         <div className="sidebar-top-row nav-buttons">
-          <button title={`Barre latérale (${shortcutLabel("toggleSidebar")})`} onClick={() => ui.runAction("toggleSidebar")}>
+          <button title={t("sidebar.toggleSidebar", { shortcut: shortcutLabel("toggleSidebar") })} onClick={() => ui.runAction("toggleSidebar")}>
             <Icon name="sidebar" />
           </button>
-          <button title="Précédent (Alt+Gauche)" onClick={() => void tabCommand(selection?.focusedTabId ?? null, "back")}>
+          <button title={t("sidebar.back")} onClick={() => void tabCommand(selection?.focusedTabId ?? null, "back")}>
             <Icon name="back" />
           </button>
-          <button title="Suivant (Alt+Droite)" onClick={() => void tabCommand(selection?.focusedTabId ?? null, "forward")}>
+          <button title={t("sidebar.forward")} onClick={() => void tabCommand(selection?.focusedTabId ?? null, "forward")}>
             <Icon name="forward" />
           </button>
-          <button title={`Recharger (${shortcutLabel("reload")})`} onClick={() => ui.runAction("reload")}>
+          <button title={t("sidebar.reload", { shortcut: shortcutLabel("reload") })} onClick={() => ui.runAction("reload")}>
             <Icon name="reload" />
           </button>
           {/* Extension action buttons (icons, popups, badges) rendered by electron-chrome-extensions. */}
@@ -255,19 +256,19 @@ export function Sidebar({ floating = false }: { floating?: boolean }) {
               tab={host.webContentsIdOf(selection?.focusedTabId ?? null)}
             />
           )}
-          <button className="extensions-button" title="Extensions" onClick={(event) => void openExtensionsMenu(event.currentTarget)}>
+          <button className="extensions-button" title={t("sidebar.extensions")} onClick={(event) => void openExtensionsMenu(event.currentTarget)}>
             <Icon name="extensions" />
           </button>
         </div>
       </div>
 
-      <button className="url-pill" onClick={() => ui.openCommandBar(url ? "current" : "new")} title={url || "Rechercher ou saisir une URL"}>
-        <span className="url-text">{url ? displayHost(url) : "Rechercher ou saisir une URL"}</span>
+      <button className="url-pill" onClick={() => ui.openCommandBar(url ? "current" : "new")} title={url || t("sidebar.searchOrUrl")}>
+        <span className="url-text">{url ? displayHost(url) : t("sidebar.searchOrUrl")}</span>
         {url && (
           <span
             className="url-copy"
             role="button"
-            title={`Copier le lien (${shortcutLabel("copyUrl")})`}
+            title={t("sidebar.copyLink", { shortcut: shortcutLabel("copyUrl") })}
             onClick={(event) => {
               event.stopPropagation();
               ui.runAction("copyUrl");
@@ -286,8 +287,8 @@ export function Sidebar({ floating = false }: { floating?: boolean }) {
           <span className="space-name">{space.name}</span>
           <button
             className="space-action"
-            title={`Nouveau dossier (${shortcutLabel("newFolder")})`}
-            onClick={() => dispatch({ type: "createFolder", spaceId: space.id, title: "Nouveau dossier", now: Date.now() })}
+            title={t("sidebar.newFolder", { shortcut: shortcutLabel("newFolder") })}
+            onClick={() => dispatch({ type: "createFolder", spaceId: space.id, title: t("default.folderName"), now: Date.now() })}
           >
             <Icon name="folder" size={13} />
           </button>
@@ -298,15 +299,15 @@ export function Sidebar({ floating = false }: { floating?: boolean }) {
         <div className="today-divider">
           <span />
           {todayCount > 0 && (
-            <button title={`Tout archiver (${shortcutLabel("clearToday")})`} onClick={() => dispatch({ type: "clearToday", spaceId: space.id, now: Date.now() })}>
-              Effacer
+            <button title={t("sidebar.archiveAll", { shortcut: shortcutLabel("clearToday") })} onClick={() => dispatch({ type: "clearToday", spaceId: space.id, now: Date.now() })}>
+              {t("sidebar.clear")}
             </button>
           )}
         </div>
 
         <button className="row new-tab-row" onClick={() => ui.openCommandBar("new")}>
           <Icon name="plus" size={15} />
-          <span className="row-title">Nouvel onglet</span>
+          <span className="row-title">{t("sidebar.newTab")}</span>
           <kbd>{shortcutLabel("newTab")}</kbd>
         </button>
 

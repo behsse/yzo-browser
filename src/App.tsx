@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { floatingSidebarDecision } from "./lib/floatingSidebar";
+import { t } from "./lib/i18n";
 import { matchShortcut, type ShortcutAction } from "./lib/shortcuts";
 import { resolveAppearance, sidebarBackground } from "./lib/theme";
 import { PEEK_ID, tabCommand } from "./lib/tabs";
@@ -104,15 +105,15 @@ export function App() {
         case "copyUrl":
           if (isTab(focusedTab)) {
             void navigator.clipboard.writeText(focusedTab.data.url);
-            showToast("Lien copié");
+            showToast(t("toast.linkCopied"));
           }
           break;
         case "clearToday":
           dispatch({ type: "clearToday", spaceId, now });
-          showToast("Onglets du jour archivés");
+          showToast(t("toast.todayArchived"));
           break;
         case "newFolder":
-          dispatch({ type: "createFolder", spaceId, title: "Nouveau dossier", now });
+          dispatch({ type: "createFolder", spaceId, title: t("default.folderName"), now });
           break;
         case "openArchive":
           setArchiveOpen(true);

@@ -13,14 +13,7 @@ export const THRESHOLD_MS: Record<AutoArchiveThreshold, number> = {
   never: Number.POSITIVE_INFINITY,
 };
 
-export const THRESHOLD_LABELS: Record<AutoArchiveThreshold, string> = {
-  oneHour: "1 heure",
-  twelveHours: "12 heures",
-  twentyFourHours: "24 heures",
-  sevenDays: "7 jours",
-  thirtyDays: "30 jours",
-  never: "Jamais",
-};
+export const THRESHOLDS: AutoArchiveThreshold[] = ["oneHour", "twelveHours", "twentyFourHours", "sevenDays", "thirtyDays", "never"];
 
 /**
  * Tells whether an unpinned tab has been inactive long enough to be archived.

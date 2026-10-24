@@ -4,9 +4,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ## [Unreleased]
 
+### Added
+
+- Internationalization: the interface, page context menu and extension install dialog are translated into English and French, following the system language with English as the fallback. Translations live in `shared/locales/` and are shared by the UI and the main process; tests check that every locale has the same keys and placeholders.
+
 ### Changed
 
 - README and CHANGELOG are now in English.
+- The interface now ships in English by default (French on French systems), including the default space ("Personal") and folder names for new profiles.
 
 ## [0.6.0] - 2026-10-24
 

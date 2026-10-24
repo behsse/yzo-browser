@@ -1,4 +1,5 @@
 import { useRef, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { t } from "../lib/i18n";
 import { shortcutLabel } from "../lib/shortcuts";
 import { useStore } from "../state/store";
 import { isSplit, isTab } from "../state/tree";
@@ -116,8 +117,8 @@ export function WebArea() {
         <div className="empty-state">
           <div className="empty-logo">yzo</div>
           <p>
-            <kbd>{shortcutLabel("newTab")}</kbd> nouvel onglet · <kbd>{shortcutLabel("toggleSidebar")}</kbd> barre latérale ·{" "}
-            <kbd>{shortcutLabel("addSplit")}</kbd> vue scindée
+            <kbd>{shortcutLabel("newTab")}</kbd> {t("empty.newTab")} · <kbd>{shortcutLabel("toggleSidebar")}</kbd> {t("empty.sidebar")} ·{" "}
+            <kbd>{shortcutLabel("addSplit")}</kbd> {t("empty.split")}
           </p>
         </div>
       )}

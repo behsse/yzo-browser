@@ -1,14 +1,15 @@
 import { useRef, useState } from "react";
+import { t, type MessageKey } from "../lib/i18n";
 import { DEFAULT_THEME, PALETTES, sidebarBackground } from "../lib/theme";
 import { useStore } from "../state/store";
 import type { ID, SpaceTheme, ThemeMode } from "../state/types";
 import { Icon } from "./Icon";
 
 const ICONS = ["🪐", "🏠", "💼", "🎨", "📚", "🎮", "🧪", "🎵", "✈️", "💡", "🔥", "🌿"];
-const MODES: [ThemeMode, string][] = [
-  ["light", "Clair"],
-  ["dark", "Sombre"],
-  ["auto", "Auto"],
+const MODES: [ThemeMode, MessageKey][] = [
+  ["light", "space.modeLight"],
+  ["dark", "space.modeDark"],
+  ["auto", "space.modeAuto"],
 ];
 
 /**
@@ -29,7 +30,7 @@ export function SpaceEditor({ spaceId, onClose }: { spaceId: ID | "new"; onClose
 
   const save = () => {
     if (existing) dispatch({ type: "updateSpace", id: existing.id, name, icon, theme });
-    else dispatch({ type: "createSpace", name: name || "Nouvel espace", icon, theme, now: Date.now() });
+    else dispatch({ type: "createSpace", name: name || t("space.new"), icon, theme, now: Date.now() });
     onClose();
   };
 
@@ -47,22 +48,22 @@ export function SpaceEditor({ spaceId, onClose }: { spaceId: ID | "new"; onClose
 
   return (
     <div className="overlay" onMouseDown={onClose}>
-      <div className="panel space-editor" onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-label="Espace">
+      <div className="panel space-editor" onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-label={t("space.dialog")}>
         <header className="panel-header">
-          <h2>{existing ? "Modifier l'espace" : "Nouvel espace"}</h2>
-          <button title="Fermer" onClick={onClose}>
+          <h2>{existing ? t("space.edit") : t("space.new")}</h2>
+          <button title={t("common.close")} onClick={onClose}>
             <Icon name="close" />
           </button>
         </header>
 
         <div className="space-preview" style={{ background: sidebarBackground(theme) }}>
           <span>{icon}</span>
-          <strong>{name || "Nouvel espace"}</strong>
+          <strong>{name || t("space.new")}</strong>
         </div>
 
         <input
           className="panel-search"
-          placeholder="Nom de l'espace"
+          placeholder={t("space.namePlaceholder")}
           value={name}
           autoFocus
           maxLength={40}
@@ -89,7 +90,7 @@ export function SpaceEditor({ spaceId, onClose }: { spaceId: ID | "new"; onClose
                 setSlot(slotRef.current);
               }}
             >
-              {i === 0 ? "Couleur 1" : "Couleur 2"}
+              {t("space.color", { n: i + 1 })}
             </button>
           ))}
         </div>
@@ -104,7 +105,7 @@ export function SpaceEditor({ spaceId, onClose }: { spaceId: ID | "new"; onClose
         <div className="mode-toggle">
           {MODES.map(([mode, label]) => (
             <button key={mode} className={theme.mode === mode ? "picked" : ""} onClick={() => setTheme((current) => ({ ...current, mode }))}>
-              {label}
+              {t(label)}
             </button>
           ))}
         </div>
@@ -118,11 +119,11 @@ export function SpaceEditor({ spaceId, onClose }: { spaceId: ID | "new"; onClose
                 onClose();
               }}
             >
-              Supprimer
+              {t("common.delete")}
             </button>
           )}
           <button className="primary" onClick={save}>
-            {existing ? "Enregistrer" : "Créer"}
+            {existing ? t("space.save") : t("space.create")}
           </button>
         </footer>
       </div>

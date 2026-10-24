@@ -1,4 +1,5 @@
 import { useState, type DragEvent, type MouseEvent } from "react";
+import { t } from "../lib/i18n";
 import { canMove } from "../state/reducer";
 import { useStore } from "../state/store";
 import { isFolder, isInToday, isSplit, isTab, rootContainerOf } from "../state/tree";
@@ -162,26 +163,26 @@ function useTabMenu(item: SidebarItem<TabData>) {
     const role = rootContainerOf(state, item.id)?.data.role;
     const entries: (MenuEntry | "separator")[] = [];
     if (focusedTab && focusedTab !== item.id && role !== "favorites" && rootContainerOf(state, focusedTab)?.data.role !== "favorites") {
-      entries.push({ label: "Ouvrir en vue scindée", onSelect: () => dispatch({ type: "splitWithTab", tabId: focusedTab, otherTabId: item.id, now }) });
+      entries.push({ label: t("tab.openInSplit"), onSelect: () => dispatch({ type: "splitWithTab", tabId: focusedTab, otherTabId: item.id, now }) });
     }
-    entries.push({ label: "Aperçu (Peek)", onSelect: () => ui.openPeek(item.data.url) });
+    entries.push({ label: t("common.peek"), onSelect: () => ui.openPeek(item.data.url) });
     if (role !== "favorites") {
-      entries.push({ label: isInToday(state, item.id) ? "Épingler" : "Désépingler", hint: "Ctrl+D", onSelect: () => dispatch({ type: "togglePin", id: item.id }) });
-      entries.push({ label: "Ajouter aux favoris", onSelect: () => dispatch({ type: "addToFavorites", id: item.id }) });
+      entries.push({ label: isInToday(state, item.id) ? t("tab.pin") : t("tab.unpin"), hint: "Ctrl+D", onSelect: () => dispatch({ type: "togglePin", id: item.id }) });
+      entries.push({ label: t("tab.addToFavorites"), onSelect: () => dispatch({ type: "addToFavorites", id: item.id }) });
     } else {
-      entries.push({ label: "Retirer des favoris", onSelect: () => dispatch({ type: "moveItem", id: item.id, parentId: state.spaces[state.window.focusedSpaceId].todayId, index: 0 }) });
+      entries.push({ label: t("sidebar.removeFromFavorites"), onSelect: () => dispatch({ type: "moveItem", id: item.id, parentId: state.spaces[state.window.focusedSpaceId].todayId, index: 0 }) });
     }
     entries.push(
-      { label: "Renommer", onSelect: rename },
+      { label: t("common.rename"), onSelect: rename },
       {
-        label: "Copier le lien",
+        label: t("common.copyLink"),
         onSelect: () => {
           void navigator.clipboard.writeText(item.data.url);
-          ui.showToast("Lien copié");
+          ui.showToast(t("toast.linkCopied"));
         },
       },
       "separator",
-      { label: isInToday(state, item.id) ? "Archiver l'onglet" : "Décharger l'onglet", hint: "Ctrl+W", danger: true, onSelect: () => dispatch({ type: "closeItem", id: item.id, now }) },
+      { label: isInToday(state, item.id) ? t("tab.archive") : t("tab.unload"), hint: "Ctrl+W", danger: true, onSelect: () => dispatch({ type: "closeItem", id: item.id, now }) },
     );
     return entries;
   };
@@ -235,7 +236,7 @@ function TabRow({ item, depth }: { item: SidebarItem<TabData>; depth: number }) 
       {(!pinnedSide || loaded) && (
         <button
           className="row-close"
-          title={pinnedSide ? "Décharger" : "Fermer"}
+          title={pinnedSide ? t("sidebar.unloadTab") : t("common.close")}
           onClick={(event) => {
             event.stopPropagation();
             dispatch({ type: "closeItem", id: item.id, now: Date.now() });
@@ -276,9 +277,9 @@ function FolderRow({ id, depth }: { id: ID; depth: number }) {
             x: event.clientX,
             y: event.clientY,
             entries: [
-              { label: "Renommer", onSelect: () => setRenaming(true) },
+              { label: t("common.rename"), onSelect: () => setRenaming(true) },
               "separator",
-              { label: "Supprimer le dossier", danger: true, onSelect: () => dispatch({ type: "deleteFolder", id, now: Date.now() }) },
+              { label: t("folder.delete"), danger: true, onSelect: () => dispatch({ type: "deleteFolder", id, now: Date.now() }) },
             ],
           });
         }}
@@ -329,12 +330,12 @@ function SplitRow({ item, depth }: { item: SidebarItem<SplitData>; depth: number
           y: event.clientY,
           entries: [
             {
-              label: vertical ? "Disposition côte à côte" : "Disposition empilée",
+              label: vertical ? t("split.sideBySide") : t("split.stacked"),
               onSelect: () => dispatch({ type: "setSplitOrientation", id: item.id, orientation: vertical ? "horizontal" : "vertical" }),
             },
-            { label: "Séparer les onglets", onSelect: () => dispatch({ type: "unsplit", id: item.id }) },
+            { label: t("split.separate"), onSelect: () => dispatch({ type: "unsplit", id: item.id }) },
             "separator",
-            { label: "Fermer le panneau actif", hint: "Ctrl+W", danger: true, onSelect: () => dispatch({ type: "closeItem", id: item.id, now: Date.now() }) },
+            { label: t("split.closeActive"), hint: "Ctrl+W", danger: true, onSelect: () => dispatch({ type: "closeItem", id: item.id, now: Date.now() }) },
           ],
         });
       }}

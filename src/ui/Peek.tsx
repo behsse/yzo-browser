@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { t } from "../lib/i18n";
 import { PEEK_ID } from "../lib/tabs";
 import { displayHost } from "../lib/url";
 import { useStore } from "../state/store";
@@ -34,13 +35,13 @@ export function Peek({ url, onClose }: { url: string; onClose: () => void }) {
 
   return (
     <div className="overlay peek-overlay" onMouseDown={onClose}>
-      <div className="peek" onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-label="Aperçu">
+      <div className="peek" onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-label={t("peek.dialog")}>
         <div className="peek-bar">
           <span className="peek-host">{title || displayHost(current)}</span>
-          <button title="Ouvrir dans un onglet" onClick={promote}>
+          <button title={t("peek.openInTab")} onClick={promote}>
             <Icon name="external" size={14} />
           </button>
-          <button title="Fermer (Échap)" onClick={onClose}>
+          <button title={t("peek.close")} onClick={onClose}>
             <Icon name="close" size={14} />
           </button>
         </div>

@@ -5,23 +5,24 @@ const { dialog, session: electronSession } = require("electron");
 const { randomUUID } = require("node:crypto");
 const { ElectronChromeExtensions } = require("electron-chrome-extensions");
 const { installChromeWebStore, uninstallExtension } = require("electron-chrome-web-store");
+const { t } = require("./i18n.cjs");
 
 /** Permissions shown in plain words in the install confirmation (others are listed as-is). */
-const PERMISSION_LABELS = {
-  tabs: "Lire votre historique de navigation (onglets ouverts)",
-  history: "Lire et modifier votre historique",
-  bookmarks: "Lire et modifier vos favoris",
-  cookies: "Lire et modifier les cookies des sites",
-  downloads: "Gérer vos téléchargements",
-  clipboardRead: "Lire le presse-papiers",
-  clipboardWrite: "Écrire dans le presse-papiers",
-  notifications: "Afficher des notifications",
-  webRequest: "Observer le trafic réseau",
-  declarativeNetRequest: "Bloquer ou modifier des requêtes réseau",
-  storage: "Stocker des données",
-  scripting: "Exécuter des scripts dans les pages",
-  "<all_urls>": "Lire et modifier toutes vos données sur tous les sites",
-};
+const LABELLED_PERMISSIONS = new Set([
+  "tabs",
+  "history",
+  "bookmarks",
+  "cookies",
+  "downloads",
+  "clipboardRead",
+  "clipboardWrite",
+  "notifications",
+  "webRequest",
+  "declarativeNetRequest",
+  "storage",
+  "scripting",
+  "<all_urls>",
+]);
 
 /**
  * Lists an extension manifest's permissions in readable form for the install prompt.
@@ -34,10 +35,11 @@ function describePermissions(manifest) {
     ...(/** @type {string[]} */ (manifest.host_permissions ?? [])),
   ].filter((p) => typeof p === "string");
   const allSites = raw.some((p) => p === "<all_urls>" || p === "*://*/*" || p === "http://*/*" || p === "https://*/*");
-  const lines = new Set(allSites ? [PERMISSION_LABELS["<all_urls>"]] : []);
+  const lines = new Set(allSites ? [t("permission.<all_urls>")] : []);
   for (const permission of raw) {
     if (/^(<all_urls>|\*:\/\/\*\/\*|https?:\/\/\*\/\*)$/.test(permission)) continue;
-    lines.add(PERMISSION_LABELS[permission] ?? (permission.includes("/") ? `Accéder à ${permission}` : permission));
+    if (LABELLED_PERMISSIONS.has(permission)) lines.add(t("permission." + permission));
+    else lines.add(permission.includes("/") ? t("permission.host", { host: permission }) : permission);
   }
   return [...lines];
 }
@@ -118,12 +120,12 @@ async function setupExtensions({ session, getWindow, getViews }) {
       const permissions = describePermissions(manifest);
       const options = {
         type: "question",
-        buttons: ["Ajouter l'extension", "Annuler"],
+        buttons: [t("extensionInstall.add"), t("common.cancel")],
         defaultId: 1,
         cancelId: 1,
-        title: "Ajouter une extension",
-        message: `Ajouter « ${localizedName} » ?`,
-        detail: permissions.length ? "Elle pourra :\n• " + permissions.join("\n• ") : "Elle ne demande aucune permission particulière.",
+        title: t("extensionInstall.title"),
+        message: t("extensionInstall.message", { name: localizedName }),
+        detail: permissions.length ? t("extensionInstall.canDo") + "\n• " + permissions.join("\n• ") : t("extensionInstall.noPermissions"),
       };
       const { response } = win ? await dialog.showMessageBox(win, options) : await dialog.showMessageBox(options);
       return { action: response === 0 ? "allow" : "deny" };

@@ -7,6 +7,7 @@ const shortcuts = require("../shared/shortcuts.json");
 const { createViewManager } = require("./views.cjs");
 const { setupExtensions } = require("./extensions.cjs");
 const { createAccount, AccountError } = require("./account.cjs");
+const { t } = require("./i18n.cjs");
 
 const PARTITION = "persist:yzo";
 const STATE_FILE = () => path.join(app.getPath("userData"), "yzo-state.json");
@@ -123,23 +124,23 @@ function buildPageMenu(guest, params) {
   const template = [];
   if (params.linkURL && isNavigableUrl(params.linkURL)) {
     template.push(
-      { label: "Ouvrir dans un nouvel onglet", click: () => host?.send("tab:open", { url: params.linkURL, background: true }) },
-      { label: "Aperçu (Peek)", click: () => host?.send("peek:open", { url: params.linkURL }) },
-      { label: "Copier le lien", click: () => clipboard.writeText(params.linkURL) },
+      { label: t("page.openInNewTab"), click: () => host?.send("tab:open", { url: params.linkURL, background: true }) },
+      { label: t("common.peek"), click: () => host?.send("peek:open", { url: params.linkURL }) },
+      { label: t("common.copyLink"), click: () => clipboard.writeText(params.linkURL) },
       { type: "separator" },
     );
   }
-  if (params.selectionText) template.push({ role: "copy", label: "Copier" });
-  if (params.isEditable) template.push({ role: "cut", label: "Couper" }, { role: "paste", label: "Coller" });
+  if (params.selectionText) template.push({ role: "copy", label: t("common.copy") });
+  if (params.isEditable) template.push({ role: "cut", label: t("page.cut") }, { role: "paste", label: t("page.paste") });
   if (params.selectionText || params.isEditable) template.push({ type: "separator" });
   const extensionItems = extensionController?.contextMenuItems(guest, params) ?? [];
   if (extensionItems.length) template.push(...extensionItems, { type: "separator" });
   template.push(
-    { label: "Précédent", enabled: guest.navigationHistory.canGoBack(), click: () => guest.navigationHistory.goBack() },
-    { label: "Suivant", enabled: guest.navigationHistory.canGoForward(), click: () => guest.navigationHistory.goForward() },
-    { label: "Recharger", click: () => guest.reload() },
+    { label: t("page.back"), enabled: guest.navigationHistory.canGoBack(), click: () => guest.navigationHistory.goBack() },
+    { label: t("page.forward"), enabled: guest.navigationHistory.canGoForward(), click: () => guest.navigationHistory.goForward() },
+    { label: t("page.reload"), click: () => guest.reload() },
     { type: "separator" },
-    { label: "Inspecter", click: () => guest.inspectElement(params.x, params.y) },
+    { label: t("page.inspect"), click: () => guest.inspectElement(params.x, params.y) },
   );
   return Menu.buildFromTemplate(template);
 }
