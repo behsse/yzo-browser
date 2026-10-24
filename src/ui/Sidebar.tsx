@@ -113,14 +113,10 @@ function Favorites() {
 function SpaceDock() {
   const { state, dispatch } = useStore();
   const ui = useUi();
-  const sync = useSync();
   return (
     <div className="space-dock">
       <button className="dock-button" title={t("sidebar.archiveAndSettings", { shortcut: shortcutLabel("openArchive") })} onClick={ui.openArchive}>
         <Icon name="archive" size={15} />
-      </button>
-      <button className={"dock-button" + (sync.status?.signedIn ? " dock-account-on" : "")} title={sync.status?.signedIn ? t("account.dockSignedIn", { email: sync.status.email ?? "" }) : t("account.dockSignedOut")} onClick={() => ui.openAccount()}>
-        <Icon name={sync.syncing ? "sync" : "user"} size={15} />
       </button>
       <div className="dock-spaces">
         {state.spaceOrder.map((id, index) => {
@@ -180,18 +176,14 @@ export function Sidebar({ floating = false }: { floating?: boolean }) {
   const openAppMenu = (anchor: HTMLElement) => {
     const rect = anchor.getBoundingClientRect();
     const signedIn = Boolean(sync.status?.signedIn);
-    const account: MenuEntry[] = signedIn
-      ? [{ icon: "user", label: t("appMenu.account", { email: sync.status?.email ?? "" }), onSelect: () => ui.openAccount() }]
-      : [
-          { icon: "user", label: t("account.signIn"), onSelect: () => ui.openAccount("signIn") },
-          { icon: "plus", label: t("account.signUp"), onSelect: () => ui.openAccount("signUp") },
-        ];
+    // The account entry closes the menu; the panel itself offers sign-up next to sign-in.
+    const account: MenuEntry = signedIn
+      ? { icon: "user", label: t("appMenu.account", { email: sync.status?.email ?? "" }), onSelect: () => ui.openAccount() }
+      : { icon: "user", label: t("account.signIn"), onSelect: () => ui.openAccount("signIn") };
     ui.openMenu({
       x: rect.left,
       y: rect.bottom + 4,
       entries: [
-        ...account,
-        "separator",
         { icon: "tab", label: t("appMenu.newTab"), hint: shortcutLabel("newTab"), onSelect: () => ui.runAction("newTab") },
         // Multi-window is not built yet: shown so the menu matches Arc, but disabled.
         { icon: "restore", label: t("appMenu.newWindow"), hint: "Ctrl+N", disabled: true, onSelect: () => {} },
@@ -206,6 +198,8 @@ export function Sidebar({ floating = false }: { floating?: boolean }) {
             ui.showToast(t(`updates.${status}`, { version: result?.version ?? "" }));
           },
         },
+        "separator",
+        account,
       ],
     });
   };

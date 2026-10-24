@@ -58,9 +58,7 @@
   "account.confirmPassword": "Confirm password",
   "account.server": "Server",
   "account.encryptingKeys": "Encrypting keys…",
-  "account.createAccount": "Create account",
-  "account.dockSignedIn": "Account: {email}",
-  "account.dockSignedOut": "Yzo account and sync",
+  "account.createAccount": "Create account",
 
   "error.invalid_server": "Invalid server address.",
   "error.insecure_server": "The server must use https (http is only accepted on this computer).",

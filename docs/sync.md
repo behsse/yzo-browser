@@ -102,7 +102,7 @@ Server table `sync_record(user_id, record_id, ciphertext, deleted, version, upda
 
 ## 7. Client UI
 
-The **Account** panel is reached from the dock:
+The **Account** panel is reached from the app menu behind the logo ("Sign in", or the account entry once signed in):
 - create an account or sign in;
 - sync status (last sync, errors) and a "Sync now" button;
 - show the recovery key again (after re-entering the password);

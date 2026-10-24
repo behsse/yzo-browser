@@ -1287,7 +1287,3 @@ button.link {
 button:disabled {
   opacity: 0.5;
 }
-
-.dock-account-on {
-  color: var(--accent) !important;
-}

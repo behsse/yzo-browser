@@ -18,7 +18,7 @@ Stack: Electron 43 in its [castLabs ECS](https://github.com/castlabs/electron-re
 | Pinned tabs | Closing a pinned tab unloads it and brings it back to its original URL, like Arc. |
 | Hidden sidebar | `Ctrl+S` hides the sidebar; it reappears when hovering the left edge. |
 | Chrome extensions | Install from the Chrome Web Store ("Add to Chrome" button, with a permission confirmation), automatic updates. Icons, popups, badges, context menus and the tabs API (`chrome.tabs`) are supported. Management (options, removal) through the puzzle button. |
-| Account and sync | Yzo account (person icon in the dock): spaces, favorites, pinned tabs, folders and settings synced across computers, **end-to-end encrypted** (the server sees neither the password nor the data). Recovery key at sign-up, session kept in the system keychain. See [docs/sync.md](docs/sync.md). |
+| Account and sync | Yzo account (sign in from the menu behind the logo): spaces, favorites, pinned tabs, folders and settings synced across computers, **end-to-end encrypted** (the server sees neither the password nor the data). Recovery key at sign-up, session kept in the system keychain. See [docs/sync.md](docs/sync.md). |
 | Protected video (DRM) | Widevine through castLabs ECS: Spotify, Deezer, Prime Video, Disney+… Netflix and the strictest services also require production VMP signing (see "Distribution"). |
 | Updates | Installed builds check GitHub Releases at startup and update in the background (`electron-updater`). |
 | Persistence | JSON state written atomically to the `userData` folder, with a `.bak` copy. |
