@@ -54,7 +54,8 @@ body,
   overflow: hidden;
   font-family: var(--font);
   font-size: 13px;
-  background: #1d1d22;
+  /* Transparent: the UI view can be stacked above the pages (see .app-backdrop). */
+  background: transparent;
   color: var(--fg);
   -webkit-font-smoothing: antialiased;
 }
@@ -92,9 +93,21 @@ kbd {
 /* Layout */
 
 .app {
+  position: relative;
+  isolation: isolate;
   display: flex;
   height: 100%;
   color: var(--fg);
+}
+
+/* Space gradient behind the whole UI, masked over the pages (--page-holes, set by ViewHost). */
+.app-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  -webkit-mask: var(--page-holes, none) 0 0 / 100% 100% no-repeat;
+  mask: var(--page-holes, none) 0 0 / 100% 100% no-repeat;
+  pointer-events: none;
 }
 
 :root {
@@ -710,26 +723,13 @@ kbd {
 
 /* Content */
 
+/* The live page is a native view placed over the slot by the main process. The slot stays
+   transparent so the page shows through when the UI is stacked above it. */
 .web-pane {
   position: absolute;
   overflow: hidden;
   border-radius: var(--radius);
-  background: var(--surface);
   box-shadow: var(--shadow-card);
-}
-
-/* The live page is a native view placed over the slot by the main process; while views are frozen
-   the slot shows a screenshot of it instead. */
-.web-pane-snapshot {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: left top;
-  border-radius: inherit;
-  pointer-events: none;
-  user-select: none;
 }
 
 .web-pane-focused {

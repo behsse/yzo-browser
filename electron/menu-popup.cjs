@@ -48,10 +48,11 @@ function sanitizeEntries(entries) {
 /**
  * Creates the popup menu layer of a window.
  * @param {object} options Wiring provided by the main process.
- * @param {() => Electron.BrowserWindow | null} options.getWindow Returns the owning window.
- * @returns {{ show(entries: unknown, x: unknown, y: unknown): Promise<number | null>, close(): void }}
+ * @param {() => Electron.BaseWindow | null} options.getWindow Returns the owning window.
+ * @param {() => Electron.WebContents | null} options.getUi Returns the UI renderer's contents.
+ * @returns {{ show(entries: unknown, x: unknown, y: unknown): Promise<number | null>, close(): void, bringToFront(): void }}
  */
-function createMenuPopup({ getWindow }) {
+function createMenuPopup({ getWindow, getUi }) {
   /** @type {WebContentsView | null} */
   let view = null;
   /** @type {Promise<void> | null} */
@@ -93,8 +94,7 @@ function createMenuPopup({ getWindow }) {
     const { resolve } = pending;
     pending = null;
     view?.setVisible(false);
-    const win = getWindow();
-    if (refocus && win && !win.isDestroyed()) win.webContents.focus();
+    if (refocus) getUi()?.focus();
     resolve(index);
   };
 
@@ -142,6 +142,11 @@ function createMenuPopup({ getWindow }) {
     },
     close() {
       if (pending) finish(pending.token, null, false);
+    },
+    /** Keeps an open menu above views restacked after it was shown (e.g. the UI being raised). */
+    bringToFront() {
+      const win = getWindow();
+      if (pending && view && win && !win.isDestroyed()) win.contentView.addChildView(view);
     },
   };
 }

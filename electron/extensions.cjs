@@ -48,7 +48,8 @@ function describePermissions(manifest) {
  * Enables Chrome extensions for the tabs' session.
  * @param {object} options Wiring provided by the main process.
  * @param {Electron.Session} options.session Session shared by all tabs.
- * @param {() => Electron.BrowserWindow | null} options.getWindow Returns the browser window.
+ * @param {() => Electron.BaseWindow | null} options.getWindow Returns the browser window.
+ * @param {() => Electron.WebContents | null} options.getUi Returns the UI renderer's contents.
  * @param {() => ReturnType<import("./views.cjs").createViewManager> | null} options.getViews Returns
  *   the view manager of that window.
  * @returns {Promise<{
@@ -58,7 +59,7 @@ function describePermissions(manifest) {
  *   contextMenuItems(contents: Electron.WebContents, params: Electron.ContextMenuParams): Electron.MenuItem[],
  * }>} Extension controller.
  */
-async function setupExtensions({ session, getWindow, getViews }) {
+async function setupExtensions({ session, getWindow, getUi, getViews }) {
   /**
    * Asks the UI to create a tab and waits for its page to exist.
    * @param {string | undefined} url Tab URL.
@@ -66,11 +67,11 @@ async function setupExtensions({ session, getWindow, getViews }) {
    * @returns {Promise<Electron.WebContents | null>} The new tab's contents.
    */
   const createTab = async (url, active) => {
-    const win = getWindow();
+    const ui = getUi();
     const views = getViews();
-    if (!win || !views) return null;
+    if (!ui || !views) return null;
     const id = randomUUID();
-    win.webContents.send("tab:create", { id, url: url || "about:blank", active });
+    ui.send("tab:create", { id, url: url || "about:blank", active });
     return views.waitForView(id);
   };
 
@@ -81,7 +82,7 @@ async function setupExtensions({ session, getWindow, getViews }) {
    */
   const toUiForTab = (channel, contents) => {
     const id = getViews()?.idOf(contents);
-    if (id) getWindow()?.webContents.send(channel, { id });
+    if (id) getUi()?.send(channel, { id });
   };
 
   const extensions = new ElectronChromeExtensions({

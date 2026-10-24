@@ -273,8 +273,8 @@ export function App() {
     return () => window.clearInterval(timer);
   }, [hidden, revealed, zoneWidth, scheduleHide, reveal]);
 
-  // Keep the pages frozen until the floating sidebar has finished sliding out, so the native views
-  // do not cover it mid-animation.
+  // Keep the UI raised above the pages until the floating sidebar has finished sliding out, so the
+  // native views do not cover it mid-animation.
   const [floatingFrozen, setFloatingFrozen] = useState(false);
   useEffect(() => {
     if (revealed) {
@@ -291,10 +291,10 @@ export function App() {
   return (
     <ViewHostProvider overlayOpen={overlayOpen} peekUrl={peekUrl}>
       <UiContext.Provider value={ui}>
-        <div
-          className={`app app-${resolveAppearance(theme)}${hidden ? " app-sidebar-hidden" : ""}`}
-          style={{ background: sidebarBackground(theme) }}
-        >
+        <div className={`app app-${resolveAppearance(theme)}${hidden ? " app-sidebar-hidden" : ""}`}>
+          {/* The space gradient, with a hole over each page: the UI view is transparent there, so the
+              live pages show through when the UI is stacked above them. */}
+          <div className="app-backdrop" style={{ background: sidebarBackground(theme) }} />
           {/* The anchored sidebar stays mounted and its slot animates its width, so Ctrl+S slides the
               page instead of jumping. It is inert while collapsed. */}
           <div className="sidebar-slot" style={{ width: hidden ? 0 : state.window.sidebarWidth }} inert={hidden}>
@@ -305,7 +305,7 @@ export function App() {
           {hidden && <div className="hidden-drag-strip drag" />}
           {/* The hover zone is the whole left column (window top to bottom, from the left edge), so the
               margins above, below and left of the card keep it open; only moving right toward the page
-              closes it. While it is open the pages are frozen behind screenshots, and an invisible layer
+              closes it. While it is open the UI is raised above the live pages, and an invisible layer
               covers the page side: entering it starts the hide delay, clicking it closes immediately. */}
           {hidden && revealed && (
             <div

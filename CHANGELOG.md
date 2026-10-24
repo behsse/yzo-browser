@@ -20,7 +20,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ### Fixed
 
-- Opening a menu no longer freezes the page behind it (a playing video kept running but its picture stopped): menus are drawn in a transparent native layer above the pages instead of freezing them.
+- Pages are no longer frozen behind menus, the command bar, panels or the floating sidebar (a playing video kept running but its picture stopped, and the page "jumped" when the overlay closed). Menus are drawn in a transparent native layer above the pages, and the UI itself, now a transparent view of a `BaseWindow`, is stacked above the pages while an overlay is open instead of replacing them with screenshots.
 - The floating sidebar no longer closes when the pointer moves onto a menu or dialog opened from it (extensions menu, space editor…); it waits until that menu or dialog is closed.
 - Context menu shortcut hints were unreadable on the dark menu.
 

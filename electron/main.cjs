@@ -1,6 +1,6 @@
 // Electron main process: owns the frameless window, persistence and every tab page (WebContentsView).
 const electron = require("electron");
-const { app, BrowserWindow, ipcMain, Menu, clipboard, screen, session } = electron;
+const { app, BaseWindow, WebContentsView, ipcMain, Menu, clipboard, screen, session } = electron;
 const path = require("node:path");
 const fs = require("node:fs");
 const shortcuts = require("../shared/shortcuts.json");
@@ -30,8 +30,14 @@ const USER_AGENT = app.userAgentFallback
   .replace(/Chrome\/[\d.]+/, `Chrome/${process.versions.chrome.split(".")[0]}.0.0.0`);
 app.userAgentFallback = USER_AGENT;
 
-/** @type {BrowserWindow | null} */
+/** @type {BaseWindow | null} */
 let mainWindow = null;
+/**
+ * The browser UI. It is a view of its own (not the window's built-in contents) so it can be stacked
+ * above the tab views while an overlay is open, with a transparent background where the pages are.
+ * @type {WebContentsView | null}
+ */
+let uiView = null;
 /** @type {ReturnType<typeof createViewManager> | null} */
 let viewManager = null;
 /** @type {ReturnType<typeof createMenuPopup> | null} */
@@ -87,7 +93,7 @@ function matchShortcut(input) {
  * @returns {boolean} True when the sender is the main window's own renderer.
  */
 function isTrustedSender(event) {
-  return mainWindow !== null && event.sender === mainWindow.webContents;
+  return uiView !== null && event.sender === uiView.webContents;
 }
 
 /**
@@ -122,7 +128,7 @@ function writeState(json) {
  * @returns {Electron.Menu} Menu to pop up.
  */
 function buildPageMenu(guest, params) {
-  const host = mainWindow?.webContents;
+  const host = uiContents();
   /** @type {Electron.MenuItemConstructorOptions[]} */
   const template = [];
   if (params.linkURL && isNavigableUrl(params.linkURL)) {
@@ -179,7 +185,7 @@ function routeWindowOpen(contents) {
   contents.setWindowOpenHandler(({ url, disposition }) => {
     if (!isNavigableUrl(url)) return { action: "deny" };
     if (disposition === "new-window") return { action: "allow", overrideBrowserWindowOptions: popupWindowOptions() };
-    mainWindow?.webContents.send("tab:open", { url, background: disposition === "background-tab" });
+    uiContents()?.send("tab:open", { url, background: disposition === "background-tab" });
     return { action: "deny" };
   });
   contents.on("did-create-window", (popup) => setupPopup(popup));
@@ -208,7 +214,7 @@ function setupPageContents(guest) {
     const action = matchShortcut(input);
     if (!action) return;
     event.preventDefault();
-    mainWindow?.webContents.send("shortcut", action);
+    uiContents()?.send("shortcut", action);
   });
 
   routeWindowOpen(guest);
@@ -223,10 +229,39 @@ function setupPageContents(guest) {
 }
 
 /**
- * Creates the frameless browser window and locks down its own renderer.
+ * Returns the UI renderer's contents while it is alive.
+ * @returns {Electron.WebContents | null} UI contents.
+ */
+function uiContents() {
+  return uiView && !uiView.webContents.isDestroyed() ? uiView.webContents : null;
+}
+
+/**
+ * Stacks the UI above or below the tab views. Below, the pages cover their slots as usual; above
+ * (overlay open, floating sidebar, divider drag), the UI draws over live pages through its
+ * transparent slots, so videos keep playing behind command bars, panels and the floating sidebar.
+ * Peek and the popup menu stay on top in both cases.
+ * @param {boolean} raised Whether the UI goes above the pages.
+ */
+function stackUi(raised) {
+  const win = mainWindow;
+  if (!win || win.isDestroyed() || !uiView) return;
+  if (raised) {
+    win.contentView.addChildView(uiView);
+    viewManager?.bringPeekToFront();
+    menuPopup?.bringToFront();
+    // Overlays (command bar, panels) need the keyboard.
+    uiView.webContents.focus();
+  } else {
+    win.contentView.addChildView(uiView, 0);
+  }
+}
+
+/**
+ * Creates the frameless browser window: the UI view at the bottom, tab views above it.
  */
 function createWindow() {
-  mainWindow = new BrowserWindow({
+  mainWindow = new BaseWindow({
     width: 1400,
     height: 900,
     minWidth: 760,
@@ -234,30 +269,45 @@ function createWindow() {
     frame: false,
     backgroundColor: "#1d1d22",
     show: false,
+  });
+  uiView = new WebContentsView({
     webPreferences: {
       // Generated from preload.cjs by scripts/build-preload.mjs (adds extension icon support).
       preload: path.join(__dirname, "preload.generated.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
-      // The UI drives the native tab views (layout sync, freeze screenshots) from animation frames
-      // and timers; they must keep running when the window is occluded or in the background.
+      // The UI drives the native tab views (layout sync) from animation frames and timers; they must
+      // keep running when the window is occluded or in the background.
       backgroundThrottling: false,
     },
   });
+  // Transparent so that, once stacked above the tabs, the pages show through the UI's empty slots.
+  uiView.setBackgroundColor("#00000000");
 
   const win = mainWindow;
-  win.once("ready-to-show", () => win.show());
-  win.on("maximize", () => win.webContents.send("window:maximized", true));
-  win.on("unmaximize", () => win.webContents.send("window:maximized", false));
+  const ui = uiView;
+  const fitUi = () => {
+    const { width, height } = win.getContentBounds();
+    ui.setBounds({ x: 0, y: 0, width, height });
+  };
+  win.contentView.addChildView(ui);
+  fitUi();
+  win.on("resize", fitUi);
+  ui.webContents.once("did-finish-load", () => win.show());
+  win.on("maximize", () => ui.webContents.send("window:maximized", true));
+  win.on("unmaximize", () => ui.webContents.send("window:maximized", false));
   win.on("closed", () => {
     viewManager = null;
     menuPopup = null;
+    uiView = null;
     mainWindow = null;
+    if (!ui.webContents.isDestroyed()) ui.webContents.close();
   });
-  menuPopup = createMenuPopup({ getWindow: () => mainWindow });
+  menuPopup = createMenuPopup({ getWindow: () => mainWindow, getUi: uiContents });
   viewManager = createViewManager({
     getWindow: () => mainWindow,
+    getUi: uiContents,
     partition: PARTITION,
     isNavigableUrl,
     setupContents: setupPageContents,
@@ -266,25 +316,26 @@ function createWindow() {
       onCreated: (_id, contents) => extensionController?.extensions.addTab(contents, win),
       onDestroyed: (_id, contents) => extensionController?.extensions.removeTab(contents),
       onActivated: (_id, contents) => extensionController?.extensions.selectTab(contents),
+      onRaise: stackUi,
     },
   });
 
   // The UI never navigates or opens windows itself; only guests do.
-  win.webContents.on("will-navigate", (event) => event.preventDefault());
-  win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
-  win.webContents.on("before-input-event", (event, input) => {
+  ui.webContents.on("will-navigate", (event) => event.preventDefault());
+  ui.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  ui.webContents.on("before-input-event", (event, input) => {
     // Ctrl+R / F5 would reload the whole UI instead of the page: route them to the renderer.
     if (input.type === "keyDown" && matchShortcut(input) === "reload") {
       event.preventDefault();
-      win.webContents.send("shortcut", "reload");
+      ui.webContents.send("shortcut", "reload");
     }
   });
 
   // Tabs are native views managed here; the UI is not allowed to embed <webview> guests.
-  win.webContents.on("will-attach-webview", (event) => event.preventDefault());
+  ui.webContents.on("will-attach-webview", (event) => event.preventDefault());
 
-  if (DEV_URL) win.loadURL(DEV_URL);
-  else win.loadFile(path.join(__dirname, "..", "dist", "index.html"));
+  if (DEV_URL) ui.webContents.loadURL(DEV_URL);
+  else ui.webContents.loadFile(path.join(__dirname, "..", "dist", "index.html"));
 }
 
 ipcMain.handle("state:load", (event) => (isTrustedSender(event) ? readState() : null));
@@ -325,9 +376,6 @@ ipcMain.on("views:sync", (event, payload) => {
   if (isTrustedSender(event)) viewManager?.sync(payload);
 });
 
-ipcMain.on("views:ack", (event, token) => {
-  if (isTrustedSender(event)) viewManager?.ackSnapshots(token);
-});
 
 ipcMain.handle("extensions:list", (event) => (isTrustedSender(event) ? (extensionController?.list() ?? []) : []));
 
@@ -421,7 +469,7 @@ app.whenReady().then(async () => {
   account = createAccount({ userDataPath: app.getPath("userData"), defaultServerUrl: DEFAULT_SYNC_URL });
   // Extensions load before the first tab exists so every tab is registered with them.
   try {
-    extensionController = await setupExtensions({ session: tabsSession, getWindow: () => mainWindow, getViews: () => viewManager });
+    extensionController = await setupExtensions({ session: tabsSession, getWindow: () => mainWindow, getUi: uiContents, getViews: () => viewManager });
   } catch (error) {
     console.error("Chrome extensions unavailable:", error);
   }

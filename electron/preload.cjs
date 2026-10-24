@@ -22,9 +22,7 @@ contextBridge.exposeInMainWorld("yzo", {
   checkForUpdates: () => ipcRenderer.invoke("app:checkForUpdates"),
   showMenu: (entries, x, y) => ipcRenderer.invoke("menu:popup", entries, x, y),
   syncViews: (payload) => ipcRenderer.send("views:sync", payload),
-  ackSnapshots: (token) => ipcRenderer.send("views:ack", token),
   tabCommand: (tabId, command, arg) => ipcRenderer.invoke("tab:command", tabId, command, arg),
-  onSnapshots: (callback) => subscribe("views:snapshots", callback),
   onTabEvent: (callback) => subscribe("tab:event", callback),
   // Tab requests coming from extensions (chrome.tabs.create / update / remove).
   onTabCreate: (callback) => subscribe("tab:create", callback),

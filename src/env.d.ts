@@ -13,7 +13,8 @@ export interface ViewBounds {
 export interface ViewSyncPayload {
   tabs: { id: string; url: string; bounds: ViewBounds | null }[];
   /** Hide the tab views (after screenshots) so HTML overlays can be drawn over the page area. */
-  frozen: boolean;
+  /** Stack the UI above the pages (overlay open): it then draws over them through transparent slots. */
+  raised: boolean;
   peek: { url: string; bounds: ViewBounds | null } | null;
   /** Selected tab, reported to extensions as the active Chrome tab. */
   activeTabId: string | null;
@@ -100,9 +101,7 @@ export interface YzoBridge {
   /** Manual update check; "dev" outside packaged builds. */
   checkForUpdates(): Promise<{ status: "dev" | "upToDate" | "available" | "error"; version?: string } | null>;
   syncViews(payload: ViewSyncPayload): void;
-  ackSnapshots(token: number): void;
   tabCommand(tabId: string, command: TabCommand, arg?: string): Promise<unknown>;
-  onSnapshots(callback: (payload: { token: number; shots: Record<string, string> }) => void): () => void;
   onTabEvent(callback: (event: TabEvent) => void): () => void;
   onTabCreate(callback: (request: { id: string; url: string; active: boolean }) => void): () => void;
   onTabActivate(callback: (request: { id: string }) => void): () => void;

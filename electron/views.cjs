@@ -2,26 +2,25 @@
 //
 // The renderer owns layout. It sends the list of loaded tabs with the on-screen rectangle of each
 // visible one (views:sync); this module creates, positions, shows and destroys native views to
-// match. Native views are drawn above all of the UI's HTML, so while an overlay is open (command bar,
-// menus, floating sidebar, panels) the UI asks for the views to be "frozen": each visible page is
-// captured, the UI shows the screenshot in its place, and only then are the views hidden.
+// match. The tab views normally sit above the UI view; while an overlay is open (command bar, floating
+// sidebar, panels, divider drag) the UI asks to be "raised" above them and draws over the live pages
+// through its transparent slots (see stackUi in main.cjs).
 const { WebContentsView } = require("electron");
 
 const PEEK_ID = "__peek__";
 const ID_PATTERN = /^[\w-]{1,64}$/;
 const MAX_TABS = 500;
 const VIEW_RADIUS = 10;
-const SNAPSHOT_ACK_TIMEOUT_MS = 250;
-const SNAPSHOT_JPEG_QUALITY = 85;
 
 /**
  * @typedef {{ x: number, y: number, width: number, height: number }} Bounds
  * @typedef {{ id: string, url: string, bounds: Bounds | null }} TabEntry
- * @typedef {{ tabs: TabEntry[], frozen: boolean, peek: { url: string, bounds: Bounds | null } | null, activeTabId: string | null }} SyncPayload
+ * @typedef {{ tabs: TabEntry[], raised: boolean, peek: { url: string, bounds: Bounds | null } | null, activeTabId: string | null }} SyncPayload
  * @typedef {{
  *   onCreated?(id: string, contents: Electron.WebContents): void,
  *   onDestroyed?(id: string, contents: Electron.WebContents): void,
  *   onActivated?(id: string, contents: Electron.WebContents): void,
+ *   onRaise?(raised: boolean): void,
  * }} ViewHooks
  */
 
@@ -42,7 +41,8 @@ function toBounds(value) {
 /**
  * Creates the view manager for one browser window.
  * @param {object} options Wiring provided by the main process.
- * @param {() => Electron.BrowserWindow | null} options.getWindow Returns the owning window.
+ * @param {() => Electron.BaseWindow | null} options.getWindow Returns the owning window.
+ * @param {() => Electron.WebContents | null} options.getUi Returns the UI renderer's contents.
  * @param {string} options.partition Session partition shared by all tabs.
  * @param {(url: string) => boolean} options.isNavigableUrl URL allow-list check.
  * @param {(contents: Electron.WebContents) => void} options.setupContents Applies page-level policy
@@ -50,25 +50,20 @@ function toBounds(value) {
  * @param {ViewHooks} [options.hooks] Lifecycle callbacks (used to expose tabs to extensions).
  * @returns {{
  *   sync(payload: unknown): void,
- *   ackSnapshots(token: unknown): void,
+ *   bringPeekToFront(): void,
  *   command(id: unknown, command: unknown, arg: unknown): unknown,
  *   waitForView(id: string, timeoutMs?: number): Promise<Electron.WebContents | null>,
  *   idOf(contents: Electron.WebContents): string | null,
  *   destroyAll(): void,
  * }}
  */
-function createViewManager({ getWindow, partition, isNavigableUrl, setupContents, hooks = {} }) {
+function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupContents, hooks = {} }) {
   /** @type {Map<string, WebContentsView>} */
   const views = new Map();
   /** @type {Map<string, Bounds | null>} */
   const bounds = new Map();
-  /** Freeze requested by the UI. */
-  let frozen = false;
-  /** Tab views actually hidden: only after the UI has painted the screenshots. */
-  let concealed = false;
-  let freezeToken = 0;
-  /** @type {((token: number) => void) | null} */
-  let resolveAck = null;
+  /** Whether the UI is stacked above the tab views. */
+  let raised = false;
   /** @type {string | null} */
   let activeTabId = null;
   /** @type {Map<string, ((contents: Electron.WebContents) => void)[]>} */
@@ -79,10 +74,7 @@ function createViewManager({ getWindow, partition, isNavigableUrl, setupContents
    * @param {string} channel IPC channel.
    * @param {unknown} payload Message payload.
    */
-  const toUi = (channel, payload) => {
-    const win = getWindow();
-    if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
-  };
+  const toUi = (channel, payload) => getUi()?.send(channel, payload);
 
   /**
    * Creates a view for a tab (or Peek), forwards its page events to the UI and loads its URL.
@@ -138,62 +130,21 @@ function createViewManager({ getWindow, partition, isNavigableUrl, setupContents
     }
   };
 
-  /**
-   * Applies the stored bounds and the frozen state to every view. Peek stays visible while frozen
-   * because it is itself shown inside an overlay.
-   */
-  const apply = () => {
-    for (const [id, view] of views) {
-      const rect = bounds.get(id) ?? null;
-      if (rect) view.setBounds(rect);
-      view.setVisible(Boolean(rect) && (id === PEEK_ID || !concealed));
-    }
-    // Keep Peek above the tabs.
+  /** Keeps Peek above the tabs and the UI (Peek is shown inside an overlay of the UI). */
+  const bringPeekToFront = () => {
     const peek = views.get(PEEK_ID);
     const win = getWindow();
     if (peek && win && !win.isDestroyed()) win.contentView.addChildView(peek);
   };
 
-  /**
-   * Freezes or unfreezes the tab views. Freezing captures every visible page first and waits until
-   * the UI has drawn the screenshots, so the swap is invisible.
-   * @param {boolean} wanted Target state.
-   */
-  const setFrozen = async (wanted) => {
-    if (wanted === frozen) return;
-    frozen = wanted;
-    const token = ++freezeToken;
-    if (!wanted) {
-      concealed = false;
-      apply();
-      return;
-    }
-    /** @type {Record<string, string>} */
-    const shots = {};
+  /** Applies the stored bounds to every view; a view without bounds (not on screen) is hidden. */
+  const apply = () => {
     for (const [id, view] of views) {
-      if (id === PEEK_ID || !view.getVisible()) continue;
-      try {
-        const image = await view.webContents.capturePage();
-        shots[id] = "data:image/jpeg;base64," + image.toJPEG(SNAPSHOT_JPEG_QUALITY).toString("base64");
-      } catch {
-        // A page that cannot be captured is simply hidden without a placeholder.
-      }
+      const rect = bounds.get(id) ?? null;
+      if (rect) view.setBounds(rect);
+      view.setVisible(Boolean(rect));
     }
-    if (token !== freezeToken) return;
-    await new Promise((resolve) => {
-      const timer = setTimeout(resolve, SNAPSHOT_ACK_TIMEOUT_MS);
-      resolveAck = (acked) => {
-        if (acked !== token) return;
-        clearTimeout(timer);
-        resolve(undefined);
-      };
-      toUi("views:snapshots", { token, shots });
-    });
-    resolveAck = null;
-    if (token === freezeToken && frozen) {
-      concealed = true;
-      apply();
-    }
+    bringPeekToFront();
   };
 
   return {
@@ -203,7 +154,7 @@ function createViewManager({ getWindow, partition, isNavigableUrl, setupContents
      */
     sync(payload) {
       if (!payload || typeof payload !== "object") return;
-      const { tabs, frozen: wantFrozen, peek, activeTabId: active } = /** @type {Partial<SyncPayload>} */ (payload);
+      const { tabs, raised: wantRaised, peek, activeTabId: active } = /** @type {Partial<SyncPayload>} */ (payload);
       if (!Array.isArray(tabs) || tabs.length > MAX_TABS) return;
 
       const wanted = new Set();
@@ -220,8 +171,12 @@ function createViewManager({ getWindow, partition, isNavigableUrl, setupContents
       }
       for (const id of [...views.keys()]) if (!wanted.has(id)) destroyView(id);
 
+      // Restack before apply(), which then puts Peek back on top of the UI.
+      if (Boolean(wantRaised) !== raised) {
+        raised = Boolean(wantRaised);
+        hooks.onRaise?.(raised);
+      }
       apply();
-      void setFrozen(Boolean(wantFrozen));
 
       const nextActive = typeof active === "string" && views.has(active) ? active : null;
       if (nextActive && nextActive !== activeTabId) hooks.onActivated?.(nextActive, views.get(nextActive).webContents);
@@ -258,13 +213,7 @@ function createViewManager({ getWindow, partition, isNavigableUrl, setupContents
       return null;
     },
 
-    /**
-     * Called by the UI once it has painted the screenshots of a freeze.
-     * @param {unknown} token Freeze token received with the snapshots.
-     */
-    ackSnapshots(token) {
-      if (typeof token === "number" && resolveAck) resolveAck(token);
-    },
+    bringPeekToFront,
 
     /**
      * Runs a navigation command on a tab's page.

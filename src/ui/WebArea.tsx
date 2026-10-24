@@ -40,8 +40,7 @@ function layoutPanes(ids: ID[], factors: number[], vertical: boolean, focusedId:
 
 /**
  * Content area: lays out one slot per visible tab (the native page view is placed over it by the
- * main process), shows page screenshots while views are frozen, and provides the draggable split
- * dividers.
+ * main process) and provides the draggable split dividers.
  * @returns Content element.
  */
 export function WebArea() {
@@ -62,8 +61,8 @@ export function WebArea() {
   }
   const layout = layoutPanes(visible, factors, vertical, selection?.focusedTabId ?? null);
 
-  // Pages are native views that swallow the pointer, so dividers freeze them while dragging and
-  // end the drag on release (or as soon as no button is pressed anymore).
+  // Pages are native views that swallow the pointer, so dividers raise the UI above them while
+  // dragging and end the drag on release (or as soon as no button is pressed anymore).
   const startDrag = (index: number) => (event: ReactPointerEvent<HTMLDivElement>) => {
     if (!isSplit(content) || !areaRef.current) return;
     event.preventDefault();
@@ -93,12 +92,7 @@ export function WebArea() {
     <main className="web-area" ref={areaRef}>
       {visible.map((id) => {
         const pane = layout.get(id)!;
-        const snapshot = host.frozen ? host.snapshots[id] : undefined;
-        return (
-          <div key={id} ref={host.slotRef(id)} className={"web-pane" + (pane.focused ? " web-pane-focused" : "")} style={pane.style}>
-            {snapshot && <img className="web-pane-snapshot" src={snapshot} alt="" draggable={false} />}
-          </div>
-        );
+        return <div key={id} ref={host.slotRef(id)} className={"web-pane" + (pane.focused ? " web-pane-focused" : "")} style={pane.style} />;
       })}
 
       {visible.slice(0, -1).map((_, i) => {
