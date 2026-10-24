@@ -102,8 +102,8 @@ export function emptySyncMeta(email: string | null): AppState["sync"] {
 }
 
 /**
- * Builds the first-launch state: one space with the favorites observed as Arc's default sidebar
- * (Google, YouTube, Linear — re/ARC-REVERSE-ENGINEERING.md §6) and an empty today section.
+ * Builds the first-launch state: one space with default favorites (Google, YouTube, Gmail; Arc ships
+ * Linear as the third one, re/ARC-REVERSE-ENGINEERING.md §6) and an empty today section.
  * @param now Current epoch ms.
  * @returns A complete state.
  */
@@ -129,7 +129,7 @@ export function createInitialState(now: number): AppState {
   for (const [url, title] of [
     ["https://www.google.com/", "Google"],
     ["https://www.youtube.com/", "YouTube"],
-    ["https://linear.app/", "Linear"],
+    ["https://mail.google.com/", "Gmail"],
   ]) {
     const tab = makeItem(makeTabData(url, now, title), now);
     state.items[tab.id] = tab;

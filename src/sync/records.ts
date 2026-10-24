@@ -15,7 +15,8 @@ import { SIDEBAR_MAX_WIDTH, SIDEBAR_MIN_WIDTH } from "../state/types";
 
 /** Stand-in for the favorites container, whose local id differs on every device. */
 export const FAVORITES_PARENT = "$favorites";
-const DEFAULT_FAVORITE_URLS = new Set(["https://www.google.com/", "https://www.youtube.com/", "https://linear.app/"]);
+/** Favorites of a fresh profile; Linear was the third one before 0.7.0 and still counts as default. */
+const DEFAULT_FAVORITE_URLS = new Set(["https://www.google.com/", "https://www.youtube.com/", "https://mail.google.com/", "https://linear.app/"]);
 
 /**
  * JSON with object keys sorted, so equal content always gives the same string (and hash).

@@ -2,13 +2,14 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.7.0] - 2026-10-24
 
 ### Added
 
 - Internationalization: the interface, page context menu and extension install dialog are translated into English and French, following the system language with English as the fallback. Translations live in `shared/locales/` and are shared by the UI and the main process; tests check that every locale has the same keys and placeholders.
 - App menu behind the logo, like Arc: New Tab, New Window (shown disabled until multi-window exists), Check for Updates, and Sign in at the bottom (the Yzo account entry once signed in), with icons and shortcuts.
 - Magnifier icon in the sidebar search field.
+- Gmail replaces Linear as the third default favorite on new profiles.
 
 ### Changed
 
