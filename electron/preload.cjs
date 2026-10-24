@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld("yzo", {
   isMaximized: () => ipcRenderer.invoke("window:isMaximized"),
   cursorPosition: () => ipcRenderer.invoke("window:cursor"),
   checkForUpdates: () => ipcRenderer.invoke("app:checkForUpdates"),
+  showMenu: (entries, x, y) => ipcRenderer.invoke("menu:popup", entries, x, y),
   syncViews: (payload) => ipcRenderer.send("views:sync", payload),
   ackSnapshots: (token) => ipcRenderer.send("views:ack", token),
   tabCommand: (tabId, command, arg) => ipcRenderer.invoke("tab:command", tabId, command, arg),

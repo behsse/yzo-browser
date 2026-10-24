@@ -1,0 +1,97 @@
+/* Same look as the UI's .context-menu (src/styles.css). The page is transparent: only the card shows.
+   MENU_MARGIN in menu-popup.cjs leaves room around the card for its shadow. */
+
+:root {
+  --surface: #ffffff;
+  --surface-border: rgba(0, 0, 0, 0.08);
+  --text: #1d1d22;
+  --accent: #5b5bd6;
+  --danger: #d43c3c;
+  --shadow: 0 10px 28px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #26262c;
+    --surface-border: rgba(255, 255, 255, 0.08);
+    --text: #f4f4f7;
+  }
+}
+
+html,
+body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+.menu {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  min-width: 210px;
+  max-width: 360px;
+  padding: 5px;
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  box-sizing: border-box;
+}
+
+button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+  cursor: default;
+}
+
+button:disabled {
+  opacity: 0.55;
+}
+
+button.danger {
+  color: var(--danger);
+}
+
+button:not(:disabled).active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  opacity: 0.8;
+}
+
+.label {
+  flex: 1;
+}
+
+kbd {
+  font-family: inherit;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+hr {
+  margin: 4px 6px;
+  border: 0;
+  border-top: 1px solid var(--surface-border);
+}

@@ -78,6 +78,15 @@ export interface AccountBridge {
   pull(since: number): Promise<AccountResult<PullResponse>>;
 }
 
+/** Serializable menu entry sent to the popup menu layer; the icon is an SVG path. */
+export interface NativeMenuEntry {
+  label: string;
+  icon?: string;
+  hint?: string;
+  danger?: boolean;
+  disabled?: boolean;
+}
+
 export interface YzoBridge {
   account: AccountBridge;
   loadState(): Promise<string | null>;
@@ -86,6 +95,8 @@ export interface YzoBridge {
   isMaximized(): Promise<boolean>;
   /** Cursor position relative to the window content (DIPs), or null if unavailable. */
   cursorPosition(): Promise<{ x: number; y: number; width: number; height: number } | null>;
+  /** Shows a popup menu above the pages; resolves to the picked entry index, or null when dismissed. */
+  showMenu(entries: (NativeMenuEntry | "separator")[], x: number, y: number): Promise<number | null>;
   /** Manual update check; "dev" outside packaged builds. */
   checkForUpdates(): Promise<{ status: "dev" | "upToDate" | "available" | "error"; version?: string } | null>;
   syncViews(payload: ViewSyncPayload): void;

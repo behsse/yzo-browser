@@ -5,6 +5,7 @@ const path = require("node:path");
 const fs = require("node:fs");
 const shortcuts = require("../shared/shortcuts.json");
 const { createViewManager } = require("./views.cjs");
+const { createMenuPopup } = require("./menu-popup.cjs");
 const { setupExtensions } = require("./extensions.cjs");
 const { createAccount, AccountError } = require("./account.cjs");
 const { t } = require("./i18n.cjs");
@@ -33,6 +34,8 @@ app.userAgentFallback = USER_AGENT;
 let mainWindow = null;
 /** @type {ReturnType<typeof createViewManager> | null} */
 let viewManager = null;
+/** @type {ReturnType<typeof createMenuPopup> | null} */
+let menuPopup = null;
 /** @type {Awaited<ReturnType<typeof setupExtensions>> | null} */
 let extensionController = null;
 /** @type {ReturnType<typeof createAccount> | null} */
@@ -249,8 +252,10 @@ function createWindow() {
   win.on("unmaximize", () => win.webContents.send("window:maximized", false));
   win.on("closed", () => {
     viewManager = null;
+    menuPopup = null;
     mainWindow = null;
   });
+  menuPopup = createMenuPopup({ getWindow: () => mainWindow });
   viewManager = createViewManager({
     getWindow: () => mainWindow,
     partition: PARTITION,
@@ -301,6 +306,9 @@ ipcMain.on("window:control", (event, action) => {
   else if (action === "maximize") mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize();
   else if (action === "close") mainWindow.close();
 });
+
+// Menus are drawn above the live pages (electron/menu-popup.cjs); resolves to the picked index or null.
+ipcMain.handle("menu:popup", (event, entries, x, y) => (isTrustedSender(event) && menuPopup ? menuPopup.show(entries, x, y) : null));
 
 ipcMain.handle("window:isMaximized", (event) => isTrustedSender(event) && Boolean(mainWindow?.isMaximized()));
 

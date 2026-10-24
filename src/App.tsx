@@ -11,6 +11,7 @@ import { AccountPanel } from "./ui/AccountPanel";
 import { ArchivePanel } from "./ui/ArchivePanel";
 import { CommandBar } from "./ui/CommandBar";
 import { ContextMenu } from "./ui/ContextMenu";
+import { ICON_PATHS } from "./ui/Icon";
 import { Peek } from "./ui/Peek";
 import { Sidebar } from "./ui/Sidebar";
 import { SpaceEditor } from "./ui/SpaceEditor";
@@ -40,6 +41,8 @@ export function App() {
   const [accountOpen, setAccountOpen] = useState<AccountMode | null>(null);
   const [spaceEditor, setSpaceEditor] = useState<ID | "new" | null>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
+  /** A menu shown by the popup layer above the pages (no freeze needed). */
+  const [nativeMenuOpen, setNativeMenuOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
   const toastTimer = useRef<number | undefined>(undefined);
@@ -126,6 +129,24 @@ export function App() {
     [dispatch, showToast],
   );
 
+  // Inside Electron, menus are drawn above the live pages by the main process, so videos keep playing.
+  // Elsewhere (tests, plain browser) they fall back to the HTML ContextMenu.
+  const openMenu = useCallback((next: MenuState) => {
+    const bridge = window.yzo;
+    if (!bridge?.showMenu) return setMenu(next);
+    const entries = next.entries.map((entry) =>
+      entry === "separator"
+        ? ("separator" as const)
+        : { label: entry.label, icon: entry.icon ? ICON_PATHS[entry.icon] : undefined, hint: entry.hint, danger: entry.danger, disabled: entry.disabled },
+    );
+    setNativeMenuOpen(true);
+    void bridge.showMenu(entries, next.x, next.y).then((index) => {
+      setNativeMenuOpen(false);
+      const picked = index === null ? undefined : next.entries[index];
+      if (picked && picked !== "separator" && !picked.disabled) picked.onSelect();
+    });
+  }, []);
+
   const ui: UiValue = useMemo(
     () => ({
       openCommandBar: setCommandBar,
@@ -133,11 +154,11 @@ export function App() {
       openArchive: () => setArchiveOpen(true),
       openAccount: (mode = "signIn") => setAccountOpen(mode),
       openSpaceEditor: setSpaceEditor,
-      openMenu: setMenu,
+      openMenu,
       showToast,
       runAction,
     }),
-    [runAction, showToast],
+    [runAction, showToast, openMenu],
   );
 
   useEffect(() => {
@@ -224,7 +245,13 @@ export function App() {
     hideTimer.current = undefined;
     setRevealed(true);
   }, []);
+  // A menu or dialog opened from the floating sidebar (extensions, space editor…) can extend past it:
+  // the sidebar stays open until it closes, then the cursor position decides again.
+  const holdFloating = nativeMenuOpen || Boolean(menu || commandBar || peekUrl || archiveOpen || accountOpen || spaceEditor);
+  const holdFloatingRef = useRef(holdFloating);
+  holdFloatingRef.current = holdFloating;
   const scheduleHide = useCallback(() => {
+    if (holdFloatingRef.current) return;
     // Keep an already running delay: repeated calls (polling) must not postpone the close forever.
     if (hideTimer.current !== undefined) return;
     hideTimer.current = window.setTimeout(() => {

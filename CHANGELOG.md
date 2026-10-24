@@ -20,6 +20,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ### Fixed
 
+- Opening a menu no longer freezes the page behind it (a playing video kept running but its picture stopped): menus are drawn in a transparent native layer above the pages instead of freezing them.
+- The floating sidebar no longer closes when the pointer moves onto a menu or dialog opened from it (extensions menu, space editor…); it waits until that menu or dialog is closed.
 - Context menu shortcut hints were unreadable on the dark menu.
 
 ## [0.6.0] - 2026-10-24

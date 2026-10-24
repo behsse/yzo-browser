@@ -1,4 +1,5 @@
-const PATHS = {
+/** 24-unit stroke paths, also sent as data to the popup menu layer. */
+export const ICON_PATHS = {
   /** Placeholder brand mark: a stroked "y" spanning rows 6–18 like the window-control icons. */
   brand: "M7 6l5.33 8M17 6l-7 12",
   extensions:
@@ -29,7 +30,7 @@ const PATHS = {
   settings: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12l2-1-1-3-2 .5-1.5-1.5.5-2-3-1-1 2h-2l-1-2-3 1 .5 2L6 7.5 4 7l-1 3 2 1v2l-2 1 1 3 2-.5 1.5 1.5-.5 2 3 1 1-2h2l1 2 3-1-.5-2 1.5-1.5 2 .5 1-3-2-1z",
 } as const;
 
-export type IconName = keyof typeof PATHS;
+export type IconName = keyof typeof ICON_PATHS;
 
 /**
  * Renders a 24×24 stroke icon.
@@ -40,7 +41,7 @@ export type IconName = keyof typeof PATHS;
 export function Icon({ name, size = 16 }: { name: IconName; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d={PATHS[name]} />
+      <path d={ICON_PATHS[name]} />
     </svg>
   );
 }
