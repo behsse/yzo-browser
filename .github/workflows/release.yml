@@ -30,7 +30,6 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       HAS_EVS: ${{ secrets.EVS_ACCOUNT_NAME != '' }}
-      HAS_CSC: ${{ secrets.CSC_LINK != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -57,11 +56,6 @@ jobs:
           echo "YZO_VMP_SIGN=1" >> "$GITHUB_ENV"
           echo "PYTHON=python" >> "$GITHUB_ENV"
 
-      - name: Disable code signing without a certificate
-        if: env.HAS_CSC != 'true'
-        shell: bash
-        run: echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
-
       - name: Build and publish
         shell: bash
         env:
@@ -70,4 +64,15 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: pnpm build && pnpm exec electron-builder ${{ matrix.target }} --publish always
+        run: |
+          # Missing secrets arrive as empty strings, which electron-builder reads as set
+          # (an empty CSC_LINK resolves to the working directory: "not a file").
+          extra=()
+          if [ -z "$CSC_LINK" ]; then
+            unset CSC_LINK CSC_KEY_PASSWORD
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+            # Without a certificate, macOS gets an ad-hoc signature: arm64 refuses to run unsigned code.
+            [ "${{ matrix.os }}" = "macos-latest" ] && extra+=(-c.mac.identity=-)
+          fi
+          [ -z "$APPLE_ID" ] && unset APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
+          pnpm build && pnpm exec electron-builder ${{ matrix.target }} "${extra[@]}" --publish always
