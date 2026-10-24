@@ -180,5 +180,16 @@
   "permission.storage": "Stocker des données",
   "permission.scripting": "Exécuter des scripts dans les pages",
   "permission.host": "Accéder à {host}",
-  "permission.<all_urls>": "Lire et modifier toutes vos données sur tous les sites"
+  "permission.<all_urls>": "Lire et modifier toutes vos données sur tous les sites",
+
+  "appMenu.title": "Menu Yzo",
+  "appMenu.account": "Compte Yzo ({email})",
+  "appMenu.newTab": "Nouvel onglet",
+  "appMenu.newWindow": "Nouvelle fenêtre (bientôt)",
+  "appMenu.checkUpdates": "Rechercher des mises à jour",
+  "updates.checking": "Recherche de mises à jour…",
+  "updates.upToDate": "Yzo {version} est à jour",
+  "updates.available": "Yzo {version} se télécharge, il s'installera à la fermeture",
+  "updates.error": "Échec de la recherche de mises à jour",
+  "updates.dev": "Les mises à jour ne fonctionnent que dans les versions installées"
 }

@@ -14,7 +14,7 @@ import { ContextMenu } from "./ui/ContextMenu";
 import { Peek } from "./ui/Peek";
 import { Sidebar } from "./ui/Sidebar";
 import { SpaceEditor } from "./ui/SpaceEditor";
-import { UiContext, type CommandBarMode, type MenuState, type UiValue } from "./ui/UiContext";
+import { UiContext, type AccountMode, type CommandBarMode, type MenuState, type UiValue } from "./ui/UiContext";
 import { ViewHostProvider } from "./ui/ViewHost";
 import { WebArea } from "./ui/WebArea";
 
@@ -37,7 +37,7 @@ export function App() {
   const [commandBar, setCommandBar] = useState<CommandBarMode | null>(null);
   const [peekUrl, setPeekUrl] = useState<string | null>(null);
   const [archiveOpen, setArchiveOpen] = useState(false);
-  const [accountOpen, setAccountOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState<AccountMode | null>(null);
   const [spaceEditor, setSpaceEditor] = useState<ID | "new" | null>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -131,7 +131,7 @@ export function App() {
       openCommandBar: setCommandBar,
       openPeek: setPeekUrl,
       openArchive: () => setArchiveOpen(true),
-      openAccount: () => setAccountOpen(true),
+      openAccount: (mode = "signIn") => setAccountOpen(mode),
       openSpaceEditor: setSpaceEditor,
       openMenu: setMenu,
       showToast,
@@ -145,7 +145,7 @@ export function App() {
       if (event.key === "Escape") {
         setPeekUrl(null);
         setArchiveOpen(false);
-        setAccountOpen(false);
+        setAccountOpen(null);
         setSpaceEditor(null);
         return;
       }
@@ -308,7 +308,7 @@ export function App() {
         {commandBar && <CommandBar mode={commandBar} onClose={() => setCommandBar(null)} />}
         {peekUrl && <Peek url={peekUrl} onClose={() => setPeekUrl(null)} />}
         {archiveOpen && <ArchivePanel onClose={() => setArchiveOpen(false)} />}
-        {accountOpen && <AccountPanel onClose={() => setAccountOpen(false)} />}
+        {accountOpen && <AccountPanel initialMode={accountOpen} onClose={() => setAccountOpen(null)} />}
         {spaceEditor && <SpaceEditor spaceId={spaceEditor} onClose={() => setSpaceEditor(null)} />}
         {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
         {toast && <div className="toast">{toast}</div>}

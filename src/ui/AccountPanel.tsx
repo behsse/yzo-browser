@@ -3,9 +3,7 @@ import { locale, t } from "../lib/i18n";
 import { accountErrorMessage } from "../sync/errors";
 import { useSync } from "../sync/SyncProvider";
 import { Icon } from "./Icon";
-import { useUi } from "./UiContext";
-
-type Mode = "signIn" | "signUp";
+import { useUi, type AccountMode } from "./UiContext";
 
 /**
  * Formats how long ago the last sync happened.
@@ -24,14 +22,15 @@ function sinceLabel(timestamp: number | null): string {
 /**
  * Yzo account panel: sign in or create an account (end-to-end encrypted sync), show the recovery
  * key once, then sync status, manual sync, sign-out and account deletion.
+ * @param props.initialMode Form shown first when signed out.
  * @param props.onClose Closes the panel.
  * @returns Modal overlay.
  */
-export function AccountPanel({ onClose }: { onClose: () => void }) {
+export function AccountPanel({ initialMode = "signIn", onClose }: { initialMode?: AccountMode; onClose: () => void }) {
   const sync = useSync();
   const ui = useUi();
   const status = sync.status;
-  const [mode, setMode] = useState<Mode>("signIn");
+  const [mode, setMode] = useState<AccountMode>(initialMode);
   const [serverUrl, setServerUrl] = useState(status?.serverUrl ?? "");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

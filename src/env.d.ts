@@ -86,6 +86,8 @@ export interface YzoBridge {
   isMaximized(): Promise<boolean>;
   /** Cursor position relative to the window content (DIPs), or null if unavailable. */
   cursorPosition(): Promise<{ x: number; y: number; width: number; height: number } | null>;
+  /** Manual update check; "dev" outside packaged builds. */
+  checkForUpdates(): Promise<{ status: "dev" | "upToDate" | "available" | "error"; version?: string } | null>;
   syncViews(payload: ViewSyncPayload): void;
   ackSnapshots(token: number): void;
   tabCommand(tabId: string, command: TabCommand, arg?: string): Promise<unknown>;

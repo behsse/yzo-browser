@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Icon } from "./Icon";
 import type { MenuState } from "./UiContext";
 
 /**
@@ -52,7 +53,12 @@ export function ContextMenu({ menu, onClose }: { menu: MenuState; onClose: () =>
               entry.onSelect();
             }}
           >
-            <span>{entry.label}</span>
+            {entry.icon && (
+              <span className="menu-icon">
+                <Icon name={entry.icon} size={15} />
+              </span>
+            )}
+            <span className="menu-label">{entry.label}</span>
             {entry.hint && <kbd>{entry.hint}</kbd>}
           </button>
         ),

@@ -7,11 +7,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 ### Added
 
 - Internationalization: the interface, page context menu and extension install dialog are translated into English and French, following the system language with English as the fallback. Translations live in `shared/locales/` and are shared by the UI and the main process; tests check that every locale has the same keys and placeholders.
+- App menu behind the logo, like Arc: sign in or create an account (or open the Yzo account when signed in), New Tab, New Window (shown disabled until multi-window exists) and Check for Updates, with icons and shortcuts.
+- Magnifier icon in the sidebar search field.
 
 ### Changed
 
 - README and CHANGELOG are now in English.
 - The interface now ships in English by default (French on French systems), including the default space ("Personal") and folder names for new profiles.
+- Every modal (command bar, space editor, account, archive) is centered in the window, horizontally and vertically.
+- Space dock: emojis are centered in their square, and the active space keeps the hover look (background, full opacity, color).
+
+### Fixed
+
+- Context menu shortcut hints were unreadable on the dark menu.
 
 ## [0.6.0] - 2026-10-24
 

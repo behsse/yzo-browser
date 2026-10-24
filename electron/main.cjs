@@ -382,6 +382,26 @@ function checkForUpdates() {
   autoUpdater.checkForUpdatesAndNotify().catch((error) => console.error("Update check failed:", error.message));
 }
 
+/**
+ * Manual update check from the Yzo menu. A found update downloads in the background and installs
+ * on quit, like the startup check.
+ * @returns {Promise<{ status: "dev" | "upToDate" | "available" | "error", version?: string }>} Outcome.
+ */
+async function checkForUpdatesNow() {
+  if (!app.isPackaged) return { status: "dev" };
+  try {
+    const { autoUpdater } = require("electron-updater");
+    const result = await autoUpdater.checkForUpdatesAndNotify();
+    if (result?.isUpdateAvailable) return { status: "available", version: result.updateInfo.version };
+    return { status: "upToDate", version: app.getVersion() };
+  } catch (error) {
+    console.error("Update check failed:", error.message);
+    return { status: "error" };
+  }
+}
+
+ipcMain.handle("app:checkForUpdates", (event) => (isTrustedSender(event) ? checkForUpdatesNow() : null));
+
 app.whenReady().then(async () => {
   Menu.setApplicationMenu(null);
   await prepareWidevine();

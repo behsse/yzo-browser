@@ -180,5 +180,16 @@
   "permission.storage": "Store data",
   "permission.scripting": "Run scripts in pages",
   "permission.host": "Access {host}",
-  "permission.<all_urls>": "Read and change all your data on all websites"
+  "permission.<all_urls>": "Read and change all your data on all websites",
+
+  "appMenu.title": "Yzo menu",
+  "appMenu.account": "Yzo account ({email})",
+  "appMenu.newTab": "New Tab",
+  "appMenu.newWindow": "New Window (coming soon)",
+  "appMenu.checkUpdates": "Check for Updates",
+  "updates.checking": "Checking for updates…",
+  "updates.upToDate": "Yzo {version} is up to date",
+  "updates.available": "Yzo {version} is downloading, it installs when you quit",
+  "updates.error": "Update check failed",
+  "updates.dev": "Updates only work in installed builds"
 }

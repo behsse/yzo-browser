@@ -1,11 +1,15 @@
 import { createContext, useContext } from "react";
 import type { ShortcutAction } from "../lib/shortcuts";
+import type { IconName } from "./Icon";
 import type { ID } from "../state/types";
 
 export type CommandBarMode = "new" | "current" | "split";
+export type AccountMode = "signIn" | "signUp";
 
 export interface MenuEntry {
   label: string;
+  /** Leading icon; menus that use icons give one to every entry so labels stay aligned. */
+  icon?: IconName;
   hint?: string;
   danger?: boolean;
   /** Informational entry: shown greyed out and not clickable. */
@@ -24,7 +28,8 @@ export interface UiValue {
   openCommandBar(mode: CommandBarMode): void;
   openPeek(url: string): void;
   openArchive(): void;
-  openAccount(): void;
+  /** Opens the account panel, on the sign-in or sign-up form when signed out. */
+  openAccount(mode?: AccountMode): void;
   openSpaceEditor(spaceId: ID | "new"): void;
   openMenu(menu: MenuState): void;
   showToast(message: string): void;

@@ -119,7 +119,7 @@ function SpaceDock() {
       <button className="dock-button" title={t("sidebar.archiveAndSettings", { shortcut: shortcutLabel("openArchive") })} onClick={ui.openArchive}>
         <Icon name="archive" size={15} />
       </button>
-      <button className={"dock-button" + (sync.status?.signedIn ? " dock-account-on" : "")} title={sync.status?.signedIn ? t("account.dockSignedIn", { email: sync.status.email ?? "" }) : t("account.dockSignedOut")} onClick={ui.openAccount}>
+      <button className={"dock-button" + (sync.status?.signedIn ? " dock-account-on" : "")} title={sync.status?.signedIn ? t("account.dockSignedIn", { email: sync.status.email ?? "" }) : t("account.dockSignedOut")} onClick={() => ui.openAccount()}>
         <Icon name={sync.syncing ? "sync" : "user"} size={15} />
       </button>
       <div className="dock-spaces">
@@ -146,7 +146,7 @@ function SpaceDock() {
                 });
               }}
             >
-              {space.icon}
+              <span className="dock-space-icon">{space.icon}</span>
             </button>
           );
         })}
@@ -174,6 +174,41 @@ export function Sidebar({ floating = false }: { floating?: boolean }) {
   const appearance = resolveAppearance(space.theme);
   const resizing = useRef(false);
   const host = useViewHost();
+  const sync = useSync();
+
+  // Arc-style app menu behind the logo: account, new tab / window, updates.
+  const openAppMenu = (anchor: HTMLElement) => {
+    const rect = anchor.getBoundingClientRect();
+    const signedIn = Boolean(sync.status?.signedIn);
+    const account: MenuEntry[] = signedIn
+      ? [{ icon: "user", label: t("appMenu.account", { email: sync.status?.email ?? "" }), onSelect: () => ui.openAccount() }]
+      : [
+          { icon: "user", label: t("account.signIn"), onSelect: () => ui.openAccount("signIn") },
+          { icon: "plus", label: t("account.signUp"), onSelect: () => ui.openAccount("signUp") },
+        ];
+    ui.openMenu({
+      x: rect.left,
+      y: rect.bottom + 4,
+      entries: [
+        ...account,
+        "separator",
+        { icon: "tab", label: t("appMenu.newTab"), hint: shortcutLabel("newTab"), onSelect: () => ui.runAction("newTab") },
+        // Multi-window is not built yet: shown so the menu matches Arc, but disabled.
+        { icon: "restore", label: t("appMenu.newWindow"), hint: "Ctrl+N", disabled: true, onSelect: () => {} },
+        "separator",
+        {
+          icon: "sync",
+          label: t("appMenu.checkUpdates"),
+          onSelect: async () => {
+            ui.showToast(t("updates.checking"));
+            const result = await window.yzo?.checkForUpdates();
+            const status = result?.status ?? "dev";
+            ui.showToast(t(`updates.${status}`, { version: result?.version ?? "" }));
+          },
+        },
+      ],
+    });
+  };
 
   // Lists installed extensions with their actions, plus the way to add more.
   const openExtensionsMenu = async (anchor: HTMLElement) => {
@@ -228,10 +263,10 @@ export function Sidebar({ floating = false }: { floating?: boolean }) {
           mouseleave on the floating host and close it as soon as the pointer reaches the top. */}
       <div className={"sidebar-top" + (floating ? "" : " drag")}>
         <div className="sidebar-top-row sidebar-brand-row">
-          {/* Placeholder mark until the real logo exists. */}
-          <span className="brand-mark" role="img" aria-label="Yzo">
+          {/* Placeholder mark until the real logo exists; opens the app menu, like Arc's logo. */}
+          <button className="brand-mark no-drag" title={t("appMenu.title")} aria-haspopup="menu" onClick={(event) => openAppMenu(event.currentTarget)}>
             <Icon name="brand" />
-          </span>
+          </button>
           <WindowControls />
         </div>
         <div className="sidebar-top-row nav-buttons">
@@ -263,6 +298,9 @@ export function Sidebar({ floating = false }: { floating?: boolean }) {
       </div>
 
       <button className="url-pill" onClick={() => ui.openCommandBar(url ? "current" : "new")} title={url || t("sidebar.searchOrUrl")}>
+        <span className="url-search">
+          <Icon name="search" size={14} />
+        </span>
         <span className="url-text">{url ? displayHost(url) : t("sidebar.searchOrUrl")}</span>
         {url && (
           <span
