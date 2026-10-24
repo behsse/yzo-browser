@@ -1,98 +1,104 @@
 # Changelog
 
-Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage [SemVer](https://semver.org/lang/fr/).
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
+
+## [Unreleased]
+
+### Changed
+
+- README and CHANGELOG are now in English.
 
 ## [0.6.0] - 2026-10-24
 
-### Ajouté
+### Added
 
-- Vidéo protégée : Yzo tourne sur castLabs Electron for Content Security (`v43.7.7+wvcus`), Widevine est téléchargé et prêt avant l'ouverture de la fenêtre. Permission `mediaKeySystem` accordée aux pages.
-- Installeurs : Windows (NSIS, x64 et arm64), macOS (DMG + ZIP, x64 et arm64, hardened runtime), Linux (AppImage, .deb), via `pnpm dist:win`, `dist:mac`, `dist:linux`.
-- Mises à jour automatiques depuis GitHub Releases (`electron-updater`).
-- Signature VMP de production (castLabs EVS) activable par `YZO_VMP_SIGN=1`.
-- Workflow GitHub Actions de release sur tag `v*` pour les trois systèmes.
-- Icône d'application (`pnpm icon`).
+- Protected video: Yzo runs on castLabs Electron for Content Security (`v43.7.7+wvcus`); Widevine is downloaded and ready before the window opens. The `mediaKeySystem` permission is granted to pages.
+- Installers: Windows (NSIS, x64 and arm64), macOS (DMG + ZIP, x64 and arm64, hardened runtime), Linux (AppImage, .deb), through `pnpm dist:win`, `dist:mac`, `dist:linux`.
+- Automatic updates from GitHub Releases (`electron-updater`).
+- Production VMP signing (castLabs EVS), enabled with `YZO_VMP_SIGN=1`.
+- GitHub Actions release workflow on `v*` tags for all three systems.
+- App icon (`pnpm icon`).
 
-### Modifié
+### Changed
 
-- Les versions packagées se synchronisent par défaut avec `https://yzo-browser-backend.vercel.app`.
-- React n'est plus une dépendance d'exécution (déjà intégré au bundle de l'interface).
+- Packaged builds sync with `https://yzo-browser-backend.vercel.app` by default.
+- React is no longer a runtime dependency (it is already bundled into the UI).
 
 ## [0.5.0] - 2026-10-24
 
-### Ajouté
+### Added
 
-- Compte Yzo et synchronisation chiffrée de bout en bout des espaces, favoris, onglets épinglés, dossiers, vues scindées épinglées et réglages (`docs/sync.md`). Le mot de passe ne quitte jamais l'appareil : scrypt puis HKDF en dérivent une clé d'authentification (envoyée) et une clé d'enveloppe (gardée). Les données sont chiffrées en AES-256-GCM, liées à leur identifiant.
-- Clé de récupération affichée une seule fois à l'inscription.
-- Session et clé de coffre conservées chiffrées par le trousseau du système (Electron `safeStorage`).
-- Moteur de synchronisation : projection de l'état en enregistrements, détection des changements, fusion avec réparation de l'arbre, adoption des données du compte sur un nouvel appareil vierge, boucle (démarrage, 60 s, 2 s après un changement, nouvel essai sur conflit).
-- Panneau Compte (icône personnage dans le dock) : inscription, connexion, état de la synchronisation, synchronisation manuelle, déconnexion, suppression du compte.
-- 15 tests (chiffrement, synchronisation entre deux appareils simulés).
+- Yzo account and end-to-end encrypted sync of spaces, favorites, pinned tabs, folders, pinned split views and settings (`docs/sync.md`). The password never leaves the device: scrypt then HKDF derive an authentication key (sent) and a wrapping key (kept). Data is encrypted with AES-256-GCM, bound to its identifier.
+- Recovery key shown once at sign-up.
+- Session and vault key stored encrypted by the system keychain (Electron `safeStorage`).
+- Sync engine: state projection into records, change detection, merging with tree repair, adoption of account data on a fresh device, loop (startup, 60 s, 2 s after a change, retry on conflict).
+- Account panel (person icon in the dock): sign-up, sign-in, sync status, manual sync, sign-out, account deletion.
+- 15 tests (encryption, sync between two simulated devices).
 
 ## [0.4.0] - 2026-10-24
 
-### Ajouté
+### Added
 
-- Extensions Chrome : installation depuis le Chrome Web Store (le bouton « Ajouter à Chrome » fonctionne, avec une confirmation qui liste les permissions), chargement au démarrage et mises à jour automatiques (`electron-chrome-web-store`).
-- API d'extensions via `electron-chrome-extensions` : icônes dans l'en-tête de la barre latérale avec popups et badges, entrées de menu contextuel, `chrome.tabs` (les onglets Yzo sont exposés comme onglets Chrome ; une extension peut en créer, en activer, en fermer).
-- Menu Extensions (bouton puzzle) : liste des extensions installées, options, suppression, lien vers le Chrome Web Store.
-- Les pages d'extension (`chrome-extension://`, par exemple les pages d'options) s'ouvrent dans des onglets.
-- Licence GPL-3.0-or-later (`LICENSE`).
+- Chrome extensions: install from the Chrome Web Store (the "Add to Chrome" button works, with a confirmation listing the permissions), loading at startup and automatic updates (`electron-chrome-web-store`).
+- Extension APIs through `electron-chrome-extensions`: icons in the sidebar header with popups and badges, context menu entries, `chrome.tabs` (Yzo tabs are exposed as Chrome tabs; an extension can create, activate and close them).
+- Extensions menu (puzzle button): installed extensions, options, removal, link to the Chrome Web Store.
+- Extension pages (`chrome-extension://`, such as options pages) open in tabs.
+- GPL-3.0-or-later license (`LICENSE`).
 
-### Modifié
+### Changed
 
-- Le preload de l'interface est généré (`pnpm preload`) pour y intégrer le support des icônes d'extensions, le preload sandboxé ne pouvant pas charger de module externe.
-- Le dossier `re/` (notes d'analyse d'Arc) est exclu du dépôt.
+- The UI preload is generated (`pnpm preload`) to include extension icon support, since the sandboxed preload cannot load external modules.
+- The `re/` folder (Arc analysis notes) is excluded from the repository.
 
 ## [0.3.0] - 2026-10-24
 
-### Modifié
+### Changed
 
-- Les onglets passent de `<webview>` (déconseillé par Electron) à des `WebContentsView` natives gérées par le process principal. L'interface envoie la position de chaque page ; navigation, titres, favicons et focus remontent par IPC.
-- Les superpositions (barre de commande, menus, barre flottante, archive, éditeur d'espace, Peek) « gèlent » les pages : capture, affichage de la capture, puis masquage de la vue native, pour passer devant sans saut visible. Même mécanisme pendant le glissement des séparateurs de vue scindée et le redimensionnement de la barre latérale.
-- Peek utilise sa propre vue native, placée dans la carte d'aperçu.
-- Le focus clavier suit l'onglet sélectionné.
-- La fenêtre de l'interface n'est plus ralentie en arrière-plan (`backgroundThrottling: false`), pour que la synchronisation des pages continue quand elle est masquée.
+- Tabs move from `<webview>` (discouraged by Electron) to native `WebContentsView`s managed by the main process. The UI sends each page's position; navigation, titles, favicons and focus come back over IPC.
+- Overlays (command bar, menus, floating sidebar, archive, space editor, Peek) "freeze" pages: capture, show the capture, then hide the native view, so they appear on top without a visible jump. Same mechanism while dragging split view dividers and resizing the sidebar.
+- Peek uses its own native view, placed inside the preview card.
+- Keyboard focus follows the selected tab.
+- The UI window is no longer throttled in the background (`backgroundThrottling: false`), so page syncing continues while it is hidden.
 
 ## [0.2.0] - 2026-10-24
 
-### Ajouté
+### Added
 
-- Vraies fenêtres pop-up pour les pages qui en ouvrent (`window.open` avec dimensions) : les connexions « Se connecter avec Google / GitHub / … » gardent leur lien `window.opener` et renvoient le résultat au site. Les pop-ups partagent la session des onglets et suivent les mêmes règles de sécurité.
+- Real popup windows for pages that open them (`window.open` with dimensions): "Sign in with Google / GitHub / …" flows keep their `window.opener` link and return the result to the site. Popups share the tabs' session and follow the same security rules.
 
-### Modifié
+### Changed
 
-- Yzo s'annonce aux sites comme un Chrome standard (`Chrome/150.0.0.0`, sans les mentions `Electron` ni `yzo`), pour que Google et les autres services n'y voient plus un navigateur embarqué.
-- Les liens qui ouvraient le Peek par défaut ouvrent maintenant un onglet ; le Peek reste disponible par clic droit.
+- Yzo identifies itself to sites as a standard Chrome (`Chrome/150.0.0.0`, without the `Electron` or `yzo` tokens), so Google and other services no longer treat it as an embedded browser.
+- Links that opened Peek by default now open a tab; Peek remains available from the context menu.
 
 ## [0.1.1] - 2026-10-24
 
-### Modifié
+### Changed
 
-- Animations de la barre latérale plus fluides et plus visibles : la barre flottante glisse depuis la gauche avec une courbe décélérée à l'ouverture (340 ms) et repart en accélérant à la fermeture (170 ms, après 120 ms de grâce ; total ≈ 0,3 s au lieu de ≈ 0,7 s), au lieu de disparaître d'un coup. `Ctrl+S` replie la barre ancrée en largeur pendant que la page s'élargit, au lieu d'un saut. Animations désactivées si le système demande moins de mouvement.
-- Marge autour de la zone des sites réduite de 8 à 6 px.
-- En-tête de la barre latérale sur deux lignes : logo provisoire « y » (SVG au trait, même hauteur et même centre que les icônes) à gauche et réduire, agrandir, fermer à droite en haut ; barre latérale, précédent, suivant, recharger en dessous, avec un bouton Extensions calé à droite (menu provisoire « Aucune extension installée », la prise en charge n'existe pas encore). Icônes de fenêtre à la même taille que celles de navigation.
+- Smoother, more visible sidebar animations: the floating sidebar slides in from the left with a decelerating curve on open (340 ms) and leaves accelerating on close (170 ms, after a 120 ms grace period; ≈ 0.3 s total instead of ≈ 0.7 s), instead of disappearing at once. `Ctrl+S` collapses the docked sidebar's width while the page widens, instead of jumping. Animations are disabled when the system requests reduced motion.
+- Margin around the web content reduced from 8 to 6 px.
+- Two-row sidebar header: temporary "y" logo (stroked SVG, same height and center as the icons) on the left and minimize, maximize, close on the right on top; sidebar, back, forward, reload below, with an Extensions button aligned right (temporary "No extensions installed" menu, support did not exist yet). Window icons are the same size as the navigation ones.
 
-### Corrigé
+### Fixed
 
-- La barre latérale masquée ne réapparaissait plus au survol du bord gauche : le bord était une zone de déplacement de fenêtre, qui ne reçoit aucun événement souris sous Electron.
-- En mode masqué, une bande en haut de la fenêtre permet de nouveau de la déplacer.
-- La barre flottante se fermait en remontant la souris vers ses boutons : son en-tête était une zone de déplacement de fenêtre. Elle tolère aussi un bref écart (120 ms).
-- La zone de survol de la barre flottante couvre toute la colonne de gauche : les marges du haut, du bas et de gauche la gardent ouverte, seule la sortie vers la droite la ferme. La position réelle du curseur est lue depuis le process principal, car une webview capte les événements souris.
-- `pnpm dev` restait bloqué : Vite écoutait seulement en IPv6 alors qu'Electron l'attendait sur 127.0.0.1.
+- The hidden sidebar no longer reappeared when hovering the left edge: the edge was a window drag region, which receives no mouse events under Electron.
+- In hidden mode, a strip at the top of the window can drag it again.
+- The floating sidebar closed when moving the mouse up to its buttons: its header was a window drag region. It also tolerates a brief exit (120 ms).
+- The floating sidebar's hover zone covers the whole left column: the top, bottom and left margins keep it open, only leaving to the right closes it. The real cursor position is read from the main process, since a webview captures mouse events.
+- `pnpm dev` hung: Vite listened only on IPv6 while Electron waited on 127.0.0.1.
 
 ## [0.1.0] - 2026-10-24
 
-### Ajouté
+### Added
 
-- Rapport de rétro-ingénierie d'Arc 1.129 pour Windows (REA + Ghidra 12.1.4) et preuves associées dans `re/`.
-- Application Electron 43 sans cadre, avec barre latérale verticale, favoris, sections épinglée et du jour, dossiers, glisser-déposer.
-- Espaces avec emoji, dégradé tiré des palettes d'Arc, modes clair/sombre/auto, dock et raccourcis `Ctrl+1…9`.
-- Barre de commande : URL, recherche (Google, DuckDuckGo, Bing), passage aux onglets ouverts, historique, dédoublonnage titre + domaine, mémoire des choix.
-- Vue scindée de 2 à 4 panneaux, horizontale ou verticale, redimensionnable.
-- Peek pour les liens ouverts dans une nouvelle fenêtre.
-- Archive avec auto-archivage configurable (1 h → 30 j, ou jamais) et restauration.
-- Raccourcis clavier actifs même quand une page a le focus.
-- Persistance atomique de l'état avec sauvegarde `.bak` et validation au chargement.
-- Durcissement des webviews (schémas autorisés, sandbox, permissions refusées par défaut).
-- 43 tests Vitest : reducer, persistance, URL, barre de commande, thèmes, raccourcis.
+- Reverse-engineering report of Arc 1.129 for Windows (REA + Ghidra 12.1.4) and related evidence in `re/`.
+- Frameless Electron 43 app with a vertical sidebar, favorites, pinned and today sections, folders, drag and drop.
+- Spaces with emoji, gradient from Arc's palettes, light/dark/auto modes, dock and `Ctrl+1…9` shortcuts.
+- Command bar: URLs, search (Google, DuckDuckGo, Bing), switching to open tabs, history, title + domain deduplication, remembered choices.
+- Split view with 2 to 4 panes, horizontal or vertical, resizable.
+- Peek for links opened in a new window.
+- Archive with configurable auto-archiving (1 h to 30 d, or never) and restore.
+- Keyboard shortcuts active even when a page has focus.
+- Atomic state persistence with a `.bak` backup and validation on load.
+- Webview hardening (allowed schemes, sandbox, permissions denied by default).
+- 43 Vitest tests: reducer, persistence, URL, command bar, themes, shortcuts.

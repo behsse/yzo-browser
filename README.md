@@ -1,78 +1,78 @@
 # Yzo
 
-Navigateur de bureau inspiré d'Arc, reconstruit « en salle blanche » à partir de l'analyse d'Arc pour Windows. Aucun code, image ni ressource d'Arc n'est copié. Seuls le comportement observé, les formes de données et les énumérations ont servi de référence. Les notes d'analyse restent locales (dossier `re/`, exclu du dépôt).
+A desktop browser inspired by Arc, rebuilt "clean room" from an analysis of Arc for Windows. No Arc code, image or asset is copied: only observed behavior, data shapes and enumerations served as reference. The analysis notes stay local (`re/` folder, excluded from the repository).
 
-Stack : Electron 43 dans sa version [castLabs ECS](https://github.com/castlabs/electron-releases) (Chromium + Widevine, comme `ArcCore.dll`) · React 19 · TypeScript 7 · Vite 8 · Vitest 5.
+Stack: Electron 43 in its [castLabs ECS](https://github.com/castlabs/electron-releases) build (Chromium + Widevine, like `ArcCore.dll`) · React 19 · TypeScript 7 · Vite 8 · Vitest 5.
 
-## Fonctionnalités
+## Features
 
-| Fonction | Détail |
+| Feature | Details |
 |---|---|
-| Barre latérale verticale | Favoris partagés entre espaces, section épinglée, séparateur, onglets « du jour ». Redimensionnable (180–420 px). |
-| Espaces | Nom, emoji, dégradé de deux couleurs issu des palettes d'Arc (pastel, terne, gris), mode clair/sombre/auto. Dock en bas de la barre. |
-| Barre de commande | Une seule saisie pour les URL, la recherche et le passage à un onglet ouvert. Dédoublonnage titre + domaine pour Figma, Notion, GitHub… Mémorise le type de résultat choisi pour chaque requête. |
-| Vue scindée | 2 à 4 panneaux, côte à côte ou empilés, séparateurs déplaçables, enregistrée comme un élément de la barre latérale. |
-| Peek | Les liens qui ouvrent une nouvelle fenêtre (`target=_blank`) s'affichent en aperçu, avec un bouton « Ouvrir dans un onglet ». |
-| Archive | Les onglets du jour fermés ou inactifs sont archivés et restaurables. Délai d'auto-archivage : 1 h, 12 h (défaut), 24 h, 7 j, 30 j ou jamais. |
-| Dossiers | Création, renommage, repli, glisser-déposer, imbrication. |
-| Onglets épinglés | Fermer un onglet épinglé le décharge et le ramène à son URL d'origine, comme Arc. |
-| Barre masquée | `Ctrl+S` masque la barre ; elle réapparaît au survol du bord gauche. |
-| Extensions Chrome | Installation depuis le Chrome Web Store (bouton « Ajouter à Chrome », avec confirmation des permissions), mises à jour automatiques. Icônes, popups, badges, menus contextuels et API d'onglets (`chrome.tabs`) pris en charge. Gestion (options, suppression) via le bouton puzzle. |
-| Compte et synchronisation | Compte Yzo (icône personnage dans le dock) : espaces, favoris, onglets épinglés, dossiers et réglages synchronisés entre ordinateurs, **chiffrés de bout en bout** (le serveur ne voit ni le mot de passe ni les données). Clé de récupération à l'inscription, session gardée par le trousseau du système. Voir [docs/sync.md](docs/sync.md). |
-| Vidéo protégée (DRM) | Widevine via castLabs ECS : Spotify, Deezer, Prime Video, Disney+… Netflix et les services les plus stricts exigent en plus la signature VMP de production (voir « Distribuer »). |
-| Mises à jour | Les versions installées vérifient GitHub Releases au démarrage et se mettent à jour en arrière-plan (`electron-updater`). |
-| Persistance | État JSON écrit de façon atomique dans le dossier `userData`, avec une copie `.bak`. |
+| Vertical sidebar | Favorites shared across spaces, pinned section, divider, "today" tabs. Resizable (180–420 px). |
+| Spaces | Name, emoji, two-color gradient from Arc's palettes (pastel, muted, gray), light/dark/auto mode. Dock at the bottom of the sidebar. |
+| Command bar | One input for URLs, search and switching to an open tab. Title + domain deduplication for Figma, Notion, GitHub… Remembers the result type picked for each query. |
+| Split view | 2 to 4 panes, side by side or stacked, draggable dividers, saved as a sidebar item. |
+| Peek | Links that open a new window (`target=_blank`) show in a preview, with an "Open in a tab" button. |
+| Archive | Closed or idle today tabs are archived and can be restored. Auto-archive delay: 1 h, 12 h (default), 24 h, 7 d, 30 d or never. |
+| Folders | Create, rename, collapse, drag and drop, nesting. |
+| Pinned tabs | Closing a pinned tab unloads it and brings it back to its original URL, like Arc. |
+| Hidden sidebar | `Ctrl+S` hides the sidebar; it reappears when hovering the left edge. |
+| Chrome extensions | Install from the Chrome Web Store ("Add to Chrome" button, with a permission confirmation), automatic updates. Icons, popups, badges, context menus and the tabs API (`chrome.tabs`) are supported. Management (options, removal) through the puzzle button. |
+| Account and sync | Yzo account (person icon in the dock): spaces, favorites, pinned tabs, folders and settings synced across computers, **end-to-end encrypted** (the server sees neither the password nor the data). Recovery key at sign-up, session kept in the system keychain. See [docs/sync.md](docs/sync.md). |
+| Protected video (DRM) | Widevine through castLabs ECS: Spotify, Deezer, Prime Video, Disney+… Netflix and the strictest services also require production VMP signing (see "Distribution"). |
+| Updates | Installed builds check GitHub Releases at startup and update in the background (`electron-updater`). |
+| Persistence | JSON state written atomically to the `userData` folder, with a `.bak` copy. |
 
-## Raccourcis
+## Shortcuts
 
-Ils fonctionnent aussi quand une page web a le focus : le process principal les intercepte avant la page.
+They also work while a web page has focus: the main process intercepts them before the page.
 
-| Raccourci | Action |
+| Shortcut | Action |
 |---|---|
-| `Ctrl+T` | Nouvel onglet (barre de commande) |
-| `Ctrl+L` | Modifier l'adresse de l'onglet actif |
-| `Ctrl+W` | Fermer / archiver (décharger si épinglé) |
-| `Ctrl+Shift+T` | Rouvrir le dernier onglet archivé |
-| `Ctrl+D` | Épingler / désépingler |
-| `Ctrl+S` | Afficher / masquer la barre latérale |
-| `Ctrl+Shift+=` | Ajouter un panneau en vue scindée |
-| `Ctrl+Tab` / `Ctrl+Shift+Tab` | Onglet suivant / précédent |
-| `Ctrl+1` … `Ctrl+9` | Aller à l'espace N |
-| `Ctrl+R`, `F5` | Recharger |
-| `Alt+←` / `Alt+→` | Précédent / suivant |
-| `Ctrl+Shift+C` | Copier l'URL |
-| `Ctrl+Shift+K` | Archiver tous les onglets du jour |
-| `Ctrl+Alt+N` | Nouveau dossier |
-| `Ctrl+Y` | Archive et réglages |
-| `Ctrl+Shift+I`, `F12` | Outils de développement de la page |
+| `Ctrl+T` | New tab (command bar) |
+| `Ctrl+L` | Edit the active tab's address |
+| `Ctrl+W` | Close / archive (unload if pinned) |
+| `Ctrl+Shift+T` | Reopen the last archived tab |
+| `Ctrl+D` | Pin / unpin |
+| `Ctrl+S` | Show / hide the sidebar |
+| `Ctrl+Shift+=` | Add a split view pane |
+| `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous tab |
+| `Ctrl+1` … `Ctrl+9` | Go to space N |
+| `Ctrl+R`, `F5` | Reload |
+| `Alt+←` / `Alt+→` | Back / forward |
+| `Ctrl+Shift+C` | Copy the URL |
+| `Ctrl+Shift+K` | Archive all today tabs |
+| `Ctrl+Alt+N` | New folder |
+| `Ctrl+Y` | Archive and settings |
+| `Ctrl+Shift+I`, `F12` | Page developer tools |
 
-La table complète est dans [shared/shortcuts.json](shared/shortcuts.json), partagée par l'interface et le process principal.
+The full table lives in [shared/shortcuts.json](shared/shortcuts.json), shared by the UI and the main process.
 
-## Démarrer
+## Getting started
 
-Prérequis : Node.js 24 et pnpm 9.
+Requirements: Node.js 24 and pnpm 9.
 
 ```bash
 pnpm install
 ```
 
-Si le binaire Electron n'a pas été téléchargé à l'installation (pas de dossier `node_modules/electron/dist`) :
+If the Electron binary was not downloaded during install (no `node_modules/electron/dist` folder):
 
 ```bash
 node node_modules/electron/install.js
 ```
 
-`pnpm dev`, `pnpm build` et `pnpm start` génèrent d'abord `electron/preload.generated.cjs` (preload de l'interface + prise en charge des icônes d'extensions) via `pnpm preload`.
+`pnpm dev`, `pnpm build` and `pnpm start` first generate `electron/preload.generated.cjs` (UI preload + extension icon support) through `pnpm preload`.
 
-La synchronisation utilise par défaut le serveur officiel `https://yzo-browser-backend.vercel.app` dans les versions packagées et le serveur local `http://127.0.0.1:3100` en développement (dépôt privé `yzo-cloud`), sauf si `YZO_SYNC_URL` est défini. L'adresse se change aussi dans le panneau Compte, rubrique « Serveur ».
+Sync uses the official server `https://yzo-browser-backend.vercel.app` by default in packaged builds and the local server `http://127.0.0.1:3100` in development (private `yzo-cloud` repository), unless `YZO_SYNC_URL` is set. The address can also be changed in the Account panel, "Server" section.
 
-Mode développement (Vite + Electron, rechargement à chaud de l'interface) :
+Development mode (Vite + Electron, hot reload of the UI):
 
 ```bash
 pnpm dev
 ```
 
-Version compilée :
+Production build:
 
 ```bash
 pnpm build
@@ -82,7 +82,7 @@ pnpm build
 pnpm start
 ```
 
-Vérifications :
+Checks:
 
 ```bash
 pnpm typecheck
@@ -92,9 +92,9 @@ pnpm typecheck
 pnpm test
 ```
 
-## Distribuer
+## Distribution
 
-Installeurs générés dans `release/` par [electron-builder](https://www.electron.build/) (configuration dans `package.json`, clé `build`) :
+Installers are generated in `release/` by [electron-builder](https://www.electron.build/) (configuration in `package.json`, `build` key):
 
 ```bash
 pnpm dist:win
@@ -108,13 +108,13 @@ pnpm dist:mac
 pnpm dist:linux
 ```
 
-| Système | Formats | Architectures |
+| System | Formats | Architectures |
 |---|---|---|
-| Windows | Installeur NSIS (`Yzo-Setup-<version>-<arch>.exe`) | x64, arm64 |
-| macOS | DMG + ZIP (le ZIP sert aux mises à jour), hardened runtime | x64, arm64 |
+| Windows | NSIS installer (`Yzo-Setup-<version>.exe` for both architectures, `Yzo-Setup-<version>-<arch>.exe` per architecture) | x64, arm64 |
+| macOS | DMG + ZIP (the ZIP is used for updates), hardened runtime | x64, arm64 |
 | Linux | AppImage, .deb | x64 |
 
-macOS ne se construit que sur un Mac. Le plus simple est de pousser un tag : le workflow [.github/workflows/release.yml](.github/workflows/release.yml) construit les trois systèmes et publie une release GitHub, que les versions installées détectent.
+macOS can only be built on a Mac. The easiest path is pushing a tag: the [.github/workflows/release.yml](.github/workflows/release.yml) workflow builds all three systems and publishes a draft GitHub release. Once published, installed builds pick it up.
 
 ```bash
 git tag v0.6.0
@@ -124,61 +124,61 @@ git tag v0.6.0
 git push origin v0.6.0
 ```
 
-Signature VMP (castLabs EVS, nécessaire pour Netflix et les services les plus stricts) : créer un compte gratuit avec `python -m pip install castlabs-evs` puis `python -m castlabs_evs.account signup`, et construire avec `YZO_VMP_SIGN=1`. En CI, renseigner les secrets `EVS_ACCOUNT_NAME` et `EVS_PASSWD`. Les hooks `scripts/after-pack.cjs` (macOS, avant la signature de code) et `scripts/after-sign.cjs` (Windows, après) s'en chargent. Linux n'a pas de VMP.
+VMP signing (castLabs EVS, required for Netflix and the strictest services): create a free account with `python -m pip install castlabs-evs` then `python -m castlabs_evs.account signup`, and build with `YZO_VMP_SIGN=1`. In CI, set the `EVS_ACCOUNT_NAME` and `EVS_PASSWD` secrets. The `scripts/after-pack.cjs` (macOS, before code signing) and `scripts/after-sign.cjs` (Windows, after) hooks take care of it. Linux has no VMP.
 
-Signature de code (optionnelle, évite les avertissements SmartScreen et Gatekeeper) : secrets `CSC_LINK` / `CSC_KEY_PASSWORD` (certificat), et pour macOS `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` (notarisation, compte Apple Developer). Sans certificat, les builds ne sont pas signés.
+Code signing (optional, avoids SmartScreen and Gatekeeper warnings): `CSC_LINK` / `CSC_KEY_PASSWORD` secrets (certificate), plus `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` for macOS (notarization, Apple Developer account). Without a certificate, Windows builds are unsigned and macOS builds get an ad-hoc signature.
 
-L'icône `build/icon.png` est générée par `pnpm icon` (`scripts/make-icon.mjs`).
+The `build/icon.png` icon is generated by `pnpm icon` (`scripts/make-icon.mjs`).
 
 ## Architecture
 
 ```
-electron/main.cjs      Fenêtre sans cadre, IPC, persistance, politique des pages (raccourcis, pop-ups, menu contextuel)
-electron/views.cjs     Une WebContentsView native par onglet chargé (et pour Peek) : création, position, gel, commandes
-electron/extensions.cjs Extensions Chrome : Web Store, API chrome.* (onglets, actions, menus)
-electron/account.cjs   Compte Yzo : connexion au serveur, session chiffrée par le trousseau du système
-electron/crypto.cjs    Chiffrement de bout en bout (scrypt, HKDF, AES-256-GCM, clé de récupération)
-src/sync/              Projection en enregistrements, fusion, boucle de synchronisation (SyncProvider)
-scripts/after-*.cjs     Hooks electron-builder : signature VMP castLabs EVS (vmp.cjs)
-scripts/build-preload.mjs Assemble le preload de l'interface avec le support des icônes d'extensions
-electron/preload.cjs   Pont étroit window.yzo (état, fenêtre, raccourcis, Peek)
-shared/shortcuts.json  Table des raccourcis (interface + process principal)
-src/state/             Modèle (types.ts), opérations d'arbre (tree.ts), reducer, persistance, store React
-src/lib/               URL, barre de commande, thèmes, auto-archivage, raccourcis, commandes d'onglet
-src/ui/                Barre latérale, arbre d'éléments, zone web, panneaux, barre de commande, Peek, archive, éditeur d'espace
-re/                    Rapport de rétro-ingénierie d'Arc et preuves REA
+electron/main.cjs        Frameless window, IPC, persistence, page policy (shortcuts, popups, context menu)
+electron/views.cjs       One native WebContentsView per loaded tab (and for Peek): creation, layout, freezing, commands
+electron/extensions.cjs  Chrome extensions: Web Store, chrome.* APIs (tabs, actions, menus)
+electron/account.cjs     Yzo account: server connection, session encrypted by the system keychain
+electron/crypto.cjs      End-to-end encryption (scrypt, HKDF, AES-256-GCM, recovery key)
+electron/preload.cjs     Narrow window.yzo bridge (state, window, shortcuts, Peek)
+src/sync/                Record projection, merging, sync loop (SyncProvider)
+scripts/after-*.cjs      electron-builder hooks: castLabs EVS VMP signing (vmp.cjs)
+scripts/build-preload.mjs Bundles the UI preload with extension icon support
+shared/shortcuts.json    Shortcut table (UI + main process)
+src/state/               Model (types.ts), tree operations (tree.ts), reducer, persistence, React store
+src/lib/                 URL, command bar, themes, auto-archive, shortcuts, tab commands
+src/ui/                  Sidebar, item tree, web area, panels, command bar, Peek, archive, space editor
 ```
 
-Le modèle reprend celui observé dans `StorableSidebar.json` d'Arc. Tous les éléments vivent dans une table plate, reliés par `parentId` et `childrenIds` :
+The model follows the one observed in Arc's `StorableSidebar.json`. Every item lives in a flat table, linked by `parentId` and `childrenIds`:
 
-- les **conteneurs** : favoris, et pour chaque espace une section épinglée et une section du jour ;
-- les **onglets** ;
-- les **dossiers** ;
-- les **vues scindées**.
+- **containers**: favorites, and for each space a pinned section and a today section;
+- **tabs**;
+- **folders**;
+- **split views**.
 
-Chaque action passe par un reducer pur, qui travaille sur une copie ; l'état précédent n'est jamais modifié.
+Every action goes through a pure reducer working on a copy; the previous state is never mutated.
 
-Chaque onglet chargé est une `WebContentsView` native gérée par le process principal ([electron/views.cjs](electron/views.cjs)). L'interface ne fait que placer des emplacements vides (`ViewHost`) et envoie leurs rectangles au process principal, qui y positionne les pages. Les vues natives sont dessinées au-dessus de tout le HTML : quand une superposition s'ouvre (barre de commande, menus, barre flottante, panneaux, Peek), les pages visibles sont « gelées » — capturées, remplacées par leur capture dans l'interface, puis masquées — pour que la superposition passe devant sans saut visible.
+Each loaded tab is a native `WebContentsView` managed by the main process ([electron/views.cjs](electron/views.cjs)). The UI only lays out empty placeholders (`ViewHost`) and sends their rectangles to the main process, which positions the pages there. Native views are drawn above all HTML: when an overlay opens (command bar, menus, floating sidebar, panels, Peek), visible pages are "frozen" (captured, replaced by their screenshot in the UI, then hidden) so the overlay shows on top without a visible jump.
 
-## Sécurité
+## Security
 
-- Interface : `contextIsolation`, `sandbox`, pas de `nodeIntegration`, CSP stricte. L'interface ne navigue jamais et ne peut pas intégrer de `<webview>` ; seules les vues d'onglet chargent des pages.
-- Pages : créées par le process principal, sans preload, en sandbox. Seuls `http(s)` et `about:blank` sont admis, à l'ouverture comme à la navigation : pas de `file:`, `javascript:` ni protocoles personnalisés. Les identifiants, URL et rectangles envoyés par l'interface sont validés.
-- Pop-ups (connexions OAuth) : vraies fenêtres partageant la session des onglets, mêmes règles de schéma.
-- Identité : user agent d'un Chrome standard, sans mention d'Electron.
-- Les canaux IPC n'acceptent que l'interface comme expéditeur. Taille et JSON de l'état sont validés avant écriture.
-- Permissions des sites refusées par défaut, sauf plein écran, écriture presse-papiers, verrouillage du pointeur et accès au système de clés (DRM).
-- Un fichier d'état corrompu ou inconnu est ignoré au démarrage : l'app repart d'un état neuf au lieu de planter.
+- UI: `contextIsolation`, `sandbox`, no `nodeIntegration`, strict CSP. The UI never navigates and cannot embed a `<webview>`; only tab views load pages.
+- Pages: created by the main process, without preload, sandboxed. Only `http(s)` and `about:blank` are allowed, on open as well as on navigation: no `file:`, `javascript:` or custom protocols. IDs, URLs and rectangles sent by the UI are validated.
+- Popups (OAuth sign-ins): real windows sharing the tabs' session, same scheme rules.
+- Identity: a standard Chrome user agent, with no mention of Electron.
+- IPC channels only accept the UI as sender. State size and JSON are validated before writing.
+- Site permissions are denied by default, except fullscreen, clipboard write, pointer lock and key system access (DRM).
+- A corrupted or unknown state file is ignored at startup: the app starts from a fresh state instead of crashing.
 
-## Limites connues
+## Known limitations
 
-- Pas de Boosts, d'Easels ni de Little Arc. L'historique et l'archive ne sont pas synchronisés.
-- Mot de passe oublié : la récupération par e-mail (Resend) n'est pas encore branchée ; la clé de récupération sert déjà à déchiffrer le coffre, mais l'écran correspondant reste à faire.
-- Extensions : `chrome.runtime.onInstalled` ne se déclenche pas sous Electron ; les extensions qui ne créent leurs menus contextuels qu'à ce moment n'en auront pas. Les API Chrome non couvertes par Electron ou `electron-chrome-extensions` restent indisponibles.
-- Les raccourcis d'Arc par défaut n'ont pas pu être extraits du binaire. Ceux ci-dessus suivent les conventions de Chromium et d'Arc publiques.
-- Sans compte EVS, les builds gardent la signature VMP de développement de castLabs : Netflix refuse la lecture.
-- Builds non signés tant qu'aucun certificat n'est fourni : SmartScreen (Windows) et Gatekeeper (macOS) avertissent à l'installation.
+- No Boosts, Easels or Little Arc. History and archive are not synced.
+- Forgotten password: email recovery (Resend) is not wired yet; the recovery key can already decrypt the vault, but its screen is still to be built.
+- The interface is in French only for now.
+- Extensions: `chrome.runtime.onInstalled` does not fire under Electron; extensions that only create their context menus at that moment will have none. Chrome APIs not covered by Electron or `electron-chrome-extensions` remain unavailable.
+- Arc's default shortcuts could not be extracted from the binary. The ones above follow Chromium's and Arc's public conventions.
+- Without an EVS account, builds keep castLabs' development VMP signature: Netflix refuses playback.
+- Builds are unsigned until a certificate is provided: SmartScreen (Windows) and Gatekeeper (macOS) warn at install.
 
-## Licence
+## License
 
-Yzo est distribué sous [GNU GPL v3.0 ou ultérieure](LICENSE). Il utilise notamment [electron-chrome-extensions](https://github.com/samuelmaddock/electron-browser-shell) sous GPL-3.0 et [electron-chrome-web-store](https://github.com/samuelmaddock/electron-browser-shell) sous MIT.
+Yzo is distributed under the [GNU GPL v3.0 or later](LICENSE). It notably uses [electron-chrome-extensions](https://github.com/samuelmaddock/electron-browser-shell) under GPL-3.0 and [electron-chrome-web-store](https://github.com/samuelmaddock/electron-browser-shell) under MIT.
