@@ -1,7 +1,7 @@
 {
   "name": "yzo",
   "productName": "Yzo",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Clean-room Arc-style browser: vertical sidebar, spaces, command bar, split view, peek and auto-archive.",
   "license": "GPL-3.0-or-later",
   "private": true,
@@ -14,7 +14,12 @@
     "preload": "node scripts/build-preload.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "dist": "pnpm build && electron-builder",
+    "dist:win": "pnpm build && electron-builder --win",
+    "dist:mac": "pnpm build && electron-builder --mac",
+    "dist:linux": "pnpm build && electron-builder --linux",
+    "icon": "node scripts/make-icon.mjs"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -25,8 +30,7 @@
   "dependencies": {
     "electron-chrome-extensions": "4.9.0",
     "electron-chrome-web-store": "0.13.0",
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "electron-updater": "6.8.10"
   },
   "devDependencies": {
     "@types/react": "19.3.0",
@@ -34,10 +38,112 @@
     "@vitejs/plugin-react": "6.1.1",
     "concurrently": "10.0.5",
     "cross-env": "10.1.0",
-    "electron": "43.7.7",
+    "electron": "github:castlabs/electron-releases#v43.7.7+wvcus",
+    "electron-builder": "26.17.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
     "typescript": "7.0.2",
     "vite": "8.3.2",
     "vitest": "5.0.3",
     "wait-on": "9.5.1"
+  },
+  "author": {
+    "name": "Behsse",
+    "email": "behsse.pro@gmail.com"
+  },
+  "homepage": "https://github.com/behsse/yzo-browser",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/behsse/yzo-browser.git"
+  },
+  "build": {
+    "appId": "app.yzo.browser",
+    "productName": "Yzo",
+    "copyright": "Copyright © 2026 Behsse. GPL-3.0-or-later.",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "shared/**/*",
+      "package.json",
+      "LICENSE"
+    ],
+    "asar": true,
+    "electronVersion": "43.7.7+wvcus",
+    "electronDownload": {
+      "mirror": "https://github.com/castlabs/electron-releases/releases/download/"
+    },
+    "afterPack": "scripts/after-pack.cjs",
+    "afterSign": "scripts/after-sign.cjs",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "behsse",
+        "repo": "yzo-browser"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "artifactName": "Yzo-Setup-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "artifactName": "Yzo-${version}-${arch}.${ext}"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Network;WebBrowser",
+      "maintainer": "Behsse <behsse.pro@gmail.com>",
+      "artifactName": "Yzo-${version}-${arch}.${ext}"
+    }
   }
 }

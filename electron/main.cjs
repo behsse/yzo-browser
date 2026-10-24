@@ -1,5 +1,6 @@
 // Electron main process: owns the frameless window, persistence and every tab page (WebContentsView).
-const { app, BrowserWindow, ipcMain, Menu, clipboard, screen, session } = require("electron");
+const electron = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, clipboard, screen, session } = electron;
 const path = require("node:path");
 const fs = require("node:fs");
 const shortcuts = require("../shared/shortcuts.json");
@@ -11,7 +12,10 @@ const PARTITION = "persist:yzo";
 const STATE_FILE = () => path.join(app.getPath("userData"), "yzo-state.json");
 const MAX_STATE_BYTES = 10 * 1024 * 1024;
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
-const ALLOWED_PERMISSIONS = new Set(["fullscreen", "clipboard-sanitized-write", "pointerLock"]);
+// "mediaKeySystem" lets sites use the Widevine CDM (Netflix, Spotify, Disney+…).
+const ALLOWED_PERMISSIONS = new Set(["fullscreen", "clipboard-sanitized-write", "pointerLock", "mediaKeySystem"]);
+/** Longest wait for the Widevine CDM at startup, so an offline first launch still opens the window. */
+const WIDEVINE_TIMEOUT_MS = 15_000;
 
 /**
  * User agent sent to sites: the default Electron one minus the "yzo/x" and "Electron/x" tokens, with
@@ -33,11 +37,14 @@ let extensionController = null;
 /** @type {ReturnType<typeof createAccount> | null} */
 let account = null;
 
+/** Official Yzo sync server (private yzo-cloud deployment). */
+const PRODUCTION_SYNC_URL = "https://yzo-browser-backend.vercel.app";
+
 /**
- * Sync server used until the user picks one: YZO_SYNC_URL, or the local development server.
- * Packaged builds without YZO_SYNC_URL start empty so the user must enter the server address.
+ * Sync server used until the user picks another one in the Account panel: YZO_SYNC_URL if set,
+ * the official server in packaged builds, the local yzo-cloud dev server otherwise.
  */
-const DEFAULT_SYNC_URL = process.env.YZO_SYNC_URL ?? (app.isPackaged ? "" : "http://127.0.0.1:3100");
+const DEFAULT_SYNC_URL = process.env.YZO_SYNC_URL ?? (app.isPackaged ? PRODUCTION_SYNC_URL : "http://127.0.0.1:3100");
 
 /**
  * Tells whether a URL may be loaded in a tab.
@@ -350,8 +357,33 @@ ipcMain.handle("tab:command", (event, tabId, command, arg) =>
   isTrustedSender(event) ? (viewManager?.command(tabId, command, arg) ?? null) : null,
 );
 
+/**
+ * Waits for the Widevine CDM (castLabs Electron for Content Security): installed on first launch,
+ * updated in the background afterwards. Stock Electron has no `components` API; then this is a no-op.
+ */
+async function prepareWidevine() {
+  const { components } = electron;
+  if (!components) return;
+  try {
+    await Promise.race([components.whenReady(), new Promise((resolve) => setTimeout(resolve, WIDEVINE_TIMEOUT_MS))]);
+  } catch (error) {
+    console.error("Widevine CDM unavailable:", error);
+  }
+}
+
+/**
+ * Checks GitHub releases for a newer Yzo in packaged builds and installs it on quit
+ * (electron-updater; feed configured by electron-builder's "publish" setting).
+ */
+function checkForUpdates() {
+  if (!app.isPackaged) return;
+  const { autoUpdater } = require("electron-updater");
+  autoUpdater.checkForUpdatesAndNotify().catch((error) => console.error("Update check failed:", error.message));
+}
+
 app.whenReady().then(async () => {
   Menu.setApplicationMenu(null);
+  await prepareWidevine();
   const tabsSession = session.fromPartition(PARTITION);
   tabsSession.setUserAgent(USER_AGENT);
   tabsSession.setPermissionRequestHandler((_wc, permission, callback) => {
@@ -365,6 +397,7 @@ app.whenReady().then(async () => {
     console.error("Chrome extensions unavailable:", error);
   }
   createWindow();
+  checkForUpdates();
 });
 
 app.on("window-all-closed", () => app.quit());

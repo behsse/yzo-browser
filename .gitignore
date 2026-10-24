@@ -12,3 +12,6 @@ electron/preload.generated.cjs
 .env
 .env.*
 *.tsbuildinfo
+
+# electron-builder output
+release/

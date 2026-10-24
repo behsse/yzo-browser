@@ -2,6 +2,22 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage [SemVer](https://semver.org/lang/fr/).
 
+## [0.6.0] - 2026-10-24
+
+### Ajouté
+
+- Vidéo protégée : Yzo tourne sur castLabs Electron for Content Security (`v43.7.7+wvcus`), Widevine est téléchargé et prêt avant l'ouverture de la fenêtre. Permission `mediaKeySystem` accordée aux pages.
+- Installeurs : Windows (NSIS, x64 et arm64), macOS (DMG + ZIP, x64 et arm64, hardened runtime), Linux (AppImage, .deb), via `pnpm dist:win`, `dist:mac`, `dist:linux`.
+- Mises à jour automatiques depuis GitHub Releases (`electron-updater`).
+- Signature VMP de production (castLabs EVS) activable par `YZO_VMP_SIGN=1`.
+- Workflow GitHub Actions de release sur tag `v*` pour les trois systèmes.
+- Icône d'application (`pnpm icon`).
+
+### Modifié
+
+- Les versions packagées se synchronisent par défaut avec `https://yzo-browser-backend.vercel.app`.
+- React n'est plus une dépendance d'exécution (déjà intégré au bundle de l'interface).
+
 ## [0.5.0] - 2026-10-24
 
 ### Ajouté
