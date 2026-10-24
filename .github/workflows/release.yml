@@ -43,14 +43,19 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck && pnpm test
 
+      # A dedicated Python: the runners' system Python refuses pip installs (PEP 668 on macOS).
+      - uses: actions/setup-python@v5
+        if: env.HAS_EVS == 'true' && matrix.os != 'ubuntu-latest'
+        with:
+          python-version: "3.12"
       - name: Set up castLabs EVS
         if: env.HAS_EVS == 'true' && matrix.os != 'ubuntu-latest'
         shell: bash
         run: |
-          python3 -m pip install --upgrade castlabs-evs
-          python3 -m castlabs_evs.account reauth -A "${{ secrets.EVS_ACCOUNT_NAME }}" -P "${{ secrets.EVS_PASSWD }}"
+          python -m pip install --upgrade castlabs-evs
+          python -m castlabs_evs.account reauth -A "${{ secrets.EVS_ACCOUNT_NAME }}" -P "${{ secrets.EVS_PASSWD }}"
           echo "YZO_VMP_SIGN=1" >> "$GITHUB_ENV"
-          echo "PYTHON=python3" >> "$GITHUB_ENV"
+          echo "PYTHON=python" >> "$GITHUB_ENV"
 
       - name: Disable code signing without a certificate
         if: env.HAS_CSC != 'true'
