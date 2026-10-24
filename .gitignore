@@ -1,0 +1,14 @@
+node_modules/
+dist/
+*.log
+
+# Reverse-engineering notes and evidence about Arc (proprietary): keep local, never publish.
+re/
+
+# Built from electron/preload.cjs by scripts/build-preload.mjs
+electron/preload.generated.cjs
+
+# Local environment and build caches
+.env
+.env.*
+*.tsbuildinfo

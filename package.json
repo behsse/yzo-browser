@@ -1,0 +1,43 @@
+{
+  "name": "yzo",
+  "productName": "Yzo",
+  "version": "0.5.0",
+  "description": "Clean-room Arc-style browser: vertical sidebar, spaces, command bar, split view, peek and auto-archive.",
+  "license": "GPL-3.0-or-later",
+  "private": true,
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "pnpm preload && concurrently -k -n vite,electron \"vite --host 127.0.0.1 --port 5173 --strictPort\" \"wait-on tcp:127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+    "build": "pnpm preload && vite build",
+    "start": "pnpm preload && electron .",
+    "preload": "node scripts/build-preload.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild"
+    ]
+  },
+  "dependencies": {
+    "electron-chrome-extensions": "4.9.0",
+    "electron-chrome-web-store": "0.13.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "concurrently": "10.0.5",
+    "cross-env": "10.1.0",
+    "electron": "43.7.7",
+    "typescript": "7.0.2",
+    "vite": "8.3.2",
+    "vitest": "5.0.3",
+    "wait-on": "9.5.1"
+  }
+}
