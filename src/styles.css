@@ -177,11 +177,6 @@ kbd {
   height: 18px;
 }
 
-.topbar .topbar-icon svg {
-  width: 16px;
-  height: 16px;
-}
-
 /* The sidebar and top bar lock buttons are highlighted while their bar is locked (anchored). */
 .topbar .topbar-locked {
   color: var(--fg);
