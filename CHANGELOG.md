@@ -7,11 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 ### Changed
 
 - Arc-style top bar across the window: logo (app menu), sidebar toggle, back, forward and reload on the left; the current site in the middle with copy-link and site settings buttons; extension icons, the extensions menu, split view and window controls on the right. The sidebar loses its header rows and search field and now starts with the favorites.
+- Icons are 2 px larger, with rounded corners instead of square ones, and the extensions icon is a clearer puzzle piece.
 
 ### Fixed
 
 - Hovering the top bar no longer keeps the floating sidebar open.
 - The floating sidebar slides in at its final size instead of growing from a slightly smaller card.
+- The divider between the pinned and today sections sits at the same distance from the last pinned tab as from the "New tab" row.
 
 ## [0.7.0] - 2026-10-24
 

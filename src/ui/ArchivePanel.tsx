@@ -97,7 +97,7 @@ export function ArchivePanel({ onClose }: { onClose: () => void }) {
                   </div>
                   <button onClick={() => dispatch({ type: "restoreArchived", archiveId: entry.id, now: Date.now() })}>{t("archive.restore")}</button>
                   <button title={t("archive.deleteForever")} onClick={() => dispatch({ type: "deleteArchived", archiveId: entry.id })}>
-                    <Icon name="close" size={12} />
+                    <Icon name="close" size={14} />
                   </button>
                 </div>
               ))}

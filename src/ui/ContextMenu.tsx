@@ -55,7 +55,7 @@ export function ContextMenu({ menu, onClose }: { menu: MenuState; onClose: () =>
           >
             {entry.icon && (
               <span className="menu-icon">
-                <Icon name={entry.icon} size={15} />
+                <Icon name={entry.icon} size={17} />
               </span>
             )}
             <span className="menu-label">{entry.label}</span>

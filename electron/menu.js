@@ -10,13 +10,13 @@ let buttons = [];
 let activeIndex = -1;
 
 /**
- * Builds a 15px stroke icon from a 24-unit SVG path.
+ * Builds a 17px stroke icon from a 24-unit SVG path.
  * @param {string} d Path data.
  * @returns {SVGSVGElement} Icon element.
  */
 function createIcon(d) {
   const svg = document.createElementNS(SVG_NS, "svg");
-  for (const [name, value] of Object.entries({ width: "15", height: "15", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" })) {
+  for (const [name, value] of Object.entries({ width: "17", height: "17", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" })) {
     svg.setAttribute(name, value);
   }
   const path = document.createElementNS(SVG_NS, "path");

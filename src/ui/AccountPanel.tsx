@@ -111,7 +111,7 @@ export function AccountPanel({ initialMode = "signIn", onClose }: { initialMode?
             {!status.keychain && <p className="warning">{t("account.noKeychain")}</p>}
             <div className="account-actions">
               <button onClick={sync.syncNow} disabled={sync.syncing}>
-                <Icon name="sync" size={14} /> {t("account.syncNow")}
+                <Icon name="sync" size={16} /> {t("account.syncNow")}
               </button>
               <button onClick={() => void sync.signOut()}>{t("account.signOut")}</button>
             </div>

@@ -242,7 +242,7 @@ function TabRow({ item, depth }: { item: SidebarItem<TabData>; depth: number }) 
             dispatch({ type: "closeItem", id: item.id, now: Date.now() });
           }}
         >
-          <Icon name={pinnedSide ? "minimize" : "close"} size={12} />
+          <Icon name={pinnedSide ? "minimize" : "close"} size={14} />
         </button>
       )}
     </div>
@@ -285,9 +285,9 @@ function FolderRow({ id, depth }: { id: ID; depth: number }) {
         }}
       >
         <span className={"chevron" + (item.data.collapsed ? "" : " chevron-open")}>
-          <Icon name="chevron" size={12} />
+          <Icon name="chevron" size={14} />
         </span>
-        <Icon name="folder" size={15} />
+        <Icon name="folder" size={17} />
         {renaming ? (
           <RenameInput
             initial={item.data.title}
@@ -340,7 +340,7 @@ function SplitRow({ item, depth }: { item: SidebarItem<SplitData>; depth: number
         });
       }}
     >
-      <Icon name={vertical ? "splitVertical" : "split"} size={13} />
+      <Icon name={vertical ? "splitVertical" : "split"} size={15} />
       <div className="split-panes">
         {item.childrenIds.map((childId) => {
           const child = state.items[childId];

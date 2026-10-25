@@ -39,10 +39,10 @@ export function Peek({ url, onClose }: { url: string; onClose: () => void }) {
         <div className="peek-bar">
           <span className="peek-host">{title || displayHost(current)}</span>
           <button title={t("peek.openInTab")} onClick={promote}>
-            <Icon name="external" size={14} />
+            <Icon name="external" size={16} />
           </button>
           <button title={t("peek.close")} onClick={onClose}>
-            <Icon name="close" size={14} />
+            <Icon name="close" size={16} />
           </button>
         </div>
         <div className="peek-page" ref={host.peekRef} />

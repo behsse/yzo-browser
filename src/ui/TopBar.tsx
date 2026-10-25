@@ -148,7 +148,7 @@ export function TopBar() {
       <div className="topbar-address">
         {url && (
           <button className="topbar-icon" title={t("sidebar.copyLink", { shortcut: shortcutLabel("copyUrl") })} onClick={() => ui.runAction("copyUrl")}>
-            <Icon name="link" size={14} />
+            <Icon name="link" size={16} />
           </button>
         )}
         <button className="topbar-host" title={url || t("sidebar.searchOrUrl")} onClick={() => ui.openCommandBar(url ? "current" : "new")}>
@@ -156,7 +156,7 @@ export function TopBar() {
         </button>
         {url && (
           <button className="topbar-icon" title={t("topbar.siteMenu")} aria-haspopup="menu" onClick={(event) => openSiteMenu(event.currentTarget)}>
-            <Icon name="sliders" size={14} />
+            <Icon name="sliders" size={16} />
           </button>
         )}
       </div>

@@ -59,7 +59,7 @@ export function CommandBar({ mode, onClose }: { mode: CommandBarMode; onClose: (
     <div className="overlay" onMouseDown={onClose}>
       <div className="command-bar" onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-label={t("commandBar.dialog")}>
         <div className="command-input">
-          <Icon name="search" size={18} />
+          <Icon name="search" size={20} />
           <input
             autoFocus
             value={query}

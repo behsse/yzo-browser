@@ -586,12 +586,14 @@ kbd {
   background: #fff;
 }
 
+/* The pinned list ends with a 12px drop target (.drop-tail): the negative top margin absorbs it so
+   the line sits as far from the last pinned tab as from the "New tab" row. */
 .today-divider {
   display: flex;
   align-items: center;
   gap: 8px;
   height: 22px;
-  margin: 6px 8px;
+  margin: -7px 8px 6px;
 }
 
 .today-divider span {
@@ -1136,7 +1138,7 @@ kbd {
 .context-menu .menu-icon {
   display: grid;
   place-items: center;
-  width: 16px;
+  width: 18px;
   opacity: 0.8;
 }
 

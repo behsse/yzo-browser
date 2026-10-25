@@ -84,7 +84,7 @@ function SpaceDock() {
   return (
     <div className="space-dock">
       <button className="dock-button" title={t("sidebar.archiveAndSettings", { shortcut: shortcutLabel("openArchive") })} onClick={ui.openArchive}>
-        <Icon name="archive" size={15} />
+        <Icon name="archive" size={17} />
       </button>
       <div className="dock-spaces">
         {state.spaceOrder.map((id, index) => {
@@ -116,7 +116,7 @@ function SpaceDock() {
         })}
       </div>
       <button className="dock-button" title={t("space.new")} onClick={() => ui.openSpaceEditor("new")}>
-        <Icon name="plus" size={15} />
+        <Icon name="plus" size={17} />
       </button>
     </div>
   );
@@ -173,7 +173,7 @@ export function Sidebar({ floating = false }: { floating?: boolean }) {
             title={t("sidebar.newFolder", { shortcut: shortcutLabel("newFolder") })}
             onClick={() => dispatch({ type: "createFolder", spaceId: space.id, title: t("default.folderName"), now: Date.now() })}
           >
-            <Icon name="folder" size={13} />
+            <Icon name="folder" size={15} />
           </button>
         </div>
 
@@ -189,7 +189,7 @@ export function Sidebar({ floating = false }: { floating?: boolean }) {
         </div>
 
         <button className="row new-tab-row" onClick={() => ui.openCommandBar("new")}>
-          <Icon name="plus" size={15} />
+          <Icon name="plus" size={17} />
           <span className="row-title">{t("sidebar.newTab")}</span>
           <kbd>{shortcutLabel("newTab")}</kbd>
         </button>

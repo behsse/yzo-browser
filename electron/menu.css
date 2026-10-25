@@ -76,7 +76,7 @@ button:not(:disabled).active {
 .icon {
   display: grid;
   place-items: center;
-  width: 16px;
+  width: 18px;
   opacity: 0.8;
 }
 
