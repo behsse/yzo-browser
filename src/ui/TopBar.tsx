@@ -39,24 +39,28 @@ function WindowControls() {
 
 /**
  * Moves the window while the floating top bar is dragged by its background (not by a button), like a
- * title bar.
+ * title bar. Listens on the whole window rather than with pointer capture: restoring a maximized
+ * window at the start of the drag makes Chromium drop the capture, which used to end the drag.
  * @param event Pointer press on the bar.
  */
 function startWindowDrag(event: ReactPointerEvent<HTMLElement>) {
   if (event.button !== 0 || (event.target as HTMLElement).closest("button, browser-action-list")) return;
-  const bar = event.currentTarget;
-  bar.setPointerCapture(event.pointerId);
+  event.preventDefault();
   window.yzo?.windowDrag("start");
-  const move = () => window.yzo?.windowDrag("move");
+  const move = (e: PointerEvent) => {
+    // Released outside of our events (e.g. over another window): stop following the cursor.
+    if (e.buttons === 0) return end();
+    window.yzo?.windowDrag("move");
+  };
   const end = () => {
     window.yzo?.windowDrag("end");
-    bar.removeEventListener("pointermove", move);
-    bar.removeEventListener("pointerup", end);
-    bar.removeEventListener("pointercancel", end);
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", end);
+    window.removeEventListener("blur", end);
   };
-  bar.addEventListener("pointermove", move);
-  bar.addEventListener("pointerup", end);
-  bar.addEventListener("pointercancel", end);
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", end);
+  window.addEventListener("blur", end);
 }
 
 /**
