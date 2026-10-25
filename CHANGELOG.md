@@ -6,7 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ### Added
 
-- Extensions panel under the puzzle button, like Arc: every extension as a tile (click opens its popup), a pin on hover to show it in the top bar, right-click for options and removal, and "+" for the Chrome Web Store. Pinned extensions are synced with the other settings.
+- Extensions panel under the puzzle button, like Arc: every extension as a tile (click opens its popup), a pin in its bottom-right corner on hover (white once pinned) to show it in the top bar, right-click for options and removal, and "+" for the Chrome Web Store. Pinned extensions are synced with the other settings.
 
 ### Changed
 

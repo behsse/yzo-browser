@@ -82,7 +82,7 @@ export function ExtensionsPanel({ anchor, onClose }: { anchor: { right: number; 
                 title={(pinned.includes(id) ? t("extensions.unpin") : t("extensions.pin")) + (title ? ` (${title})` : "")}
                 onClick={() => togglePin(id)}
               >
-                <Icon name="pin" size={12} />
+                <Icon name="pin" size={15} />
               </button>
             </div>
           ))}

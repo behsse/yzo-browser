@@ -397,31 +397,38 @@ kbd {
   background-size: 22px;
 }
 
-/* Pin shown on hover (always when pinned), in the tile's corner. */
+/* Pin shown on hover (always when pinned), in the tile's bottom-right corner. */
 .extension-pin {
   position: absolute;
-  top: -5px;
-  right: -5px;
+  right: -3px;
+  bottom: -3px;
   display: grid;
   place-items: center;
   width: 20px;
   height: 20px;
-  border-radius: 50%;
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
   color: inherit;
   opacity: 0;
   transition: opacity 0.1s;
 }
 
-.extension-tile:hover .extension-pin,
-.extension-pin-on {
+.extension-tile:hover .extension-pin {
+  opacity: 0.55;
+}
+
+.extension-tile .extension-pin:hover,
+.extension-tile .extension-pin-on {
   opacity: 1;
 }
 
+/* Pinned: full-strength white on the dark panel (near-black on the light one). */
 .extension-pin-on {
-  background: var(--accent);
-  color: #fff;
+  color: #1d1d22;
+}
+
+@media (prefers-color-scheme: dark) {
+  .extension-pin-on {
+    color: #fff;
+  }
 }
 
 .extension-add {
