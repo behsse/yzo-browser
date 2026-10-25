@@ -374,15 +374,24 @@ ipcMain.on("window:drag", (event, phase) => {
   const cursor = screen.getCursorScreenPoint();
   if (phase === "start") {
     if (win.isMaximized()) {
+      // Restore to the normal size under the cursor. Windows applies the restore asynchronously and
+      // may put the window back at its old place, so the bounds are set again once it is done.
       const maximized = win.getBounds();
+      const normal = win.getNormalBounds();
       const ratio = (cursor.x - maximized.x) / maximized.width;
+      const target = { x: Math.round(cursor.x - normal.width * ratio), y: Math.round(cursor.y - 12), width: normal.width, height: normal.height };
+      manualDrag = { dx: cursor.x - target.x, dy: cursor.y - target.y };
+      win.once("unmaximize", () => {
+        const now = screen.getCursorScreenPoint();
+        if (manualDrag) win.setBounds({ ...target, x: Math.round(now.x - manualDrag.dx), y: Math.round(now.y - manualDrag.dy) });
+      });
       win.unmaximize();
-      const restored = win.getBounds();
-      win.setPosition(Math.round(cursor.x - restored.width * ratio), Math.round(cursor.y - 12));
+      win.setBounds(target);
+      return;
     }
     const [x, y] = win.getPosition();
     manualDrag = { dx: cursor.x - x, dy: cursor.y - y };
-  } else if (phase === "move" && manualDrag) {
+  } else if (phase === "move" && manualDrag && !win.isMaximized()) {
     win.setPosition(Math.round(cursor.x - manualDrag.dx), Math.round(cursor.y - manualDrag.dy));
   } else if (phase === "end") {
     manualDrag = null;
