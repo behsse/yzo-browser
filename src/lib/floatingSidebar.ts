@@ -14,7 +14,24 @@ export interface CursorPosition {
  * @param topBarHeight Height of the top bar in pixels, which is not part of the zone.
  * @returns "keep" to stay open, "hide" to start the close delay.
  */
+/**
+ * Decides whether the floating top bar stays open: the cursor must stay on the bar (a little margin
+ * below it included) or above the window.
+ * @param cursor Cursor position relative to the window content.
+ * @param barHeight Height of the top bar in pixels.
+ * @returns "keep" to stay open, "hide" to start the close delay.
+ */
+export function floatingTopBarDecision(cursor: CursorPosition, barHeight: number): "keep" | "hide" {
+  const insideHorizontally = cursor.x >= 0 && cursor.x < cursor.width;
+  return insideHorizontally && cursor.y < barHeight + TOP_BAR_MARGIN_PX ? "keep" : "hide";
+}
+
+/** Extra height under the floating top bar that still counts as hovering it. */
+const TOP_BAR_MARGIN_PX = 8;
+
 export function floatingSidebarDecision(cursor: CursorPosition, zoneWidth: number, topBarHeight: number): "keep" | "hide" {
+  // Hidden top bar: leaving the window by the top keeps the sidebar open, as before the top bar.
+  if (topBarHeight === 0 && cursor.y < 0) return cursor.x < zoneWidth ? "keep" : "hide";
   if (cursor.y < topBarHeight) return "hide";
   if (cursor.x < zoneWidth) return "keep";
   if (cursor.x >= cursor.width) return "hide";

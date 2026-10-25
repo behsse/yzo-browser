@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isArchivable, THRESHOLD_MS } from "./autoArchive";
 import { dedupKey, matchScore } from "./commandBar";
-import { floatingSidebarDecision } from "./floatingSidebar";
+import { floatingSidebarDecision, floatingTopBarDecision } from "./floatingSidebar";
 import { matchShortcut, shortcutLabel } from "./shortcuts";
 import { hexToRgb, relativeLuminance, resolveAppearance, rgbToHex } from "./theme";
 import { displayHost, isNavigableUrl, looksLikeUrl, toNavigableUrl } from "./url";
@@ -125,6 +125,24 @@ describe("floating sidebar hover zone", () => {
   it("closes when the cursor goes right, onto the page or out of the window on that side", () => {
     expect(floatingSidebarDecision({ x: 252, y: 400, ...window }, zone, topBar)).toBe("hide");
     expect(floatingSidebarDecision({ x: 1500, y: 400, ...window }, zone, topBar)).toBe("hide");
+  });
+});
+
+describe("floating top bar hover zone", () => {
+  const window = { width: 1400, height: 900 };
+
+  it("stays open on the bar, a little below it, and above the window", () => {
+    for (const [x, y] of [[700, 10], [5, 35], [1390, -20]]) expect(floatingTopBarDecision({ x, y, ...window }, 32)).toBe("keep");
+  });
+
+  it("closes below the bar or out of the window on the sides", () => {
+    for (const [x, y] of [[700, 60], [-10, 10], [1500, 10]]) expect(floatingTopBarDecision({ x, y, ...window }, 32)).toBe("hide");
+  });
+
+  it("lets the floating sidebar stay open above the window when the top bar is hidden", () => {
+    expect(floatingSidebarDecision({ x: 100, y: -10, ...window }, 252, 0)).toBe("keep");
+    expect(floatingSidebarDecision({ x: 100, y: 5, ...window }, 252, 0)).toBe("keep");
+    expect(floatingSidebarDecision({ x: 100, y: 5, ...window }, 252, 32)).toBe("hide");
   });
 });
 

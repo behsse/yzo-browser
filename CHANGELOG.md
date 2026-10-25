@@ -2,6 +2,12 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Hideable top bar for a real full-screen view: the new lock button next to the sidebar toggle (or Ctrl+Shift+S) hides it; it slides down over the pages when the pointer reaches the top edge and slides back up when the pointer leaves it. The pages and the sidebar take the full height while it is hidden.
+
 ## [0.8.0] - 2026-10-25
 
 ### Added

@@ -93,13 +93,54 @@ kbd {
 /* Layout */
 
 .app {
-  --topbar-height: 32px;
+  /* --topbar-size: the bar itself; --topbar-height: the room it takes in the layout (0 when hidden). */
+  --topbar-size: 32px;
+  --topbar-height: var(--topbar-size);
   position: relative;
   isolation: isolate;
   display: flex;
   flex-direction: column;
   height: 100%;
   color: var(--fg);
+}
+
+.app-topbar-hidden {
+  --topbar-height: 0px;
+}
+
+/* Hidden top bar: the pages start below the usual gap instead of under the bar. */
+.app-topbar-hidden .web-area {
+  margin-top: var(--content-gap);
+}
+
+/* Thin strip along the top edge that reveals the hidden top bar (never a drag region: those get no
+   mouse events). It starts after the sidebar's reveal edge. */
+.topbar-reveal-edge {
+  position: fixed;
+  top: 0;
+  left: 12px;
+  right: 0;
+  height: 6px;
+  z-index: 26;
+}
+
+/* Hidden top bar, sliding down over the pages; transform only, like the floating sidebar. */
+.floating-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 35;
+  transform: translateY(calc(-100% - 8px));
+  transition: transform var(--slide-out-ms) var(--ease-in), box-shadow var(--slide-out-ms) var(--ease-in);
+  pointer-events: none;
+}
+
+.floating-topbar-open {
+  transform: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  transition: transform var(--slide-in-ms) var(--ease-out), box-shadow var(--slide-in-ms) var(--ease-out);
+  pointer-events: auto;
 }
 
 /* Below the top bar: sidebar and pages side by side. */
@@ -114,7 +155,7 @@ kbd {
   position: relative;
   display: flex;
   align-items: center;
-  height: var(--topbar-height);
+  height: var(--topbar-size);
   padding: 0 4px 0 8px;
   flex-shrink: 0;
 }
@@ -144,6 +185,11 @@ kbd {
 .topbar .topbar-icon svg {
   width: 14px;
   height: 14px;
+}
+
+/* The top bar lock button is highlighted while the bar is locked (anchored). */
+.topbar .topbar-locked {
+  color: var(--fg);
 }
 
 .topbar-side {

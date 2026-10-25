@@ -117,6 +117,8 @@ export interface WindowState {
   selection: Record<ID, SpaceSelection>;
   sidebarMode: SidebarMode;
   sidebarWidth: number;
+  /** Top bar shown above the pages, or hidden and revealed on hover of the top edge (absent = anchored). */
+  topBarMode?: SidebarMode;
 }
 
 /** Data read from Arc by "Import from Arc" (electron/arc-import.cjs). */

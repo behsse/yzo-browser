@@ -5,6 +5,7 @@ export const ICON_PATHS = {
   back: "M15 18l-6-6 6-6",
   forward: "M9 18l6-6-6-6",
   reload: "M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7",
+  topbar: "M7 5h10a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3zM4 10h16",
   sidebar: "M7 5h10a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3zM9.5 5v14",
   plus: "M12 5v14M5 12h14",
   close: "M6 6l12 12M18 6L6 18",

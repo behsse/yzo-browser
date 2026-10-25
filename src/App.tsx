@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { floatingSidebarDecision } from "./lib/floatingSidebar";
+import { floatingSidebarDecision, floatingTopBarDecision } from "./lib/floatingSidebar";
 import { t } from "./lib/i18n";
 import { matchShortcut, type ShortcutAction } from "./lib/shortcuts";
 import { resolveAppearance, sidebarBackground } from "./lib/theme";
@@ -51,8 +51,10 @@ export function App() {
   const [nativeMenuOpen, setNativeMenuOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
+  const [topRevealed, setTopRevealed] = useState(false);
   const toastTimer = useRef<number | undefined>(undefined);
   const hideTimer = useRef<number | undefined>(undefined);
+  const topHideTimer = useRef<number | undefined>(undefined);
   const stateRef = useRef(state);
   stateRef.current = state;
 
@@ -97,6 +99,10 @@ export function App() {
         case "toggleSidebar":
           dispatch({ type: "setSidebarMode", mode: s.window.sidebarMode === "anchored" ? "hidden" : "anchored" });
           setRevealed(false);
+          break;
+        case "toggleTopBar":
+          dispatch({ type: "setTopBarMode", mode: s.window.topBarMode === "hidden" ? "anchored" : "hidden" });
+          setTopRevealed(false);
           break;
         case "reload":
           void tabCommand(focusedId, "reload");
@@ -247,6 +253,7 @@ export function App() {
   }, [dispatch]);
 
   const hidden = state.window.sidebarMode === "hidden";
+  const topHidden = state.window.topBarMode === "hidden";
   const zoneWidth = state.window.sidebarWidth + 2 * FLOATING_MARGIN_PX;
 
   // The floating sidebar closes after a short grace period, so brushing past its edge does not hide it.
@@ -277,11 +284,11 @@ export function App() {
     const timer = window.setInterval(async () => {
       const cursor = await window.yzo?.cursorPosition();
       if (!cursor) return;
-      if (floatingSidebarDecision(cursor, zoneWidth, TOP_BAR_HEIGHT_PX) === "hide") scheduleHide();
+      if (floatingSidebarDecision(cursor, zoneWidth, topHidden ? 0 : TOP_BAR_HEIGHT_PX) === "hide") scheduleHide();
       else reveal();
     }, CURSOR_POLL_MS);
     return () => window.clearInterval(timer);
-  }, [hidden, revealed, zoneWidth, scheduleHide, reveal]);
+  }, [hidden, topHidden, revealed, zoneWidth, scheduleHide, reveal]);
 
   // Keep the UI raised above the pages until the floating sidebar has finished sliding out, so the
   // native views do not cover it mid-animation.
@@ -295,17 +302,63 @@ export function App() {
     return () => window.clearTimeout(timer);
   }, [revealed]);
 
-  const overlayOpen = Boolean(commandBar || peekUrl || archiveOpen || accountOpen || spaceEditor || menu || extensionsAnchor || (hidden && floatingFrozen));
+  // Floating top bar: same behavior as the floating sidebar, from the top edge.
+  const revealTop = useCallback(() => {
+    window.clearTimeout(topHideTimer.current);
+    topHideTimer.current = undefined;
+    setTopRevealed(true);
+  }, []);
+  const scheduleTopHide = useCallback(() => {
+    if (holdFloatingRef.current || topHideTimer.current !== undefined) return;
+    topHideTimer.current = window.setTimeout(() => {
+      topHideTimer.current = undefined;
+      setTopRevealed(false);
+    }, HIDE_DELAY_MS);
+  }, []);
+  useEffect(() => {
+    if (!topHidden || !topRevealed || !window.yzo) return;
+    const timer = window.setInterval(async () => {
+      const cursor = await window.yzo?.cursorPosition();
+      if (!cursor) return;
+      if (floatingTopBarDecision(cursor, TOP_BAR_HEIGHT_PX) === "hide") scheduleTopHide();
+      else revealTop();
+    }, CURSOR_POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [topHidden, topRevealed, scheduleTopHide, revealTop]);
+  const [topFrozen, setTopFrozen] = useState(false);
+  useEffect(() => {
+    if (topRevealed) {
+      setTopFrozen(true);
+      return;
+    }
+    const timer = window.setTimeout(() => setTopFrozen(false), FLOATING_EXIT_MS);
+    return () => window.clearTimeout(timer);
+  }, [topRevealed]);
+
+  const overlayOpen = Boolean(
+    commandBar || peekUrl || archiveOpen || accountOpen || spaceEditor || menu || extensionsAnchor || (hidden && floatingFrozen) || (topHidden && topFrozen),
+  );
   const theme = state.spaces[state.window.focusedSpaceId].theme;
 
   return (
     <ViewHostProvider overlayOpen={overlayOpen} peekUrl={peekUrl}>
       <UiContext.Provider value={ui}>
-        <div className={`app app-${resolveAppearance(theme)}${hidden ? " app-sidebar-hidden" : ""}`}>
+        <div className={`app app-${resolveAppearance(theme)}${hidden ? " app-sidebar-hidden" : ""}${topHidden ? " app-topbar-hidden" : ""}`}>
           {/* The space gradient, with a hole over each page: the UI view is transparent there, so the
               live pages show through when the UI is stacked above them. */}
           <div className="app-backdrop" style={{ background: sidebarBackground(theme) }} />
-          <TopBar />
+          {/* Anchored top bar takes its row; hidden, it slides down over the pages on hover of the top
+              edge (like the floating sidebar) and the pages get the full height. */}
+          {topHidden ? (
+            <>
+              <div className="topbar-reveal-edge" onMouseEnter={revealTop} onMouseMove={revealTop} />
+              <div className={"floating-topbar" + (topRevealed ? " floating-topbar-open" : "")} style={{ background: sidebarBackground(theme) }} inert={!topRevealed}>
+                <TopBar floating />
+              </div>
+            </>
+          ) : (
+            <TopBar />
+          )}
           <div className="app-body">
           {/* The anchored sidebar stays mounted and its slot animates its width, so Ctrl+S slides the
               page instead of jumping. It is inert while collapsed. */}

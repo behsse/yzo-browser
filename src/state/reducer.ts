@@ -88,6 +88,7 @@ export type Action =
   | { type: "runAutoArchive"; now: number }
   | { type: "clearToday"; spaceId: ID; now: number }
   | { type: "setSidebarMode"; mode: SidebarMode }
+  | { type: "setTopBarMode"; mode: SidebarMode }
   | { type: "setSidebarWidth"; width: number }
   | { type: "updateSettings"; settings: Partial<Settings> }
   | { type: "recordVisit"; url: string; title: string; now: number }
@@ -722,6 +723,10 @@ export function reducer(state: AppState, action: Action): AppState {
 
     case "setSidebarMode":
       draft.window.sidebarMode = action.mode;
+      return draft;
+
+    case "setTopBarMode":
+      draft.window.topBarMode = action.mode;
       return draft;
 
     case "setSidebarWidth":

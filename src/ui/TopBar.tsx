@@ -41,9 +41,10 @@ function WindowControls() {
  * Arc-style top bar spanning the window: logo (app menu), sidebar toggle and navigation on the left,
  * the current site in the middle, extensions, split view and window controls on the right. The bar
  * is the window's drag region; only its buttons opt out.
+ * @param props.floating True when shown on hover while the top bar is hidden.
  * @returns Top bar element.
  */
-export function TopBar() {
+export function TopBar({ floating = false }: { floating?: boolean }) {
   const { state, dispatch } = useStore();
   const ui = useUi();
   const sync = useSync();
@@ -113,7 +114,7 @@ export function TopBar() {
   };
 
   return (
-    <header className="topbar drag">
+    <header className={"topbar drag" + (floating ? " topbar-floating" : "")}>
       <div className="topbar-side topbar-left">
         {/* The Yzo logo opens the app menu, like Arc's. */}
         <button className="brand-mark" title={t("appMenu.title")} aria-haspopup="menu" onClick={(event) => openAppMenu(event.currentTarget)}>
@@ -121,6 +122,13 @@ export function TopBar() {
         </button>
         <button title={t("sidebar.toggleSidebar", { shortcut: shortcutLabel("toggleSidebar") })} onClick={() => ui.runAction("toggleSidebar")}>
           <Icon name="sidebar" />
+        </button>
+        <button
+          className={state.window.topBarMode === "hidden" ? "" : "topbar-locked"}
+          title={t("topbar.toggle", { shortcut: shortcutLabel("toggleTopBar") })}
+          onClick={() => ui.runAction("toggleTopBar")}
+        >
+          <Icon name="topbar" />
         </button>
         <button title={t("sidebar.back")} onClick={() => void tabCommand(focusedId, "back")}>
           <Icon name="back" />

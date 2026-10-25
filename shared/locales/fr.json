@@ -204,5 +204,7 @@
   "arcImport.import": "Importer",
   "arcImport.detail": "{spaces} espaces et {tabs} onglets (épinglés, du jour et favoris) seront ajoutés à Yzo, et {extensions} extensions seront installées depuis le Chrome Web Store. Tes espaces actuels sont conservés.",
   "arcImport.notFound": "Les données d'Arc sont introuvables sur cet ordinateur",
-  "arcImport.done": "Importé depuis Arc : {spaces} espaces, {extensions} extensions en cours d'installation"
+  "arcImport.done": "Importé depuis Arc : {spaces} espaces, {extensions} extensions en cours d'installation",
+
+  "topbar.toggle": "Verrouiller ou masquer la barre du haut ({shortcut})"
 }

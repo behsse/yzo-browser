@@ -13,6 +13,7 @@ export type ShortcutAction =
   | "reopenClosed"
   | "togglePin"
   | "toggleSidebar"
+  | "toggleTopBar"
   | "addSplit"
   | "reload"
   | "back"

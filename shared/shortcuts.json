@@ -5,6 +5,7 @@
   { "action": "reopenClosed", "key": "t", "ctrl": true, "shift": true },
   { "action": "togglePin", "key": "d", "ctrl": true },
   { "action": "toggleSidebar", "key": "s", "ctrl": true },
+  { "action": "toggleTopBar", "key": "s", "ctrl": true, "shift": true },
   { "action": "addSplit", "key": "=", "ctrl": true, "shift": true },
   { "action": "addSplit", "key": "+", "ctrl": true, "shift": true },
   { "action": "reload", "key": "r", "ctrl": true },
