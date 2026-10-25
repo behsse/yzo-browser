@@ -219,7 +219,7 @@ kbd {
   display: block;
   width: auto;
   min-width: 0;
-  padding: 0 8px;
+  padding: 0 14px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
