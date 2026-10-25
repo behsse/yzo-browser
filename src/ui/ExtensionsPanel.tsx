@@ -3,7 +3,7 @@ import { useStore } from "../state/store";
 import { Icon } from "./Icon";
 import { ExtensionActionButton, useExtensionActions } from "./extensionActions";
 import { useUi } from "./UiContext";
-import { useViewHost } from "./ViewHost";
+import { holdPageFocus, useViewHost } from "./ViewHost";
 
 const CHROME_WEB_STORE_URL = "https://chromewebstore.google.com/category/extensions";
 const PANEL_WIDTH = 248;
@@ -73,7 +73,10 @@ export function ExtensionsPanel({ anchor, onClose }: { anchor: { right: number; 
               }}
               // Bubbles after the button has opened the extension's popup.
               onClick={(event) => {
-                if (!(event.target as HTMLElement).closest(".extension-pin")) onClose();
+                if ((event.target as HTMLElement).closest(".extension-pin")) return;
+                // The extension's popup now has the focus: keep the page from taking it back.
+                holdPageFocus(1000);
+                onClose();
               }}
             >
               <ExtensionActionButton id={id} tabId={tabId} className="extension-tile-action" />
@@ -82,7 +85,7 @@ export function ExtensionsPanel({ anchor, onClose }: { anchor: { right: number; 
                 title={(pinned.includes(id) ? t("extensions.unpin") : t("extensions.pin")) + (title ? ` (${title})` : "")}
                 onClick={() => togglePin(id)}
               >
-                <Icon name="pin" size={15} />
+                <Icon name="pin" size={13} />
               </button>
             </div>
           ))}

@@ -19,6 +19,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ### Fixed
 
+- An extension popup opened from the extensions panel no longer closes right away (the page took the focus back as the panel closed).
+- Hovering a pinned extension in the top bar no longer zooms its icon.
 - Hovering the top bar no longer keeps the floating sidebar open.
 - The floating sidebar slides in at its final size instead of growing from a slightly smaller card.
 - The divider between the pinned and today sections sits at the same distance from the last pinned tab as from the "New tab" row.

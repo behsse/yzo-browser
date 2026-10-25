@@ -129,8 +129,9 @@ kbd {
   color: var(--fg-muted);
 }
 
+/* background-color only: the shorthand would reset the icon size of extension buttons. */
 .topbar button:hover {
-  background: var(--row-hover);
+  background-color: var(--row-hover);
   color: var(--fg);
 }
 
@@ -400,12 +401,12 @@ kbd {
 /* Pin shown on hover (always when pinned), in the tile's bottom-right corner. */
 .extension-pin {
   position: absolute;
-  right: -3px;
-  bottom: -3px;
+  right: -2px;
+  bottom: -2px;
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   color: inherit;
   opacity: 0;
   transition: opacity 0.1s;

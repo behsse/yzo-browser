@@ -23,6 +23,18 @@ interface ViewHostValue {
 
 const ViewHostContext = createContext<ViewHostValue | null>(null);
 
+/** Until this time (epoch ms), the selected page does not take the keyboard back. */
+let pageFocusHeldUntil = 0;
+
+/**
+ * Keeps the selected page from taking the keyboard focus for a moment. Used when an extension popup
+ * opens as its panel closes: focusing the page would blur the popup, which then closes itself.
+ * @param ms Duration in milliseconds.
+ */
+export function holdPageFocus(ms: number): void {
+  pageFocusHeldUntil = Date.now() + ms;
+}
+
 /**
  * Reads the rectangle of an element in window coordinates.
  * @param element Slot element.
@@ -114,8 +126,11 @@ export function ViewHostProvider({ overlayOpen, peekUrl, children }: { overlayOp
   const focusedTabId = state.window.selection[state.window.focusedSpaceId]?.focusedTabId ?? null;
   useEffect(() => {
     if (!focusedTabId || raised) return;
-    const first = window.setTimeout(() => void tabCommand(focusedTabId, "focus"), 0);
-    const retry = window.setTimeout(() => void tabCommand(focusedTabId, "focus"), FOCUS_RETRY_MS);
+    const focus = () => {
+      if (Date.now() >= pageFocusHeldUntil) void tabCommand(focusedTabId, "focus");
+    };
+    const first = window.setTimeout(focus, 0);
+    const retry = window.setTimeout(focus, FOCUS_RETRY_MS);
     return () => {
       window.clearTimeout(first);
       window.clearTimeout(retry);
