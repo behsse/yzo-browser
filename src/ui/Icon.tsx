@@ -2,8 +2,8 @@
 export const ICON_PATHS = {
   /** Placeholder brand mark: a stroked "y" spanning rows 6–18 like the window-control icons. */
   brand: "M7 6l5.33 8M17 6l-7 12",
-  /** Puzzle piece: rounded body with a rounded tab on top and one on the right. */
-  extensions: "M5 7h3V5.5a2 2 0 0 1 4 0V7h3a2 2 0 0 1 2 2v3h1.5a2 2 0 0 1 0 4H17v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z",
+  /** Puzzle piece: rounded tabs out on the top and right, rounded notches in on the bottom and left. */
+  extensions: "M6 8H8V6.5a2 2 0 0 1 4 0V8h2a2 2 0 0 1 2 2v2h1.5a2 2 0 0 1 0 4H16v2a2 2 0 0 1-2 2h-2v-1.5a2 2 0 0 0-4 0V20H6a2 2 0 0 1-2-2v-2h1.5a2 2 0 0 0 0-4H4v-2a2 2 0 0 1 2-2z",
   back: "M15 18l-6-6 6-6",
   forward: "M9 18l6-6-6-6",
   reload: "M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7",

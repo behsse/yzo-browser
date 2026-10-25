@@ -137,7 +137,7 @@ kbd {
 .topbar-side {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
 }
 
 .topbar-right {
@@ -147,7 +147,7 @@ kbd {
 .topbar-divider {
   width: 1px;
   height: 16px;
-  margin: 0 4px;
+  margin: 0 6px;
   background: var(--divider);
 }
 
@@ -157,7 +157,7 @@ kbd {
   left: 50%;
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
   max-width: 40%;
   transform: translateX(-50%);
 }
@@ -339,9 +339,10 @@ kbd {
   background: var(--row-hover);
 }
 
+/* Minimize / maximize / close get more room than the other top bar buttons. */
 .window-controls {
   display: flex;
-  gap: 2px;
+  gap: 10px;
 }
 
 .window-controls .window-close:hover {

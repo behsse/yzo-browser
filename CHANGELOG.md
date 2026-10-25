@@ -7,7 +7,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 ### Changed
 
 - Arc-style top bar across the window: logo (app menu), sidebar toggle, back, forward and reload on the left; the current site in the middle with copy-link and site settings buttons; extension icons, the extensions menu, split view and window controls on the right. The sidebar loses its header rows and search field and now starts with the favorites.
-- Icons are 2 px larger, with rounded corners instead of square ones, and the extensions icon is a clearer puzzle piece.
+- Icons are 2 px larger, with rounded corners instead of square ones, and the extensions icon is a full puzzle piece (tabs out on the top and right, notches in on the bottom and left).
+- More space between the top bar buttons, and a little more between minimize, maximize and close.
 
 ### Fixed
 
