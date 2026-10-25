@@ -7,7 +7,7 @@ import { useStore } from "../state/store";
 import { isTab } from "../state/tree";
 import { useSync } from "../sync/SyncProvider";
 import { ExtensionActionButton, useExtensionActions } from "./extensionActions";
-import { Icon } from "./Icon";
+import { BrandMark, Icon } from "./Icon";
 import { useUi, type MenuEntry } from "./UiContext";
 import { useViewHost } from "./ViewHost";
 
@@ -115,9 +115,9 @@ export function TopBar() {
   return (
     <header className="topbar drag">
       <div className="topbar-side topbar-left">
-        {/* Placeholder mark until the real logo exists; opens the app menu, like Arc's logo. */}
+        {/* The Yzo logo opens the app menu, like Arc's. */}
         <button className="brand-mark" title={t("appMenu.title")} aria-haspopup="menu" onClick={(event) => openAppMenu(event.currentTarget)}>
-          <Icon name="brand" />
+          <BrandMark />
         </button>
         <button title={t("sidebar.toggleSidebar", { shortcut: shortcutLabel("toggleSidebar") })} onClick={() => ui.runAction("toggleSidebar")}>
           <Icon name="sidebar" />
