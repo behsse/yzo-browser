@@ -28,6 +28,8 @@ const CURSOR_POLL_MS = 50;
 const FLOATING_EXIT_MS = 200;
 /** Gap between the floating sidebar card and the window edges (matches .floating-zone padding). */
 const FLOATING_MARGIN_PX = 6;
+/** Height of the top bar (--topbar-height in styles.css). */
+const TOP_BAR_HEIGHT_PX = 38;
 
 /**
  * Root component: lays out the sidebar and content, owns the transient overlays and routes every
@@ -268,7 +270,7 @@ export function App() {
     const timer = window.setInterval(async () => {
       const cursor = await window.yzo?.cursorPosition();
       if (!cursor) return;
-      if (floatingSidebarDecision(cursor, zoneWidth) === "hide") scheduleHide();
+      if (floatingSidebarDecision(cursor, zoneWidth, TOP_BAR_HEIGHT_PX) === "hide") scheduleHide();
       else reveal();
     }, CURSOR_POLL_MS);
     return () => window.clearInterval(timer);

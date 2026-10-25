@@ -8,6 +8,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 - Arc-style top bar across the window: logo (app menu), sidebar toggle, back, forward and reload on the left; the current site in the middle with copy-link and site settings buttons; extension icons, the extensions menu, split view and window controls on the right. The sidebar loses its header rows and search field and now starts with the favorites.
 
+### Fixed
+
+- Hovering the top bar no longer keeps the floating sidebar open.
+- The floating sidebar slides in at its final size instead of growing from a slightly smaller card.
+
 ## [0.7.0] - 2026-10-24
 
 ### Added

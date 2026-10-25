@@ -102,23 +102,29 @@ describe("shortcuts", () => {
 describe("floating sidebar hover zone", () => {
   const window = { width: 1400, height: 900 };
   const zone = 252;
+  const topBar = 38;
 
-  it("stays open in the left column, including its top, bottom and left margins", () => {
-    for (const [x, y] of [[120, 2], [120, 897], [1, 400], [249, 400]]) {
-      expect(floatingSidebarDecision({ x, y, ...window }, zone)).toBe("keep");
+  it("stays open in the left column below the top bar, including its bottom and left margins", () => {
+    for (const [x, y] of [[120, 40], [120, 897], [1, 400], [249, 400]]) {
+      expect(floatingSidebarDecision({ x, y, ...window }, zone, topBar)).toBe("keep");
     }
   });
 
-  it("stays open when the cursor leaves the window by the top, bottom or left", () => {
-    for (const [x, y] of [[120, -30], [600, -5], [600, 950], [-40, 400]]) {
-      expect(floatingSidebarDecision({ x, y, ...window }, zone)).toBe("keep");
+  it("stays open when the cursor leaves the window by the bottom or left", () => {
+    for (const [x, y] of [[600, 950], [-40, 400]]) {
+      expect(floatingSidebarDecision({ x, y, ...window }, zone, topBar)).toBe("keep");
+    }
+  });
+
+  it("closes when the cursor reaches the top bar or leaves the window by the top", () => {
+    for (const [x, y] of [[120, 20], [10, 0], [120, -30]]) {
+      expect(floatingSidebarDecision({ x, y, ...window }, zone, topBar)).toBe("hide");
     }
   });
 
   it("closes when the cursor goes right, onto the page or out of the window on that side", () => {
-    expect(floatingSidebarDecision({ x: 252, y: 400, ...window }, zone)).toBe("hide");
-    expect(floatingSidebarDecision({ x: 900, y: 10, ...window }, zone)).toBe("hide");
-    expect(floatingSidebarDecision({ x: 1500, y: 400, ...window }, zone)).toBe("hide");
+    expect(floatingSidebarDecision({ x: 252, y: 400, ...window }, zone, topBar)).toBe("hide");
+    expect(floatingSidebarDecision({ x: 1500, y: 400, ...window }, zone, topBar)).toBe("hide");
   });
 });
 
