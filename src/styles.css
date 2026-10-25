@@ -93,7 +93,7 @@ kbd {
 /* Layout */
 
 .app {
-  --topbar-height: 44px;
+  --topbar-height: 32px;
   position: relative;
   isolation: isolate;
   display: flex;
@@ -123,8 +123,8 @@ kbd {
   -webkit-app-region: no-drag;
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--radius-small);
   color: var(--fg-muted);
 }
@@ -136,13 +136,13 @@ kbd {
 
 /* Top bar icons are larger than the sidebar ones (CSS size wins over the SVG attributes). */
 .topbar svg {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
 }
 
 .topbar .topbar-icon svg {
-  width: 17px;
-  height: 17px;
+  width: 14px;
+  height: 14px;
 }
 
 .topbar-side {
@@ -157,8 +157,8 @@ kbd {
 
 .topbar-divider {
   width: 1px;
-  height: 18px;
-  margin: 0 8px;
+  height: 14px;
+  margin: 0 6px;
   background: var(--divider);
 }
 
@@ -182,13 +182,12 @@ kbd {
   white-space: nowrap;
   text-overflow: ellipsis;
   color: var(--fg);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 13px;
 }
 
 .topbar .topbar-icon {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
 }
 
 /* Space gradient behind the whole UI, masked over the pages (--page-holes, set by ViewHost). */
@@ -322,8 +321,8 @@ kbd {
 }
 
 .extension-actions::part(action) {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--radius-small);
   background-size: 16px;
 }
@@ -354,7 +353,7 @@ kbd {
 /* Minimize / maximize / close get more room than the other top bar buttons. */
 .window-controls {
   display: flex;
-  gap: 14px;
+  gap: 18px;
 }
 
 .window-controls .window-close:hover {
