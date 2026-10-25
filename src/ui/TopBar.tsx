@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { t } from "../lib/i18n";
 import { shortcutLabel } from "../lib/shortcuts";
 import { tabCommand } from "../lib/tabs";
@@ -38,11 +38,34 @@ function WindowControls() {
 }
 
 /**
+ * Moves the window while the floating top bar is dragged by its background (not by a button), like a
+ * title bar.
+ * @param event Pointer press on the bar.
+ */
+function startWindowDrag(event: ReactPointerEvent<HTMLElement>) {
+  if (event.button !== 0 || (event.target as HTMLElement).closest("button, browser-action-list")) return;
+  const bar = event.currentTarget;
+  bar.setPointerCapture(event.pointerId);
+  window.yzo?.windowDrag("start");
+  const move = () => window.yzo?.windowDrag("move");
+  const end = () => {
+    window.yzo?.windowDrag("end");
+    bar.removeEventListener("pointermove", move);
+    bar.removeEventListener("pointerup", end);
+    bar.removeEventListener("pointercancel", end);
+  };
+  bar.addEventListener("pointermove", move);
+  bar.addEventListener("pointerup", end);
+  bar.addEventListener("pointercancel", end);
+}
+
+/**
  * Arc-style top bar spanning the window: logo (app menu), sidebar toggle and navigation on the left,
  * the current site in the middle, extensions, split view and window controls on the right. The bar
  * is the window's drag region; only its buttons opt out.
  * @param props.floating True when shown on hover while the top bar is hidden.
- * @param props.draggable Whether the bar is a window drag region (off while a floating bar is hidden).
+ * @param props.draggable Whether the bar is a window drag region (the anchored bar only; the floating
+ *   bar moves the window itself, since drag regions do not work while the UI is above the pages).
  * @returns Top bar element.
  */
 export function TopBar({ floating = false, draggable = true }: { floating?: boolean; draggable?: boolean }) {
@@ -115,7 +138,13 @@ export function TopBar({ floating = false, draggable = true }: { floating?: bool
   };
 
   return (
-    <header className={"topbar" + (draggable ? " drag" : "") + (floating ? " topbar-floating" : "")}>
+    <header
+      className={"topbar" + (draggable ? " drag" : "") + (floating ? " topbar-floating" : "")}
+      onPointerDown={floating ? startWindowDrag : undefined}
+      onDoubleClick={(event) => {
+        if (floating && !(event.target as HTMLElement).closest("button")) window.yzo?.windowControl("maximize");
+      }}
+    >
       <div className="topbar-side topbar-left">
         {/* The Yzo logo opens the app menu, like Arc's. */}
         <button className="brand-mark" title={t("appMenu.title")} aria-haspopup="menu" onClick={(event) => openAppMenu(event.currentTarget)}>

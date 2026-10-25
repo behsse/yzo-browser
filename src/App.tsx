@@ -353,9 +353,10 @@ export function App() {
             <>
               <div className="topbar-reveal-edge" onMouseEnter={revealTop} onMouseMove={revealTop} />
               <div className={"floating-topbar" + (topRevealed ? " floating-topbar-open" : "")} style={{ background: sidebarBackground(theme) }} inert={!topRevealed}>
-                {/* Electron places drag regions without CSS transforms: a hidden bar slid off-screen would
-                    still swallow the mouse at the top of the window (and its reveal edge). */}
-                <TopBar floating draggable={topRevealed} />
+                {/* No drag region here: Electron places them without CSS transforms (a slid-out bar would
+                    swallow the mouse at the top of the window) and they do not work while the UI is above
+                    the pages. The floating bar moves the window itself. */}
+                <TopBar floating draggable={false} />
               </div>
             </>
           ) : (

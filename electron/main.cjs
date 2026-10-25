@@ -360,6 +360,35 @@ ipcMain.on("window:control", (event, action) => {
   else if (action === "close") mainWindow.close();
 });
 
+/**
+ * Window move driven by the UI, for the floating top bar: Electron drag regions do not work in it
+ * (the UI view is stacked above the pages then), so the UI reports the drag and the window follows
+ * the cursor. A maximized window is restored first, keeping the cursor at the same relative spot.
+ * @type {{ dx: number, dy: number } | null}
+ */
+let manualDrag = null;
+
+ipcMain.on("window:drag", (event, phase) => {
+  const win = mainWindow;
+  if (!isTrustedSender(event) || !win || win.isDestroyed()) return;
+  const cursor = screen.getCursorScreenPoint();
+  if (phase === "start") {
+    if (win.isMaximized()) {
+      const maximized = win.getBounds();
+      const ratio = (cursor.x - maximized.x) / maximized.width;
+      win.unmaximize();
+      const restored = win.getBounds();
+      win.setPosition(Math.round(cursor.x - restored.width * ratio), Math.round(cursor.y - 12));
+    }
+    const [x, y] = win.getPosition();
+    manualDrag = { dx: cursor.x - x, dy: cursor.y - y };
+  } else if (phase === "move" && manualDrag) {
+    win.setPosition(Math.round(cursor.x - manualDrag.dx), Math.round(cursor.y - manualDrag.dy));
+  } else if (phase === "end") {
+    manualDrag = null;
+  }
+});
+
 // Menus are drawn above the live pages (electron/menu-popup.cjs); resolves to the picked index or null.
 ipcMain.handle("menu:popup", (event, entries, x, y) => (isTrustedSender(event) && menuPopup ? menuPopup.show(entries, x, y) : null));
 

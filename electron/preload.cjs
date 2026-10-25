@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld("yzo", {
   loadState: () => ipcRenderer.invoke("state:load"),
   saveState: (json) => ipcRenderer.invoke("state:save", json),
   windowControl: (action) => ipcRenderer.send("window:control", action),
+  windowDrag: (phase) => ipcRenderer.send("window:drag", phase),
   isMaximized: () => ipcRenderer.invoke("window:isMaximized"),
   cursorPosition: () => ipcRenderer.invoke("window:cursor"),
   checkForUpdates: () => ipcRenderer.invoke("app:checkForUpdates"),
