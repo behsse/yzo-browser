@@ -42,9 +42,10 @@ function WindowControls() {
  * the current site in the middle, extensions, split view and window controls on the right. The bar
  * is the window's drag region; only its buttons opt out.
  * @param props.floating True when shown on hover while the top bar is hidden.
+ * @param props.draggable Whether the bar is a window drag region (off while a floating bar is hidden).
  * @returns Top bar element.
  */
-export function TopBar({ floating = false }: { floating?: boolean }) {
+export function TopBar({ floating = false, draggable = true }: { floating?: boolean; draggable?: boolean }) {
   const { state, dispatch } = useStore();
   const ui = useUi();
   const sync = useSync();
@@ -114,7 +115,7 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
   };
 
   return (
-    <header className={"topbar drag" + (floating ? " topbar-floating" : "")}>
+    <header className={"topbar" + (draggable ? " drag" : "") + (floating ? " topbar-floating" : "")}>
       <div className="topbar-side topbar-left">
         {/* The Yzo logo opens the app menu, like Arc's. */}
         <button className="brand-mark" title={t("appMenu.title")} aria-haspopup="menu" onClick={(event) => openAppMenu(event.currentTarget)}>
