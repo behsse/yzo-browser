@@ -10,7 +10,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ### Changed
 
-- Top bar layout: full screen button and a divider after the top bar lock, private browsing next to the site settings, downloads after the extensions, a menu button after split view, and more room around the address. The new buttons are placeholders for now.
+- Top bar layout: full screen button and a divider after the top bar lock, private browsing next to reload, downloads after the extensions, a menu button after split view, and more room around the address. The new buttons are placeholders for now.
 
 ## [0.8.0] - 2026-10-25
 

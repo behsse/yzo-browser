@@ -145,6 +145,10 @@ export function TopBar({ draggable = true }: { draggable?: boolean }) {
         <button title={t("sidebar.reload", { shortcut: shortcutLabel("reload") })} onClick={() => ui.runAction("reload")}>
           <Icon name="reload" />
         </button>
+        {/* Visual only for now: private browsing is not built yet. */}
+        <button title={t("topbar.private")}>
+          <Icon name="incognito" />
+        </button>
       </div>
 
       <div className="topbar-address">
@@ -159,12 +163,6 @@ export function TopBar({ draggable = true }: { draggable?: boolean }) {
         {url && (
           <button className="topbar-icon" title={t("topbar.siteMenu")} aria-haspopup="menu" onClick={(event) => openSiteMenu(event.currentTarget)}>
             <Icon name="sliders" size={16} />
-          </button>
-        )}
-        {/* Visual only for now: private browsing is not built yet. */}
-        {url && (
-          <button className="topbar-icon" title={t("topbar.private")}>
-            <Icon name="incognito" size={16} />
           </button>
         )}
       </div>
