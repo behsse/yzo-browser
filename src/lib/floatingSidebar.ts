@@ -26,6 +26,17 @@ export function floatingTopBarDecision(cursor: CursorPosition, barHeight: number
   return insideHorizontally && cursor.y < barHeight + TOP_BAR_MARGIN_PX ? "keep" : "hide";
 }
 
+/**
+ * Whether the cursor is on the top edge of the window, which reveals the hidden top bar. Polled, since
+ * the edge is mostly covered by the window resize border and the pages, which hide it from the UI.
+ * @param cursor Cursor position relative to the window content.
+ * @param edgeHeight Height of the edge in pixels.
+ * @returns True on the edge.
+ */
+export function cursorOnTopEdge(cursor: CursorPosition, edgeHeight: number): boolean {
+  return cursor.x >= 0 && cursor.x < cursor.width && cursor.y >= 0 && cursor.y < edgeHeight;
+}
+
 /** Extra height under the floating top bar that still counts as hovering it. */
 const TOP_BAR_MARGIN_PX = 8;
 

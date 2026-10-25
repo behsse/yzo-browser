@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { t } from "../lib/i18n";
 import { shortcutLabel } from "../lib/shortcuts";
 import { tabCommand } from "../lib/tabs";
@@ -37,15 +37,41 @@ function WindowControls() {
   );
 }
 
+/** Distance the pointer must travel, button held, before a press on the floating top bar moves the window. */
+const DRAG_THRESHOLD_PX = 3;
+
+/**
+ * Press on the floating top bar's background (not a button): once the pointer starts moving, Windows
+ * takes over and moves the window like from its title bar, restoring it first when it is maximized.
+ * Waiting for the movement keeps plain clicks and double-clicks (maximize) working.
+ * @param event Pointer press on the bar.
+ */
+function startWindowDrag(event: ReactPointerEvent<HTMLElement>) {
+  if (event.button !== 0 || (event.target as HTMLElement).closest("button, browser-action-list")) return;
+  const { screenX: startX, screenY: startY } = event;
+  const move = (e: PointerEvent) => {
+    if (e.buttons !== 1) return stop();
+    if (Math.hypot(e.screenX - startX, e.screenY - startY) < DRAG_THRESHOLD_PX) return;
+    stop();
+    window.yzo?.windowDrag();
+  };
+  const stop = () => {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", stop);
+  };
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", stop);
+}
+
 /**
  * Arc-style top bar spanning the window: logo (app menu), sidebar toggle and navigation on the left,
  * the current site in the middle, extensions, split view and window controls on the right. The bar
  * is the window's drag region; only its buttons opt out.
- * @param props.draggable Whether the bar is a window drag region (off while it is collapsed, so the
- *   collapsed bar never catches the mouse at the top of the window).
+ * @param props.floating True for the bar shown over the pages while the top bar is hidden: no drag region
+ *   there (they do not work while the UI is above the pages), a press moves the window instead.
  * @returns Top bar element.
  */
-export function TopBar({ draggable = true }: { draggable?: boolean }) {
+export function TopBar({ floating = false }: { floating?: boolean }) {
   const { state, dispatch } = useStore();
   const ui = useUi();
   const sync = useSync();
@@ -115,7 +141,13 @@ export function TopBar({ draggable = true }: { draggable?: boolean }) {
   };
 
   return (
-    <header className={"topbar" + (draggable ? " drag" : "")}>
+    <header
+      className={"topbar" + (floating ? "" : " drag")}
+      onPointerDown={floating ? startWindowDrag : undefined}
+      onDoubleClick={(event) => {
+        if (floating && !(event.target as HTMLElement).closest("button")) window.yzo?.windowControl("maximize");
+      }}
+    >
       <div className="topbar-side topbar-left">
         {/* The Yzo logo opens the app menu, like Arc's. */}
         <button className="brand-mark" title={t("appMenu.title")} aria-haspopup="menu" onClick={(event) => openAppMenu(event.currentTarget)}>

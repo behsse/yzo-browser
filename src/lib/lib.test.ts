@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isArchivable, THRESHOLD_MS } from "./autoArchive";
 import { dedupKey, matchScore } from "./commandBar";
-import { floatingSidebarDecision, floatingTopBarDecision } from "./floatingSidebar";
+import { cursorOnTopEdge, floatingSidebarDecision, floatingTopBarDecision } from "./floatingSidebar";
 import { matchShortcut, shortcutLabel } from "./shortcuts";
 import { hexToRgb, relativeLuminance, resolveAppearance, rgbToHex } from "./theme";
 import { displayHost, isNavigableUrl, looksLikeUrl, toNavigableUrl } from "./url";
@@ -137,6 +137,11 @@ describe("floating top bar hover zone", () => {
 
   it("closes below the bar or out of the window on the sides", () => {
     for (const [x, y] of [[700, 60], [-10, 10], [1500, 10]]) expect(floatingTopBarDecision({ x, y, ...window }, 32)).toBe("hide");
+  });
+
+  it("reveals the hidden top bar from the top edge only, inside the window", () => {
+    for (const [x, y] of [[700, 0], [5, 7]]) expect(cursorOnTopEdge({ x, y, ...window }, 8)).toBe(true);
+    for (const [x, y] of [[700, 8], [700, -1], [-1, 2], [1400, 2]]) expect(cursorOnTopEdge({ x, y, ...window }, 8)).toBe(false);
   });
 
   it("lets the floating sidebar stay open above the window when the top bar is hidden", () => {

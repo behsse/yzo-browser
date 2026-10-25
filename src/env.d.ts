@@ -93,6 +93,8 @@ export interface YzoBridge {
   loadState(): Promise<string | null>;
   saveState(json: string): Promise<boolean>;
   windowControl(action: "minimize" | "maximize" | "close"): void;
+  /** Hands a press on the floating top bar to the system, which moves the window like from its title bar. */
+  windowDrag(): void;
   /** Fires while the window is being moved. */
   onWindowMoved(callback: () => void): () => void;
   isMaximized(): Promise<boolean>;

@@ -10,6 +10,7 @@ const { setupExtensions } = require("./extensions.cjs");
 const { createAccount, AccountError } = require("./account.cjs");
 const { readArc, countTabs, EXTENSION_ID } = require("./arc-import.cjs");
 const { resolveFavicon } = require("./favicon.cjs");
+const { startNativeWindowDrag } = require("./window-drag.cjs");
 const { t } = require("./i18n.cjs");
 
 const PARTITION = "persist:yzo";
@@ -360,6 +361,13 @@ ipcMain.on("window:control", (event, action) => {
   if (action === "minimize") mainWindow.minimize();
   else if (action === "maximize") mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize();
   else if (action === "close") mainWindow.close();
+});
+
+// Floating top bar pressed: Windows moves the window like from its title bar (electron/window-drag.cjs).
+ipcMain.on("window:drag", (event) => {
+  if (!isTrustedSender(event) || !mainWindow || mainWindow.isDestroyed()) return;
+  const cursor = screen.dipToScreenPoint(screen.getCursorScreenPoint());
+  startNativeWindowDrag(mainWindow, cursor);
 });
 
 // Menus are drawn above the live pages (electron/menu-popup.cjs); resolves to the picked index or null.
