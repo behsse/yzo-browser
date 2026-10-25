@@ -14,6 +14,7 @@ import { ContextMenu } from "./ui/ContextMenu";
 import { ICON_PATHS } from "./ui/Icon";
 import { Peek } from "./ui/Peek";
 import { Sidebar } from "./ui/Sidebar";
+import { TopBar } from "./ui/TopBar";
 import { SpaceEditor } from "./ui/SpaceEditor";
 import { UiContext, type AccountMode, type CommandBarMode, type MenuState, type UiValue } from "./ui/UiContext";
 import { ViewHostProvider } from "./ui/ViewHost";
@@ -295,6 +296,8 @@ export function App() {
           {/* The space gradient, with a hole over each page: the UI view is transparent there, so the
               live pages show through when the UI is stacked above them. */}
           <div className="app-backdrop" style={{ background: sidebarBackground(theme) }} />
+          <TopBar />
+          <div className="app-body">
           {/* The anchored sidebar stays mounted and its slot animates its width, so Ctrl+S slides the
               page instead of jumping. It is inert while collapsed. */}
           <div className="sidebar-slot" style={{ width: hidden ? 0 : state.window.sidebarWidth }} inert={hidden}>
@@ -302,7 +305,6 @@ export function App() {
           </div>
           {/* Never mark the reveal edge as a drag region: Electron drag regions receive no mouse events. */}
           {hidden && <div className="reveal-edge" onMouseEnter={reveal} onMouseMove={reveal} />}
-          {hidden && <div className="hidden-drag-strip drag" />}
           {/* The hover zone is the whole left column (window top to bottom, from the left edge), so the
               margins above, below and left of the card keep it open; only moving right toward the page
               closes it. While it is open the UI is raised above the live pages, and an invisible layer
@@ -330,6 +332,7 @@ export function App() {
             </div>
           )}
           <WebArea />
+          </div>
         </div>
 
         {commandBar && <CommandBar mode={commandBar} onClose={() => setCommandBar(null)} />}

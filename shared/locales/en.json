@@ -189,5 +189,9 @@
   "updates.upToDate": "Yzo {version} is up to date",
   "updates.available": "Yzo {version} is downloading, it installs when you quit",
   "updates.error": "Update check failed",
-  "updates.dev": "Updates only work in installed builds"
+  "updates.dev": "Updates only work in installed builds",
+
+  "topbar.siteMenu": "Site settings",
+  "topbar.splitView": "Split view ({shortcut})",
+  "topbar.devTools": "Developer tools"
 }

@@ -93,11 +93,90 @@ kbd {
 /* Layout */
 
 .app {
+  --topbar-height: 38px;
   position: relative;
   isolation: isolate;
   display: flex;
+  flex-direction: column;
   height: 100%;
   color: var(--fg);
+}
+
+/* Below the top bar: sidebar and pages side by side. */
+.app-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Arc-style top bar: the window's drag region; buttons opt out. */
+.topbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: var(--topbar-height);
+  padding: 0 4px 0 8px;
+  flex-shrink: 0;
+}
+
+.topbar button {
+  -webkit-app-region: no-drag;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-small);
+  color: var(--fg-muted);
+}
+
+.topbar button:hover {
+  background: var(--row-hover);
+  color: var(--fg);
+}
+
+.topbar-side {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.topbar-right {
+  margin-left: auto;
+}
+
+.topbar-divider {
+  width: 1px;
+  height: 16px;
+  margin: 0 4px;
+  background: var(--divider);
+}
+
+/* Current site, centered on the window: link icon, host, site settings. */
+.topbar-address {
+  position: absolute;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 40%;
+  transform: translateX(-50%);
+}
+
+.topbar .topbar-host {
+  display: block;
+  width: auto;
+  min-width: 0;
+  padding: 0 8px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.topbar .topbar-icon {
+  width: 24px;
+  height: 24px;
 }
 
 /* Space gradient behind the whole UI, masked over the pages (--page-holes, set by ViewHost). */
@@ -122,7 +201,7 @@ kbd {
   position: relative;
   flex: 1;
   min-width: 0;
-  margin: var(--content-gap) var(--content-gap) var(--content-gap) 0;
+  margin: 0 var(--content-gap) var(--content-gap) 0;
   transition: margin-left var(--slide-in-ms) var(--ease-out);
 }
 
@@ -156,24 +235,14 @@ kbd {
 
 .reveal-edge {
   position: fixed;
-  inset: 0 auto 0 0;
+  inset: var(--topbar-height) auto 0 0;
   width: 12px;
   z-index: 25;
 }
 
-/* With the sidebar hidden, the top gap still lets the user move the window. */
-.hidden-drag-strip {
-  position: fixed;
-  top: 0;
-  left: 12px;
-  right: 0;
-  height: var(--content-gap);
-  z-index: 20;
-}
-
 .floating-catcher {
   position: fixed;
-  top: 0;
+  top: var(--topbar-height);
   right: 0;
   bottom: 0;
   z-index: 28;
@@ -182,12 +251,12 @@ kbd {
 /* Full-height left column: its padding is part of the hover zone. Closed, it lets clicks through. */
 .floating-zone {
   position: fixed;
-  top: 0;
+  top: var(--topbar-height);
   bottom: 0;
   left: 0;
   z-index: 30;
   display: flex;
-  padding: 6px;
+  padding: 0 6px 6px;
   pointer-events: none;
 }
 
@@ -232,26 +301,10 @@ kbd {
   user-select: none;
 }
 
-/* Two rows: window controls (close, maximize, minimize) on top, navigation below; both left-aligned.
-   The rows stay part of the drag region; only the buttons opt out. */
-.sidebar-top {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 6px 0 8px;
-  flex-shrink: 0;
-}
-
-.sidebar-top-row {
-  display: flex;
-  align-items: center;
-  height: 28px;
-}
-
 /* Row 2: navigation on the left; extension icons then the extensions menu pushed to the right. */
 .extension-actions {
+  -webkit-app-region: no-drag;
   display: flex;
-  margin-left: auto;
   min-width: 0;
   overflow: hidden;
 }
@@ -271,19 +324,6 @@ kbd {
   font-size: 9px;
 }
 
-.extensions-button {
-  margin-left: auto;
-}
-
-.extension-actions + .extensions-button {
-  margin-left: 0;
-}
-
-/* Row 1: logo on the left, window actions pushed to the right. */
-.sidebar-brand-row {
-  justify-content: space-between;
-}
-
 /* SVG mark drawn on the same 24-unit grid and stroke as the icons, in a 28px button like the others,
    so it shares their height and vertical center. It opens the app menu. */
 .brand-mark {
@@ -299,76 +339,14 @@ kbd {
   background: var(--row-hover);
 }
 
-.nav-buttons,
 .window-controls {
   display: flex;
   gap: 2px;
 }
 
-.nav-buttons button,
-.window-controls button {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-small);
-  color: var(--fg-muted);
-}
-
-.nav-buttons button:hover,
-.window-controls button:hover {
-  background: var(--row-hover);
-  color: var(--fg);
-}
-
 .window-controls .window-close:hover {
   background: var(--danger);
   color: #fff;
-}
-
-.url-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 34px;
-  padding: 0 10px;
-  margin-bottom: 10px;
-  border-radius: var(--radius);
-  background: var(--pill-bg);
-  text-align: left;
-  flex-shrink: 0;
-}
-
-.url-pill:hover {
-  background: var(--row-active);
-}
-
-.url-search {
-  display: grid;
-  place-items: center;
-  color: var(--fg-muted);
-}
-
-.url-text {
-  flex: 1;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  font-weight: 500;
-}
-
-.url-copy {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 5px;
-  color: var(--fg-muted);
-}
-
-.url-copy:hover {
-  background: var(--row-hover);
-  color: var(--fg);
 }
 
 .favorites {

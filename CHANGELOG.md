@@ -2,6 +2,12 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- Arc-style top bar across the window: logo (app menu), sidebar toggle, back, forward and reload on the left; the current site in the middle with copy-link and site settings buttons; extension icons, the extensions menu, split view and window controls on the right. The sidebar loses its header rows and search field and now starts with the favorites.
+
 ## [0.7.0] - 2026-10-24
 
 ### Added

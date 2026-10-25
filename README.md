@@ -8,6 +8,7 @@ Stack: Electron 43 in its [castLabs ECS](https://github.com/castlabs/electron-re
 
 | Feature | Details |
 |---|---|
+| Top bar | Like Arc: logo (app menu), sidebar toggle, back, forward, reload on the left; the current site in the middle (click to edit, link icon to copy, sliders for site settings); extensions, split view and window controls on the right. The bar moves the window. |
 | Vertical sidebar | Favorites shared across spaces, pinned section, divider, "today" tabs. Resizable (180–420 px). |
 | Spaces | Name, emoji, two-color gradient from Arc's palettes (pastel, muted, gray), light/dark/auto mode. Dock at the bottom of the sidebar. |
 | Command bar | One input for URLs, search and switching to an open tab. Title + domain deduplication for Figma, Notion, GitHub… Remembers the result type picked for each query. |
@@ -148,7 +149,7 @@ shared/shortcuts.json    Shortcut table (UI + main process)
 shared/locales/          UI translations, en.json (reference) and fr.json (UI + main process)
 src/state/               Model (types.ts), tree operations (tree.ts), reducer, persistence, React store
 src/lib/                 URL, command bar, themes, auto-archive, shortcuts, tab commands, i18n
-src/ui/                  Sidebar, item tree, web area, panels, command bar, Peek, archive, space editor
+src/ui/                  Top bar, sidebar, item tree, web area, panels, command bar, Peek, archive, space editor
 ```
 
 The model follows the one observed in Arc's `StorableSidebar.json`. Every item lives in a flat table, linked by `parentId` and `childrenIds`:

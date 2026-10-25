@@ -189,5 +189,9 @@
   "updates.upToDate": "Yzo {version} est à jour",
   "updates.available": "Yzo {version} se télécharge, il s'installera à la fermeture",
   "updates.error": "Échec de la recherche de mises à jour",
-  "updates.dev": "Les mises à jour ne fonctionnent que dans les versions installées"
+  "updates.dev": "Les mises à jour ne fonctionnent que dans les versions installées",
+
+  "topbar.siteMenu": "Réglages du site",
+  "topbar.splitView": "Vue scindée ({shortcut})",
+  "topbar.devTools": "Outils de développement"
 }

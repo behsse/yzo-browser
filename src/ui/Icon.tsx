@@ -17,6 +17,8 @@ export const ICON_PATHS = {
   folder: "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z",
   archive: "M3 5h18v4H3zM5 9v10h14V9M10 13h4",
   copy: "M9 9h11v11H9zM5 15H4V4h11v1",
+  link: "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1",
+  sliders: "M4 8h9M17 8h3M4 16h3M11 16h9M15 6v4M9 14v4",
   split: "M4 5h16v14H4zM12 5v14",
   splitVertical: "M4 5h16v14H4zM4 12h16",
   search: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-5-5",

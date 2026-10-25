@@ -1,47 +1,15 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { t } from "../lib/i18n";
 import { shortcutLabel } from "../lib/shortcuts";
 import { resolveAppearance, sidebarBackground } from "../lib/theme";
-import { displayHost } from "../lib/url";
-import { tabCommand } from "../lib/tabs";
 import { canMove } from "../state/reducer";
 import { useStore } from "../state/store";
 import { isTab } from "../state/tree";
 import { Favicon } from "./Favicon";
 import { Icon } from "./Icon";
-import { PARTITION as TABS_PARTITION } from "../lib/tabs";
 import { DRAG_TYPE, ItemList } from "./SidebarTree";
-import { useUi, type MenuEntry } from "./UiContext";
+import { useUi } from "./UiContext";
 import { useViewHost } from "./ViewHost";
-import { useSync } from "../sync/SyncProvider";
-
-const CHROME_WEB_STORE_URL = "https://chromewebstore.google.com/category/extensions";
-
-/**
- * Minimize / maximize / close buttons of the frameless window, in the Windows order.
- * @returns Button group.
- */
-function WindowControls() {
-  const [maximized, setMaximized] = useState(false);
-  useEffect(() => {
-    window.yzo?.isMaximized().then(setMaximized);
-    return window.yzo?.onMaximized(setMaximized);
-  }, []);
-  if (!window.yzo) return null;
-  return (
-    <div className="window-controls no-drag">
-      <button title={t("window.minimize")} onClick={() => window.yzo?.windowControl("minimize")}>
-        <Icon name="minimize" />
-      </button>
-      <button title={maximized ? t("window.restore") : t("window.maximize")} onClick={() => window.yzo?.windowControl("maximize")}>
-        <Icon name={maximized ? "restore" : "maximize"} />
-      </button>
-      <button className="window-close" title={t("common.close")} onClick={() => window.yzo?.windowControl("close")}>
-        <Icon name="close" />
-      </button>
-    </div>
-  );
-}
 
 /**
  * Favorites grid shared by every space (Arc's "top apps" container).
@@ -155,8 +123,8 @@ function SpaceDock() {
 }
 
 /**
- * The Arc-style vertical sidebar: window chrome, navigation, URL pill, favorites, the focused
- * space's pinned and today sections, and the space dock.
+ * The Arc-style vertical sidebar, below the top bar: favorites, the focused space's pinned and today
+ * sections, and the space dock.
  * @param props.floating True when shown as an overlay while the sidebar is hidden.
  * @returns Sidebar element.
  */
@@ -164,72 +132,13 @@ export function Sidebar({ floating = false }: { floating?: boolean }) {
   const { state, dispatch } = useStore();
   const ui = useUi();
   const space = state.spaces[state.window.focusedSpaceId];
-  const selection = state.window.selection[space.id];
-  const focusedTab = selection?.focusedTabId ? state.items[selection.focusedTabId] : undefined;
-  const url = isTab(focusedTab) ? focusedTab.data.url : "";
   const appearance = resolveAppearance(space.theme);
   const resizing = useRef(false);
   const host = useViewHost();
-  const sync = useSync();
 
-  // Arc-style app menu behind the logo: account, new tab / window, updates.
-  const openAppMenu = (anchor: HTMLElement) => {
-    const rect = anchor.getBoundingClientRect();
-    const signedIn = Boolean(sync.status?.signedIn);
-    // The account entry closes the menu; the panel itself offers sign-up next to sign-in.
-    const account: MenuEntry = signedIn
-      ? { icon: "user", label: t("appMenu.account", { email: sync.status?.email ?? "" }), onSelect: () => ui.openAccount() }
-      : { icon: "user", label: t("account.signIn"), onSelect: () => ui.openAccount("signIn") };
-    ui.openMenu({
-      x: rect.left,
-      y: rect.bottom + 4,
-      entries: [
-        { icon: "tab", label: t("appMenu.newTab"), hint: shortcutLabel("newTab"), onSelect: () => ui.runAction("newTab") },
-        // Multi-window is not built yet: shown so the menu matches Arc, but disabled.
-        { icon: "restore", label: t("appMenu.newWindow"), hint: "Ctrl+N", disabled: true, onSelect: () => {} },
-        "separator",
-        {
-          icon: "sync",
-          label: t("appMenu.checkUpdates"),
-          onSelect: async () => {
-            ui.showToast(t("updates.checking"));
-            const result = await window.yzo?.checkForUpdates();
-            const status = result?.status ?? "dev";
-            ui.showToast(t(`updates.${status}`, { version: result?.version ?? "" }));
-          },
-        },
-        "separator",
-        account,
-      ],
-    });
-  };
-
-  // Lists installed extensions with their actions, plus the way to add more.
-  const openExtensionsMenu = async (anchor: HTMLElement) => {
-    const rect = anchor.getBoundingClientRect();
-    const installed = (await window.yzo?.listExtensions()) ?? [];
-    const openTab = (url: string) => dispatch({ type: "createTab", url, target: "today", activate: true, now: Date.now() });
-    const entries: (MenuEntry | "separator")[] = installed.length
-      ? installed.flatMap((ext) => [
-          { label: `${ext.name} ${ext.version}`, disabled: true, onSelect: () => {} },
-          ...(ext.optionsUrl ? [{ label: t("extensions.options"), onSelect: () => openTab(ext.optionsUrl!) }] : []),
-          {
-            label: t("common.delete"),
-            danger: true,
-            onSelect: async () => {
-              const removed = await window.yzo?.uninstallExtension(ext.id);
-              ui.showToast(removed ? t("extensions.removed", { name: ext.name }) : t("extensions.removeFailed"));
-            },
-          },
-          "separator" as const,
-        ])
-      : [{ label: t("extensions.none"), disabled: true, onSelect: () => {} }, "separator" as const];
-    entries.push({ label: t("extensions.addFromStore"), onSelect: () => openTab(CHROME_WEB_STORE_URL) });
-    ui.openMenu({ x: rect.left, y: rect.bottom + 4, entries });
-  };
   const todayCount = state.items[space.todayId].childrenIds.length;
 
-  // The page view next to the handle swallows the pointer: freeze it while resizing.
+  // The page view next to the handle swallows the pointer: raise the UI above it while resizing.
   const startResize = (event: ReactPointerEvent<HTMLDivElement>) => {
     resizing.current = true;
     host.setDragging(true);
@@ -253,64 +162,6 @@ export function Sidebar({ floating = false }: { floating?: boolean }) {
       className={`sidebar sidebar-${appearance}${floating ? " sidebar-floating" : ""}`}
       style={{ width: state.window.sidebarWidth, background: floating ? sidebarBackground(space.theme) : undefined }}
     >
-      {/* No drag region while floating: Electron drag regions swallow mouse events, which would fire
-          mouseleave on the floating host and close it as soon as the pointer reaches the top. */}
-      <div className={"sidebar-top" + (floating ? "" : " drag")}>
-        <div className="sidebar-top-row sidebar-brand-row">
-          {/* Placeholder mark until the real logo exists; opens the app menu, like Arc's logo. */}
-          <button className="brand-mark no-drag" title={t("appMenu.title")} aria-haspopup="menu" onClick={(event) => openAppMenu(event.currentTarget)}>
-            <Icon name="brand" />
-          </button>
-          <WindowControls />
-        </div>
-        <div className="sidebar-top-row nav-buttons">
-          <button title={t("sidebar.toggleSidebar", { shortcut: shortcutLabel("toggleSidebar") })} onClick={() => ui.runAction("toggleSidebar")}>
-            <Icon name="sidebar" />
-          </button>
-          <button title={t("sidebar.back")} onClick={() => void tabCommand(selection?.focusedTabId ?? null, "back")}>
-            <Icon name="back" />
-          </button>
-          <button title={t("sidebar.forward")} onClick={() => void tabCommand(selection?.focusedTabId ?? null, "forward")}>
-            <Icon name="forward" />
-          </button>
-          <button title={t("sidebar.reload", { shortcut: shortcutLabel("reload") })} onClick={() => ui.runAction("reload")}>
-            <Icon name="reload" />
-          </button>
-          {/* Extension action buttons (icons, popups, badges) rendered by electron-chrome-extensions. */}
-          {window.yzo && (
-            <browser-action-list
-              className="extension-actions no-drag"
-              partition={TABS_PARTITION}
-              alignment="bottom right"
-              tab={host.webContentsIdOf(selection?.focusedTabId ?? null)}
-            />
-          )}
-          <button className="extensions-button" title={t("sidebar.extensions")} onClick={(event) => void openExtensionsMenu(event.currentTarget)}>
-            <Icon name="extensions" />
-          </button>
-        </div>
-      </div>
-
-      <button className="url-pill" onClick={() => ui.openCommandBar(url ? "current" : "new")} title={url || t("sidebar.searchOrUrl")}>
-        <span className="url-search">
-          <Icon name="search" size={14} />
-        </span>
-        <span className="url-text">{url ? displayHost(url) : t("sidebar.searchOrUrl")}</span>
-        {url && (
-          <span
-            className="url-copy"
-            role="button"
-            title={t("sidebar.copyLink", { shortcut: shortcutLabel("copyUrl") })}
-            onClick={(event) => {
-              event.stopPropagation();
-              ui.runAction("copyUrl");
-            }}
-          >
-            <Icon name="copy" size={13} />
-          </span>
-        )}
-      </button>
-
       <Favorites />
 
       <div className="sidebar-scroll">
