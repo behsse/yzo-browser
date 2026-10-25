@@ -154,12 +154,13 @@ kbd {
   flex-shrink: 0;
 }
 
+/* Height leaves 3px above and below, so hover backgrounds never touch the bar edges. */
 .topbar button {
   -webkit-app-region: no-drag;
   display: grid;
   place-items: center;
   width: 28px;
-  height: 28px;
+  height: 26px;
   border-radius: var(--radius-small);
   color: var(--fg-muted);
 }
@@ -369,6 +370,10 @@ kbd {
   background-size: 16px;
 }
 
+.topbar .topbar-extension {
+  height: 26px;
+}
+
 .topbar-extension:hover {
   background-color: var(--row-hover);
 }
@@ -485,7 +490,7 @@ kbd {
   display: grid;
   place-items: center;
   width: 28px;
-  height: 28px;
+  height: 26px;
   border-radius: var(--radius-small);
   color: var(--fg);
 }
