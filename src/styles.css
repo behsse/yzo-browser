@@ -173,13 +173,13 @@ kbd {
 
 /* Top bar icons are larger than the sidebar ones (CSS size wins over the SVG attributes). */
 .topbar svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
 }
 
 .topbar .topbar-icon svg {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
 }
 
 /* The sidebar and top bar lock buttons are highlighted while their bar is locked (anchored). */
@@ -372,6 +372,7 @@ kbd {
 
 .topbar .topbar-extension {
   height: 26px;
+  background-size: 18px;
 }
 
 .topbar-extension:hover {
