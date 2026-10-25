@@ -157,7 +157,7 @@ export function TopBar({ draggable = true }: { draggable?: boolean }) {
 
       <div className="topbar-address">
         {url && (
-          <button className="topbar-icon" title={t("sidebar.copyLink", { shortcut: shortcutLabel("copyUrl") })} onClick={() => ui.runAction("copyUrl")}>
+          <button title={t("sidebar.copyLink", { shortcut: shortcutLabel("copyUrl") })} onClick={() => ui.runAction("copyUrl")}>
             <Icon name="link" />
           </button>
         )}
@@ -165,7 +165,7 @@ export function TopBar({ draggable = true }: { draggable?: boolean }) {
           {url ? displayHost(url) : t("sidebar.searchOrUrl")}
         </button>
         {url && (
-          <button className="topbar-icon" title={t("topbar.siteMenu")} aria-haspopup="menu" onClick={(event) => openSiteMenu(event.currentTarget)}>
+          <button title={t("topbar.siteMenu")} aria-haspopup="menu" onClick={(event) => openSiteMenu(event.currentTarget)}>
             <Icon name="sliders" />
           </button>
         )}
