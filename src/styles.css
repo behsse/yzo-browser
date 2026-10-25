@@ -124,32 +124,17 @@ kbd {
   z-index: 26;
 }
 
-/* Hidden top bar, sliding down over the pages; transform only, like the floating sidebar. */
-.floating-topbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 35;
-  transform: translateY(calc(-100% - 8px));
-  /* Hidden once slid out, so nothing of it can catch the mouse at the top of the window. */
-  visibility: hidden;
-  transition:
-    transform var(--slide-out-ms) var(--ease-in),
-    box-shadow var(--slide-out-ms) var(--ease-in),
-    visibility 0s linear var(--slide-out-ms);
-  pointer-events: none;
+/* Holds the top bar; collapsing its height hides the bar and gives its room to the pages. */
+.topbar-slot {
+  height: var(--topbar-height);
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: height var(--slide-in-ms) var(--ease-out);
 }
 
-.floating-topbar-open {
-  transform: none;
-  visibility: visible;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-  transition:
-    transform var(--slide-in-ms) var(--ease-out),
-    box-shadow var(--slide-in-ms) var(--ease-out),
-    visibility 0s;
-  pointer-events: auto;
+.app-topbar-hidden .topbar-slot {
+  transition-duration: var(--slide-out-ms);
+  transition-timing-function: var(--ease-in);
 }
 
 /* Below the top bar: sidebar and pages side by side. */
@@ -269,7 +254,9 @@ kbd {
   flex: 1;
   min-width: 0;
   margin: 0 var(--content-gap) var(--content-gap) 0;
-  transition: margin-left var(--slide-in-ms) var(--ease-out);
+  transition:
+    margin-left var(--slide-in-ms) var(--ease-out),
+    margin-top var(--slide-in-ms) var(--ease-out);
 }
 
 .app-sidebar-hidden .web-area {

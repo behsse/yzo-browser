@@ -28,6 +28,8 @@ const HIDE_DELAY_MS = 120;
 const CURSOR_POLL_MS = 50;
 /** Matches --slide-out-ms in styles.css, plus a frame of margin. */
 const FLOATING_EXIT_MS = 200;
+/** How long after the window last moved the revealed top bar stays open (window drag by the bar). */
+const WINDOW_MOVE_HOLD_MS = 400;
 /** Gap between the floating sidebar card and the window edges (matches .floating-zone padding). */
 const FLOATING_MARGIN_PX = 6;
 /** Height of the top bar (--topbar-height in styles.css). */
@@ -284,11 +286,11 @@ export function App() {
     const timer = window.setInterval(async () => {
       const cursor = await window.yzo?.cursorPosition();
       if (!cursor) return;
-      if (floatingSidebarDecision(cursor, zoneWidth, topHidden ? 0 : TOP_BAR_HEIGHT_PX) === "hide") scheduleHide();
+      if (floatingSidebarDecision(cursor, zoneWidth, topHidden && !topRevealed ? 0 : TOP_BAR_HEIGHT_PX) === "hide") scheduleHide();
       else reveal();
     }, CURSOR_POLL_MS);
     return () => window.clearInterval(timer);
-  }, [hidden, topHidden, revealed, zoneWidth, scheduleHide, reveal]);
+  }, [hidden, topHidden, topRevealed, revealed, zoneWidth, scheduleHide, reveal]);
 
   // Keep the UI raised above the pages until the floating sidebar has finished sliding out, so the
   // native views do not cover it mid-animation.
@@ -302,14 +304,21 @@ export function App() {
     return () => window.clearTimeout(timer);
   }, [revealed]);
 
-  // Floating top bar: same behavior as the floating sidebar, from the top edge.
+  // Hidden top bar: revealed from the top edge (like the floating sidebar), as a block that pushes the
+  // pages down rather than floating over them, so it stays a native title bar (window move, snap, and
+  // restoring a maximized window by dragging all work).
   const revealTop = useCallback(() => {
     window.clearTimeout(topHideTimer.current);
     topHideTimer.current = undefined;
     setTopRevealed(true);
   }, []);
+  // While the window is dragged by the revealed bar, the cursor stays on it but its position can lag:
+  // keep the bar open until the window has stopped moving for a moment.
+  const lastWindowMove = useRef(0);
+  useEffect(() => window.yzo?.onWindowMoved(() => (lastWindowMove.current = Date.now())), []);
   const scheduleTopHide = useCallback(() => {
     if (holdFloatingRef.current || topHideTimer.current !== undefined) return;
+    if (Date.now() - lastWindowMove.current < WINDOW_MOVE_HOLD_MS) return;
     topHideTimer.current = window.setTimeout(() => {
       topHideTimer.current = undefined;
       setTopRevealed(false);
@@ -325,43 +334,24 @@ export function App() {
     }, CURSOR_POLL_MS);
     return () => window.clearInterval(timer);
   }, [topHidden, topRevealed, scheduleTopHide, revealTop]);
-  const [topFrozen, setTopFrozen] = useState(false);
-  useEffect(() => {
-    if (topRevealed) {
-      setTopFrozen(true);
-      return;
-    }
-    const timer = window.setTimeout(() => setTopFrozen(false), FLOATING_EXIT_MS);
-    return () => window.clearTimeout(timer);
-  }, [topRevealed]);
-
   const overlayOpen = Boolean(
-    commandBar || peekUrl || archiveOpen || accountOpen || spaceEditor || menu || extensionsAnchor || (hidden && floatingFrozen) || (topHidden && topFrozen),
+    commandBar || peekUrl || archiveOpen || accountOpen || spaceEditor || menu || extensionsAnchor || (hidden && floatingFrozen),
   );
   const theme = state.spaces[state.window.focusedSpaceId].theme;
 
   return (
     <ViewHostProvider overlayOpen={overlayOpen} peekUrl={peekUrl}>
       <UiContext.Provider value={ui}>
-        <div className={`app app-${resolveAppearance(theme)}${hidden ? " app-sidebar-hidden" : ""}${topHidden ? " app-topbar-hidden" : ""}`}>
+        <div className={`app app-${resolveAppearance(theme)}${hidden ? " app-sidebar-hidden" : ""}${topHidden && !topRevealed ? " app-topbar-hidden" : ""}`}>
           {/* The space gradient, with a hole over each page: the UI view is transparent there, so the
               live pages show through when the UI is stacked above them. */}
           <div className="app-backdrop" style={{ background: sidebarBackground(theme) }} />
-          {/* Anchored top bar takes its row; hidden, it slides down over the pages on hover of the top
-              edge (like the floating sidebar) and the pages get the full height. */}
-          {topHidden ? (
-            <>
-              <div className="topbar-reveal-edge" onMouseEnter={revealTop} onMouseMove={revealTop} />
-              <div className={"floating-topbar" + (topRevealed ? " floating-topbar-open" : "")} style={{ background: sidebarBackground(theme) }} inert={!topRevealed}>
-                {/* No drag region here: Electron places them without CSS transforms (a slid-out bar would
-                    swallow the mouse at the top of the window) and they do not work while the UI is above
-                    the pages. The floating bar moves the window itself. */}
-                <TopBar floating draggable={false} />
-              </div>
-            </>
-          ) : (
-            <TopBar />
-          )}
+          {/* Its slot animates its height: collapsed when hidden, full when anchored or revealed. */}
+          <div className="topbar-slot">
+            <TopBar draggable={!topHidden || topRevealed} />
+          </div>
+          {/* Never a drag region: Electron drag regions receive no mouse events. */}
+          {topHidden && !topRevealed && <div className="topbar-reveal-edge" onMouseEnter={revealTop} onMouseMove={revealTop} />}
           <div className="app-body">
           {/* The anchored sidebar stays mounted and its slot animates its width, so Ctrl+S slides the
               page instead of jumping. It is inert while collapsed. */}

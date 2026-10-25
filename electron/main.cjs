@@ -299,6 +299,8 @@ function createWindow() {
   ui.webContents.once("did-finish-load", () => win.show());
   win.on("maximize", () => ui.webContents.send("window:maximized", true));
   win.on("unmaximize", () => ui.webContents.send("window:maximized", false));
+  // Lets the UI keep a revealed top bar open while the user drags the window by it.
+  win.on("move", () => ui.webContents.send("window:moved"));
   win.on("closed", () => {
     viewManager = null;
     menuPopup = null;
@@ -358,44 +360,6 @@ ipcMain.on("window:control", (event, action) => {
   if (action === "minimize") mainWindow.minimize();
   else if (action === "maximize") mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize();
   else if (action === "close") mainWindow.close();
-});
-
-/**
- * Window move driven by the UI, for the floating top bar: Electron drag regions do not work in it
- * (the UI view is stacked above the pages then), so the UI reports the drag and the window follows
- * the cursor. A maximized window is restored first, keeping the cursor at the same relative spot.
- * @type {{ dx: number, dy: number } | null}
- */
-let manualDrag = null;
-
-ipcMain.on("window:drag", (event, phase) => {
-  const win = mainWindow;
-  if (!isTrustedSender(event) || !win || win.isDestroyed()) return;
-  const cursor = screen.getCursorScreenPoint();
-  if (phase === "start") {
-    if (win.isMaximized()) {
-      // Restore to the normal size under the cursor. Windows applies the restore asynchronously and
-      // may put the window back at its old place, so the bounds are set again once it is done.
-      const maximized = win.getBounds();
-      const normal = win.getNormalBounds();
-      const ratio = (cursor.x - maximized.x) / maximized.width;
-      const target = { x: Math.round(cursor.x - normal.width * ratio), y: Math.round(cursor.y - 12), width: normal.width, height: normal.height };
-      manualDrag = { dx: cursor.x - target.x, dy: cursor.y - target.y };
-      win.once("unmaximize", () => {
-        const now = screen.getCursorScreenPoint();
-        if (manualDrag) win.setBounds({ ...target, x: Math.round(now.x - manualDrag.dx), y: Math.round(now.y - manualDrag.dy) });
-      });
-      win.unmaximize();
-      win.setBounds(target);
-      return;
-    }
-    const [x, y] = win.getPosition();
-    manualDrag = { dx: cursor.x - x, dy: cursor.y - y };
-  } else if (phase === "move" && manualDrag && !win.isMaximized()) {
-    win.setPosition(Math.round(cursor.x - manualDrag.dx), Math.round(cursor.y - manualDrag.dy));
-  } else if (phase === "end") {
-    manualDrag = null;
-  }
 });
 
 // Menus are drawn above the live pages (electron/menu-popup.cjs); resolves to the picked index or null.

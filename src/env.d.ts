@@ -93,8 +93,8 @@ export interface YzoBridge {
   loadState(): Promise<string | null>;
   saveState(json: string): Promise<boolean>;
   windowControl(action: "minimize" | "maximize" | "close"): void;
-  /** Moves the window with the cursor (floating top bar): start on press, move while dragging, end on release. */
-  windowDrag(phase: "start" | "move" | "end"): void;
+  /** Fires while the window is being moved. */
+  onWindowMoved(callback: () => void): () => void;
   isMaximized(): Promise<boolean>;
   /** Cursor position relative to the window content (DIPs), or null if unavailable. */
   cursorPosition(): Promise<{ x: number; y: number; width: number; height: number } | null>;

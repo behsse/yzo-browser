@@ -6,7 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ### Added
 
-- Hideable top bar for a real full-screen view: the new lock button next to the sidebar toggle (or Ctrl+Shift+S) hides it; it slides down over the pages when the pointer reaches the top edge and slides back up when the pointer leaves it. The pages and the sidebar take the full height while it is hidden. The window can be moved (to another screen too) by dragging the revealed bar, and double-clicking it maximizes or restores the window.
+- Hideable top bar for a real full-screen view: the new lock button next to the sidebar toggle (or Ctrl+Shift+S) hides it and the pages take the full height. Moving the pointer to the top edge brings it back above the pages (they slide down), and it hides again when the pointer leaves it. It stays a real title bar: dragging it moves the window, to another screen too, and restores a maximized window.
 
 ## [0.8.0] - 2026-10-25
 
