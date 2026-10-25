@@ -29,7 +29,7 @@ const FLOATING_EXIT_MS = 200;
 /** Gap between the floating sidebar card and the window edges (matches .floating-zone padding). */
 const FLOATING_MARGIN_PX = 6;
 /** Height of the top bar (--topbar-height in styles.css). */
-const TOP_BAR_HEIGHT_PX = 38;
+const TOP_BAR_HEIGHT_PX = 44;
 
 /**
  * Root component: lays out the sidebar and content, owns the transient overlays and routes every

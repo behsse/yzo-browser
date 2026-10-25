@@ -13,7 +13,7 @@ const MENU_MARGIN = 12;
 const MEASURE_SIZE = { width: 420, height: 900 };
 const MAX_ENTRIES = 64;
 const MAX_TEXT = 200;
-const ICON_PATH_PATTERN = /^[MmLlHhVvCcSsQqTtAaZz0-9.,\s-]{1,600}$/;
+const ICON_PATH_PATTERN = /^[MmLlHhVvCcSsQqTtAaZz0-9.,\s-]{1,2000}$/;
 
 /**
  * @typedef {{ separator: true } | { label: string, icon?: string, hint?: string, danger?: boolean, disabled?: boolean, index: number }} MenuItem
