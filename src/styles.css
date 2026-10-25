@@ -222,11 +222,6 @@ kbd {
   font-size: 13px;
 }
 
-.topbar .topbar-icon {
-  width: 24px;
-  height: 24px;
-}
-
 /* Space gradient behind the whole UI, masked over the pages (--page-holes, set by ViewHost). */
 .app-backdrop {
   position: fixed;
