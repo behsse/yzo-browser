@@ -2,7 +2,7 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.8.0] - 2026-10-25
 
 ### Added
 
@@ -13,12 +13,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ### Changed
 
+- Arc-style top bar across the window: logo (app menu), sidebar toggle, back, forward and reload on the left; the current site in the middle with copy-link and site settings buttons; extension icons, the extensions menu, split view and window controls on the right. The sidebar loses its header rows and search field and now starts with the favorites.
 - Only pinned extensions show in the top bar.
 - The real Yzo logo replaces the placeholder "y" in the top bar, with smoothed curves and the same color as the other icons.
 - The app icon (installers, taskbar, dock) now shows the Yzo logo in white on the gradient square; `pnpm icon` draws it from the same outline as the top bar.
-
-- Arc-style top bar across the window: logo (app menu), sidebar toggle, back, forward and reload on the left; the current site in the middle with copy-link and site settings buttons; extension icons, the extensions menu, split view and window controls on the right. The sidebar loses its header rows and search field and now starts with the favorites.
-- Icons are 2 px larger, with rounded corners instead of square ones, and the extensions icon is a full puzzle piece (tabs out on the top and right, notches in on the bottom and left).
+- Icons have rounded corners instead of square ones, and the extensions icon is a full puzzle piece (tabs out on the top and right, notches in on the bottom and left).
 - Top bar sized like Arc's (32 px, 16 px icons, buttons 36 px apart, window controls 46 px apart).
 - The restore icon now shows the back window at the top right, like Windows.
 
