@@ -9,6 +9,7 @@ const { createMenuPopup } = require("./menu-popup.cjs");
 const { setupExtensions } = require("./extensions.cjs");
 const { createAccount, AccountError } = require("./account.cjs");
 const { readArc, countTabs, EXTENSION_ID } = require("./arc-import.cjs");
+const { resolveFavicon } = require("./favicon.cjs");
 const { t } = require("./i18n.cjs");
 
 const PARTITION = "persist:yzo";
@@ -391,6 +392,9 @@ async function importFromArc() {
   })();
   return { status: "imported", data: { spaces: arc.spaces, favorites: arc.favorites }, extensions: extensions.length };
 }
+
+// Icon of a tab that was never opened (imported, restored, synced), found without loading it.
+ipcMain.handle("favicon:resolve", (event, url) => (isTrustedSender(event) ? resolveFavicon(session.fromPartition(PARTITION), url) : null));
 
 ipcMain.handle("arc:import", (event) => (isTrustedSender(event) ? importFromArc() : null));
 

@@ -98,6 +98,8 @@ export interface YzoBridge {
   cursorPosition(): Promise<{ x: number; y: number; width: number; height: number } | null>;
   /** Shows a popup menu above the pages; resolves to the picked entry index, or null when dismissed. */
   showMenu(entries: (NativeMenuEntry | "separator")[], x: number, y: number): Promise<number | null>;
+  /** Finds the icon of a site without opening it; null when none was found. */
+  resolveFavicon(url: string): Promise<string | null>;
   /** Reads Arc's data after a confirmation dialog; extensions install in the background. */
   importArc(): Promise<{ status: "notFound" | "cancelled" | "imported"; data?: import("./state/types").ArcImportData; extensions?: number } | null>;
   /** Manual update check; "dev" outside packaged builds. */

@@ -120,7 +120,7 @@ export interface WindowState {
 }
 
 /** Data read from Arc by "Import from Arc" (electron/arc-import.cjs). */
-export type ArcImportTab = { kind: "tab"; url: string; title: string };
+export type ArcImportTab = { kind: "tab"; url: string; title: string; favicon?: string };
 export type ArcImportNode =
   | ArcImportTab
   | { kind: "folder"; title: string; children: ArcImportNode[] }

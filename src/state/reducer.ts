@@ -166,6 +166,19 @@ function addSpace(draft: AppState, name: string, icon: string, theme: SpaceTheme
 }
 
 /**
+ * Identifies the site of a URL for favorite de-duplication: host without "www.".
+ * @param url Page URL.
+ * @returns Lower-case host, or the URL itself when it does not parse.
+ */
+function siteKey(url: string): string {
+  try {
+    return new URL(url).hostname.toLowerCase().replace(/^www./, "");
+  } catch {
+    return url;
+  }
+}
+
+/**
  * Adds imported Arc nodes (tabs, folders, split views) under a parent, in order. Non-http(s) tabs
  * and split views with fewer than two tabs are flattened or dropped, like the rest of the model.
  * @param draft Mutable state copy.
@@ -178,6 +191,8 @@ function addImportedNodes(draft: AppState, nodes: ArcImportNode[], parentId: ID,
     if (node.kind === "tab") {
       if (!/^https?:\/\//i.test(node.url)) continue;
       const tab = makeItem(makeTabData(node.url, now, node.title), now);
+      // Arc's cached icon, so imported tabs show their icon before they are ever opened.
+      if (node.favicon?.startsWith("data:image/png;base64,")) tab.data.favicon = node.favicon;
       draft.items[tab.id] = tab;
       attach(draft, tab.id, parentId);
     } else if (node.kind === "folder") {
@@ -532,13 +547,20 @@ export function reducer(state: AppState, action: Action): AppState {
         addImportedNodes(draft, space.pinned, draft.spaces[id].pinnedId, action.now);
         addImportedNodes(draft, space.today, draft.spaces[id].todayId, action.now);
       }
-      const known = new Set(draft.items[draft.favoritesId].childrenIds.flatMap((id) => { const item = draft.items[id]; return isTab(item) ? [item.data.savedUrl] : []; }));
-      addImportedNodes(
-        draft,
-        favorites.filter((tab) => !known.has(tab.url)),
-        draft.favoritesId,
-        action.now,
+      // One favorite per site: Arc's Gmail (mail.google.com/mail/u/0/…) is the same favorite as Yzo's.
+      const known = new Set(
+        draft.items[draft.favoritesId].childrenIds.flatMap((id) => {
+          const item = draft.items[id];
+          return isTab(item) ? [siteKey(item.data.savedUrl || item.data.url)] : [];
+        }),
       );
+      const newFavorites = favorites.filter((tab) => {
+        const key = siteKey(tab.url);
+        if (known.has(key)) return false;
+        known.add(key);
+        return true;
+      });
+      addImportedNodes(draft, newFavorites, draft.favoritesId, action.now);
       // Show the first imported space; addSpace focused the last one.
       draft.window.focusedSpaceId = firstImported ?? focused;
       loadSelection(draft, draft.window.focusedSpaceId);

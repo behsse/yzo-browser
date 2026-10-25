@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { displayHost } from "../lib/url";
 
+/** Window event sent when a favicon fails to load, so useMissingFavicons can look the icon up again. */
+export const FAVICON_BROKEN_EVENT = "yzo:favicon-broken";
+
 /**
  * Shows a page favicon, falling back to the host's first letter when the page has none or the image
  * fails to load.
@@ -12,7 +15,19 @@ import { displayHost } from "../lib/url";
 export function Favicon({ src, url, size = 16 }: { src: string | null; url: string; size?: number }) {
   const [failed, setFailed] = useState<string | null>(null);
   if (src && failed !== src && /^https?:|^data:image\//.test(src)) {
-    return <img className="favicon" src={src} width={size} height={size} alt="" onError={() => setFailed(src)} />;
+    return (
+      <img
+        className="favicon"
+        src={src}
+        width={size}
+        height={size}
+        alt=""
+        onError={() => {
+          setFailed(src);
+          window.dispatchEvent(new CustomEvent(FAVICON_BROKEN_EVENT, { detail: src }));
+        }}
+      />
+    );
   }
   const letter = displayHost(url).charAt(0).toUpperCase() || "•";
   return (

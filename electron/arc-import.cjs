@@ -4,6 +4,7 @@
 // local only). Everything is a node of one flat item table linked by parentID / childrenIds; Swift
 // ordered dictionaries are flat [key, value, key, value…] arrays. This module only reads: Arc's
 // files are never modified.
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
@@ -13,11 +14,13 @@ const MAX_DEPTH = 8;
 const MAX_NODES = 5000;
 const MAX_TEXT = 500;
 const EXTENSION_ID = /^[a-p]{32}$/;
+const MAX_FAVICON_BYTES = 100 * 1024;
+const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
 /** Arc's built-in space icons (SF Symbol names) that have an obvious emoji. */
 const ICON_EMOJI = { planet: "🪐", star: "⭐", heart: "❤️", bolt: "⚡", flame: "🔥", leaf: "🍃", moon: "🌙", sun: "☀️", book: "📖", briefcase: "💼", house: "🏠", gamecontroller: "🎮" };
 
 /**
- * @typedef {{ kind: "tab", url: string, title: string }} ArcTab
+ * @typedef {{ kind: "tab", url: string, title: string, favicon?: string }} ArcTab
  * @typedef {{ kind: "folder", title: string, children: ArcNode[] }} ArcFolder
  * @typedef {{ kind: "split", orientation: "horizontal" | "vertical", factors: number[], children: ArcTab[] }} ArcSplit
  * @typedef {ArcTab | ArcFolder | ArcSplit} ArcNode
@@ -86,11 +89,29 @@ function spaceIcon(customInfo) {
 }
 
 /**
+ * Reads the icon Arc cached for a sidebar item: SidebarItemsFaviconCache/<md5(item id)>, a PNG.
+ * @param {string | null} cacheDir Cache folder, or null to skip icons.
+ * @param {string} itemId Arc item id.
+ * @returns {string | undefined} data:image/png URL, or undefined when Arc has none.
+ */
+function cachedFavicon(cacheDir, itemId) {
+  if (!cacheDir) return undefined;
+  try {
+    const bytes = fs.readFileSync(path.join(cacheDir, crypto.createHash("md5").update(itemId).digest("hex")));
+    if (bytes.length > MAX_FAVICON_BYTES || !bytes.subarray(0, 4).equals(PNG_MAGIC)) return undefined;
+    return "data:image/png;base64," + bytes.toString("base64");
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Converts Arc's sidebar file into spaces, tabs, folders and split views. Only http(s) tabs are kept.
  * @param {any} json Parsed StorableSidebar.json.
+ * @param {string | null} [faviconCacheDir] Arc's SidebarItemsFaviconCache folder, for tab icons.
  * @returns {ArcSidebar} Importable sidebar.
  */
-function parseArcSidebar(json) {
+function parseArcSidebar(json, faviconCacheDir = null) {
   const container = (json?.sidebar?.containers ?? []).find((c) => c && Array.isArray(c.spaces) && Array.isArray(c.items));
   if (!container) return { spaces: [], favorites: [] };
   const items = pairs(container.items);
@@ -110,7 +131,8 @@ function parseArcSidebar(json) {
     if (data.tab) {
       const url = text(data.tab.savedURL);
       if (!/^https?:\/\//i.test(url)) return null;
-      return { kind: "tab", url, title: text(item.title) || text(data.tab.savedTitle) };
+      const favicon = cachedFavicon(faviconCacheDir, id);
+      return { kind: "tab", url, title: text(item.title) || text(data.tab.savedTitle), ...(favicon ? { favicon } : {}) };
     }
     if (data.list) return { kind: "folder", title: text(item.title), children: children() };
     if (data.splitView) {
@@ -170,7 +192,8 @@ function readArc() {
   try {
     const file = path.join(dir, "StorableSidebar.json");
     if (fs.statSync(file).size > MAX_FILE_BYTES) return null;
-    return { ...parseArcSidebar(JSON.parse(fs.readFileSync(file, "utf8"))), extensions: listArcExtensions(dir) };
+    const sidebar = parseArcSidebar(JSON.parse(fs.readFileSync(file, "utf8")), path.join(dir, "SidebarItemsFaviconCache"));
+    return { ...sidebar, extensions: listArcExtensions(dir) };
   } catch {
     return null;
   }

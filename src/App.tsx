@@ -18,6 +18,7 @@ import { Sidebar } from "./ui/Sidebar";
 import { TopBar } from "./ui/TopBar";
 import { SpaceEditor } from "./ui/SpaceEditor";
 import { UiContext, type AccountMode, type CommandBarMode, type MenuState, type UiValue } from "./ui/UiContext";
+import { useMissingFavicons } from "./ui/useMissingFavicons";
 import { ViewHostProvider } from "./ui/ViewHost";
 import { WebArea } from "./ui/WebArea";
 
@@ -236,6 +237,8 @@ export function App() {
       offClose?.();
     };
   }, [dispatch]);
+
+  useMissingFavicons(state, dispatch);
 
   useEffect(() => {
     dispatch({ type: "runAutoArchive", now: Date.now() });

@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld("yzo", {
   cursorPosition: () => ipcRenderer.invoke("window:cursor"),
   checkForUpdates: () => ipcRenderer.invoke("app:checkForUpdates"),
   importArc: () => ipcRenderer.invoke("arc:import"),
+  resolveFavicon: (url) => ipcRenderer.invoke("favicon:resolve", url),
   showMenu: (entries, x, y) => ipcRenderer.invoke("menu:popup", entries, x, y),
   syncViews: (payload) => ipcRenderer.send("views:sync", payload),
   tabCommand: (tabId, command, arg) => ipcRenderer.invoke("tab:command", tabId, command, arg),

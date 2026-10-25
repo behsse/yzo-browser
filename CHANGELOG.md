@@ -7,6 +7,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 ### Added
 
 - "Import from Arc…" in the Yzo menu: adds Arc's spaces with their pinned and today tabs, folders and split views, its favorites, and installs its extensions from the Chrome Web Store, after a confirmation. Nothing in Yzo is replaced and Arc's files are only read.
+- Tabs that were never opened (imported, restored, synced) get their site icon without being loaded: Yzo fetches the page in the background with the tabs' cookies and keeps the icon itself, falling back to the site's or parent domain's /favicon.ico. Imports from Arc reuse the icons Arc cached.
+- Imported favorites are de-duplicated by site (Arc's Gmail inbox link and Yzo's Gmail favorite are one favorite).
 - Extensions panel under the puzzle button, like Arc: every extension as a tile (click opens its popup), a pin in its bottom-right corner on hover (white once pinned) to show it in the top bar, right-click for options and removal, and "+" for the Chrome Web Store. Pinned extensions are synced with the other settings.
 
 ### Changed

@@ -73,6 +73,22 @@ describe("Arc sidebar parser", () => {
   });
 });
 
+describe("Arc favicon cache", () => {
+  it("attaches the PNG Arc cached under md5(item id) to the tab", async () => {
+    const { mkdtempSync, writeFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const { tmpdir } = await import("node:os");
+    const { createHash } = await import("node:crypto");
+    const dir = mkdtempSync(join(tmpdir(), "arc-favicons-"));
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+    writeFileSync(join(dir, createHash("md5").update("t1").digest("hex")), png);
+    writeFileSync(join(dir, createHash("md5").update("fav").digest("hex")), "<html>not an image</html>");
+    const parsed = parseArcSidebar(arcFile, dir);
+    expect(parsed.spaces[0].pinned[1].favicon).toBe("data:image/png;base64," + png.toString("base64"));
+    expect(parsed.favorites[0].favicon).toBeUndefined();
+  });
+});
+
 describe("importArc action", () => {
   const data: ArcImportData = parseArcSidebar(arcFile);
 
@@ -94,6 +110,13 @@ describe("importArc action", () => {
 
     const favorites = after.items[after.favoritesId].childrenIds.map((id) => after.items[id]);
     expect(favorites.filter((item) => isTab(item) && item.data.url === "https://search.example.com/")).toHaveLength(1);
+  });
+
+  it("keeps one favorite per site, whatever the page", () => {
+    const before = createInitialState(1);
+    const gmail = { kind: "tab" as const, url: "https://mail.google.com/mail/u/0/#inbox", title: "Gmail" };
+    const after = reducer(before, { type: "importArc", data: { spaces: [], favorites: [gmail, { ...gmail, url: "https://www.mail.google.com/x" }] }, now: 2 });
+    expect(after.items[after.favoritesId].childrenIds).toHaveLength(before.items[before.favoritesId].childrenIds.length);
   });
 
   it("does not duplicate a favorite that already exists", () => {
