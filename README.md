@@ -8,7 +8,7 @@ Stack: Electron 43 in its [castLabs ECS](https://github.com/castlabs/electron-re
 
 | Feature | Details |
 |---|---|
-| Top bar | Like Arc: logo (app menu), sidebar toggle, back, forward, reload on the left; the current site in the middle (click to edit, link icon to copy, sliders for site settings); extensions, split view and window controls on the right. The bar moves the window. |
+| Top bar | Like Arc: logo (app menu), sidebar toggle, back, forward, reload on the left; the current site in the middle (click to edit, link icon to copy, sliders for site settings); pinned extensions, the extensions panel, split view and window controls on the right. The bar moves the window. |
 | Vertical sidebar | Favorites shared across spaces, pinned section, divider, "today" tabs. Resizable (180–420 px). |
 | Spaces | Name, emoji, two-color gradient from Arc's palettes (pastel, muted, gray), light/dark/auto mode. Dock at the bottom of the sidebar. |
 | Command bar | One input for URLs, search and switching to an open tab. Title + domain deduplication for Figma, Notion, GitHub… Remembers the result type picked for each query. |
@@ -18,7 +18,7 @@ Stack: Electron 43 in its [castLabs ECS](https://github.com/castlabs/electron-re
 | Folders | Create, rename, collapse, drag and drop, nesting. |
 | Pinned tabs | Closing a pinned tab unloads it and brings it back to its original URL, like Arc. |
 | Hidden sidebar | `Ctrl+S` hides the sidebar; it reappears when hovering the left edge. |
-| Chrome extensions | Install from the Chrome Web Store ("Add to Chrome" button, with a permission confirmation), automatic updates. Icons, popups, badges, context menus and the tabs API (`chrome.tabs`) are supported. Management (options, removal) through the puzzle button. |
+| Chrome extensions | Install from the Chrome Web Store ("Add to Chrome" button, with a permission confirmation), automatic updates. The puzzle button opens the extensions panel: click an extension to open its popup, hover it and click the pin to show it in the top bar, right-click for options and removal, "+" to add more. Popups, badges, context menus and the tabs API (`chrome.tabs`) are supported. |
 | Account and sync | Yzo account (sign in from the menu behind the logo): spaces, favorites, pinned tabs, folders and settings synced across computers, **end-to-end encrypted** (the server sees neither the password nor the data). Recovery key at sign-up, session kept in the system keychain. See [docs/sync.md](docs/sync.md). |
 | Protected video (DRM) | Widevine through castLabs ECS: Spotify, Deezer, Prime Video, Disney+… Netflix and the strictest services also require production VMP signing (see "Distribution"). |
 | Updates | Installed builds check GitHub Releases at startup and update in the background (`electron-updater`). |

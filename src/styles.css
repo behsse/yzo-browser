@@ -313,26 +313,120 @@ kbd {
 }
 
 /* Row 2: navigation on the left; extension icons then the extensions menu pushed to the right. */
-.extension-actions {
+/* Extension actions (<button is="browser-action">): the library sets the icon as background. */
+.topbar-extension,
+.extension-tile-action {
   -webkit-app-region: no-drag;
-  display: flex;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.extension-actions::part(action) {
+  position: relative;
   width: 28px;
   height: 28px;
   border-radius: var(--radius-small);
+  background-position: center;
+  background-repeat: no-repeat;
   background-size: 16px;
 }
 
-.extension-actions::part(action):hover {
+.topbar-extension:hover {
   background-color: var(--row-hover);
 }
 
-.extension-actions::part(badge) {
+.topbar-extension .badge,
+.extension-tile-action .badge {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  padding: 0 3px;
+  border-radius: 4px;
   font-size: 9px;
+  line-height: 12px;
+}
+
+/* Transparent layer under popovers anchored to a button (extensions panel): click outside closes. */
+.popover-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+
+.extensions-panel {
+  position: fixed;
+  padding: 10px 12px 12px;
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+  color: #1d1d22;
+  animation: pop-in 0.12s ease-out;
+}
+
+@media (prefers-color-scheme: dark) {
+  .extensions-panel {
+    color: #f4f4f7;
+  }
+}
+
+.extensions-panel h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.6;
+}
+
+.extensions-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.extension-tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.extension-tile:hover {
+  filter: brightness(1.08);
+}
+
+.extension-tile .extension-tile-action {
+  width: 44px;
+  height: 44px;
+  background-size: 22px;
+}
+
+/* Pin shown on hover (always when pinned), in the tile's corner. */
+.extension-pin {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  color: inherit;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.extension-tile:hover .extension-pin,
+.extension-pin-on {
+  opacity: 1;
+}
+
+.extension-pin-on {
+  background: var(--accent);
+  color: #fff;
+}
+
+.extension-add {
+  color: inherit;
+  opacity: 0.8;
 }
 
 /* SVG mark drawn on the same 24-unit grid and stroke as the icons, in a 28px button like the others,

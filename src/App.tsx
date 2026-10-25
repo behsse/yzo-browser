@@ -10,6 +10,7 @@ import type { ID } from "./state/types";
 import { AccountPanel } from "./ui/AccountPanel";
 import { ArchivePanel } from "./ui/ArchivePanel";
 import { CommandBar } from "./ui/CommandBar";
+import { ExtensionsPanel } from "./ui/ExtensionsPanel";
 import { ContextMenu } from "./ui/ContextMenu";
 import { ICON_PATHS } from "./ui/Icon";
 import { Peek } from "./ui/Peek";
@@ -42,6 +43,7 @@ export function App() {
   const [peekUrl, setPeekUrl] = useState<string | null>(null);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState<AccountMode | null>(null);
+  const [extensionsAnchor, setExtensionsAnchor] = useState<{ right: number; bottom: number } | null>(null);
   const [spaceEditor, setSpaceEditor] = useState<ID | "new" | null>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
   /** A menu shown by the popup layer above the pages (no freeze needed). */
@@ -158,6 +160,7 @@ export function App() {
       openAccount: (mode = "signIn") => setAccountOpen(mode),
       openSpaceEditor: setSpaceEditor,
       openMenu,
+      openExtensions: setExtensionsAnchor,
       showToast,
       runAction,
     }),
@@ -170,6 +173,7 @@ export function App() {
         setPeekUrl(null);
         setArchiveOpen(false);
         setAccountOpen(null);
+        setExtensionsAnchor(null);
         setSpaceEditor(null);
         return;
       }
@@ -250,7 +254,7 @@ export function App() {
   }, []);
   // A menu or dialog opened from the floating sidebar (extensions, space editor…) can extend past it:
   // the sidebar stays open until it closes, then the cursor position decides again.
-  const holdFloating = nativeMenuOpen || Boolean(menu || commandBar || peekUrl || archiveOpen || accountOpen || spaceEditor);
+  const holdFloating = nativeMenuOpen || Boolean(menu || commandBar || peekUrl || archiveOpen || accountOpen || spaceEditor || extensionsAnchor);
   const holdFloatingRef = useRef(holdFloating);
   holdFloatingRef.current = holdFloating;
   const scheduleHide = useCallback(() => {
@@ -288,7 +292,7 @@ export function App() {
     return () => window.clearTimeout(timer);
   }, [revealed]);
 
-  const overlayOpen = Boolean(commandBar || peekUrl || archiveOpen || accountOpen || spaceEditor || menu || (hidden && floatingFrozen));
+  const overlayOpen = Boolean(commandBar || peekUrl || archiveOpen || accountOpen || spaceEditor || menu || extensionsAnchor || (hidden && floatingFrozen));
   const theme = state.spaces[state.window.focusedSpaceId].theme;
 
   return (
@@ -341,6 +345,7 @@ export function App() {
         {peekUrl && <Peek url={peekUrl} onClose={() => setPeekUrl(null)} />}
         {archiveOpen && <ArchivePanel onClose={() => setArchiveOpen(false)} />}
         {accountOpen && <AccountPanel initialMode={accountOpen} onClose={() => setAccountOpen(null)} />}
+        {extensionsAnchor && <ExtensionsPanel anchor={extensionsAnchor} onClose={() => setExtensionsAnchor(null)} />}
         {spaceEditor && <SpaceEditor spaceId={spaceEditor} onClose={() => setSpaceEditor(null)} />}
         {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
         {toast && <div className="toast">{toast}</div>}

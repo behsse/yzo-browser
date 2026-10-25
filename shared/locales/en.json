@@ -193,5 +193,9 @@
 
   "topbar.siteMenu": "Site settings",
   "topbar.splitView": "Split view ({shortcut})",
-  "topbar.devTools": "Developer tools"
+  "topbar.devTools": "Developer tools",
+
+  "extensions.title": "Extensions",
+  "extensions.pin": "Pin to the top bar",
+  "extensions.unpin": "Unpin from the top bar"
 }

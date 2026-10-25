@@ -114,8 +114,23 @@ export interface YzoBridge {
   onOpenTab(callback: (payload: { url: string; background: boolean }) => void): () => void;
 }
 
+/** State of the extension actions, from electron-chrome-extensions' browser-action preload. */
+export interface BrowserActionState {
+  activeTabId?: number;
+  actions: { id: string; title?: string }[];
+}
+
 declare global {
+  /** Exposed by electron-chrome-extensions' browser-action preload (see scripts/build-preload.mjs). */
+  type BrowserActionState = import("./env").BrowserActionState;
   interface Window {
+    browserAction?: {
+      addEventListener(name: "update", listener: (state: BrowserActionState) => void): void;
+      removeEventListener(name: "update", listener: (state: BrowserActionState) => void): void;
+      getState(partition: string): Promise<BrowserActionState>;
+      addObserver(partition: string): void;
+      removeObserver(partition: string): void;
+    };
     /** Present inside Electron only (see electron/preload.cjs). */
     yzo?: YzoBridge;
   }

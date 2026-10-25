@@ -193,5 +193,9 @@
 
   "topbar.siteMenu": "Réglages du site",
   "topbar.splitView": "Vue scindée ({shortcut})",
-  "topbar.devTools": "Outils de développement"
+  "topbar.devTools": "Outils de développement",
+
+  "extensions.title": "Extensions",
+  "extensions.pin": "Épingler dans la barre du haut",
+  "extensions.unpin": "Retirer de la barre du haut"
 }

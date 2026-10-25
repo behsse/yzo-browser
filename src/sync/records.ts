@@ -417,6 +417,10 @@ function applySettings(draft: AppState, body: Record<string, unknown>): void {
       draft.settings.autoArchive = settings.autoArchive!;
     }
     if (["google", "duckduckgo", "bing"].includes(settings.searchEngine as string)) draft.settings.searchEngine = settings.searchEngine!;
+    const pinned = settings.pinnedExtensions;
+    if (Array.isArray(pinned) && pinned.length <= 100 && pinned.every((id) => typeof id === "string" && /^[a-p]{32}$/.test(id))) {
+      draft.settings.pinnedExtensions = [...new Set(pinned)];
+    }
   }
   if (body.sidebarMode === "anchored" || body.sidebarMode === "hidden") draft.window.sidebarMode = body.sidebarMode;
   if (typeof body.sidebarWidth === "number") {

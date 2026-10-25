@@ -32,6 +32,8 @@ export interface UiValue {
   openAccount(mode?: AccountMode): void;
   openSpaceEditor(spaceId: ID | "new"): void;
   openMenu(menu: MenuState): void;
+  /** Opens the extensions panel under the puzzle button (its bottom-right corner). */
+  openExtensions(anchor: { right: number; bottom: number }): void;
   showToast(message: string): void;
   runAction(action: ShortcutAction): void;
 }

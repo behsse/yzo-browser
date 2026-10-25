@@ -1,16 +1,15 @@
 import { useEffect, useState } from "react";
 import { t } from "../lib/i18n";
 import { shortcutLabel } from "../lib/shortcuts";
-import { PARTITION as TABS_PARTITION, tabCommand } from "../lib/tabs";
+import { tabCommand } from "../lib/tabs";
 import { displayHost } from "../lib/url";
 import { useStore } from "../state/store";
 import { isTab } from "../state/tree";
 import { useSync } from "../sync/SyncProvider";
+import { ExtensionActionButton, useExtensionActions } from "./extensionActions";
 import { Icon } from "./Icon";
 import { useUi, type MenuEntry } from "./UiContext";
 import { useViewHost } from "./ViewHost";
-
-const CHROME_WEB_STORE_URL = "https://chromewebstore.google.com/category/extensions";
 
 /**
  * Minimize / maximize / close buttons of the frameless window, in the Windows order.
@@ -45,7 +44,7 @@ function WindowControls() {
  * @returns Top bar element.
  */
 export function TopBar() {
-  const { state, dispatch } = useStore();
+  const { state } = useStore();
   const ui = useUi();
   const sync = useSync();
   const host = useViewHost();
@@ -53,6 +52,9 @@ export function TopBar() {
   const focusedId = selection?.focusedTabId ?? null;
   const focusedTab = focusedId ? state.items[focusedId] : undefined;
   const url = isTab(focusedTab) ? focusedTab.data.url : "";
+  const actions = useExtensionActions();
+  const pinned = state.settings.pinnedExtensions ?? [];
+  const pinnedActions = pinned.filter((id) => actions.some((action) => action.id === id));
 
   // Arc-style app menu behind the logo: new tab / window, updates, account at the bottom.
   const openAppMenu = (anchor: HTMLElement) => {
@@ -99,31 +101,6 @@ export function TopBar() {
     });
   };
 
-  // Lists installed extensions with their actions, plus the way to add more.
-  const openExtensionsMenu = async (anchor: HTMLElement) => {
-    const rect = anchor.getBoundingClientRect();
-    const installed = (await window.yzo?.listExtensions()) ?? [];
-    const openTab = (target: string) => dispatch({ type: "createTab", url: target, target: "today", activate: true, now: Date.now() });
-    const entries: (MenuEntry | "separator")[] = installed.length
-      ? installed.flatMap((ext) => [
-          { label: `${ext.name} ${ext.version}`, disabled: true, onSelect: () => {} },
-          ...(ext.optionsUrl ? [{ label: t("extensions.options"), onSelect: () => openTab(ext.optionsUrl!) }] : []),
-          {
-            label: t("common.delete"),
-            danger: true,
-            onSelect: async () => {
-              const removed = await window.yzo?.uninstallExtension(ext.id);
-              ui.showToast(removed ? t("extensions.removed", { name: ext.name }) : t("extensions.removeFailed"));
-            },
-          },
-          "separator" as const,
-        ])
-      : [{ label: t("extensions.none"), disabled: true, onSelect: () => {} }, "separator" as const];
-    entries.push({ label: t("extensions.addFromStore"), onSelect: () => openTab(CHROME_WEB_STORE_URL) });
-    // Right-aligned under the button, since it sits at the right edge of the window.
-    ui.openMenu({ x: rect.right - 240, y: rect.bottom + 4, entries });
-  };
-
   return (
     <header className="topbar drag">
       <div className="topbar-side topbar-left">
@@ -162,9 +139,18 @@ export function TopBar() {
       </div>
 
       <div className="topbar-side topbar-right">
-        {/* Extension action buttons (icons, popups, badges) rendered by electron-chrome-extensions. */}
-        {window.yzo && <browser-action-list className="extension-actions" partition={TABS_PARTITION} alignment="bottom left" tab={host.webContentsIdOf(focusedId)} />}
-        <button title={t("sidebar.extensions")} onClick={(event) => void openExtensionsMenu(event.currentTarget)}>
+        {/* Only the pinned extensions show here; the others live in the extensions panel. */}
+        {pinnedActions.map((id) => (
+          <ExtensionActionButton key={id} id={id} tabId={host.webContentsIdOf(focusedId) ?? -1} className="topbar-extension" />
+        ))}
+        <button
+          title={t("sidebar.extensions")}
+          aria-haspopup="dialog"
+          onClick={(event) => {
+            const rect = event.currentTarget.getBoundingClientRect();
+            ui.openExtensions({ right: rect.right, bottom: rect.bottom });
+          }}
+        >
           <Icon name="extensions" />
         </button>
         <button title={t("topbar.splitView", { shortcut: shortcutLabel("addSplit") })} onClick={() => ui.runAction("addSplit")}>

@@ -122,6 +122,8 @@ export interface WindowState {
 export interface Settings {
   autoArchive: AutoArchiveThreshold;
   searchEngine: SearchEngine;
+  /** Extension ids whose action is shown in the top bar, in order (absent on older profiles). */
+  pinnedExtensions?: string[];
 }
 
 /** Sync bookkeeping for one record: what was last exchanged with the server. */
