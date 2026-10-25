@@ -209,7 +209,7 @@ kbd {
   left: 50%;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 14px;
   max-width: 40%;
   transform: translateX(-50%);
 }

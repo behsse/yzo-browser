@@ -206,5 +206,9 @@
   "arcImport.notFound": "Les données d'Arc sont introuvables sur cet ordinateur",
   "arcImport.done": "Importé depuis Arc : {spaces} espaces, {extensions} extensions en cours d'installation",
 
-  "topbar.toggle": "Verrouiller ou masquer la barre du haut ({shortcut})"
+  "topbar.toggle": "Verrouiller ou masquer la barre du haut ({shortcut})",
+  "topbar.fullscreen": "Plein écran",
+  "topbar.private": "Navigation privée",
+  "topbar.downloads": "Téléchargements",
+  "topbar.more": "Menu"
 }

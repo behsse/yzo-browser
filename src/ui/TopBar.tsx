@@ -131,6 +131,11 @@ export function TopBar({ draggable = true }: { draggable?: boolean }) {
         >
           <Icon name="topbar" />
         </button>
+        {/* Visual only for now: full screen is not wired yet. */}
+        <button title={t("topbar.fullscreen")}>
+          <Icon name="fullscreen" />
+        </button>
+        <span className="topbar-divider" />
         <button title={t("sidebar.back")} onClick={() => void tabCommand(focusedId, "back")}>
           <Icon name="back" />
         </button>
@@ -156,6 +161,12 @@ export function TopBar({ draggable = true }: { draggable?: boolean }) {
             <Icon name="sliders" size={16} />
           </button>
         )}
+        {/* Visual only for now: private browsing is not built yet. */}
+        {url && (
+          <button className="topbar-icon" title={t("topbar.private")}>
+            <Icon name="incognito" size={16} />
+          </button>
+        )}
       </div>
 
       <div className="topbar-side topbar-right">
@@ -173,8 +184,15 @@ export function TopBar({ draggable = true }: { draggable?: boolean }) {
         >
           <Icon name="extensions" />
         </button>
+        {/* Downloads and the menu are visual only for now. */}
+        <button title={t("topbar.downloads")}>
+          <Icon name="download" />
+        </button>
         <button title={t("topbar.splitView", { shortcut: shortcutLabel("addSplit") })} onClick={() => ui.runAction("addSplit")}>
           <Icon name="split" />
+        </button>
+        <button title={t("topbar.more")} aria-haspopup="menu">
+          <Icon name="more" />
         </button>
         <span className="topbar-divider" />
         <WindowControls />

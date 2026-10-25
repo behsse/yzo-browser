@@ -206,5 +206,9 @@
   "arcImport.notFound": "Arc's data was not found on this computer",
   "arcImport.done": "Imported from Arc: {spaces} spaces, {extensions} extensions installing",
 
-  "topbar.toggle": "Lock or hide the top bar ({shortcut})"
+  "topbar.toggle": "Lock or hide the top bar ({shortcut})",
+  "topbar.fullscreen": "Full screen",
+  "topbar.private": "Private browsing",
+  "topbar.downloads": "Downloads",
+  "topbar.more": "More"
 }
