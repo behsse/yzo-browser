@@ -121,7 +121,11 @@ export function TopBar({ draggable = true }: { draggable?: boolean }) {
         <button className="brand-mark" title={t("appMenu.title")} aria-haspopup="menu" onClick={(event) => openAppMenu(event.currentTarget)}>
           <BrandMark />
         </button>
-        <button title={t("sidebar.toggleSidebar", { shortcut: shortcutLabel("toggleSidebar") })} onClick={() => ui.runAction("toggleSidebar")}>
+        <button
+          className={state.window.sidebarMode === "hidden" ? "" : "topbar-locked"}
+          title={t("sidebar.toggleSidebar", { shortcut: shortcutLabel("toggleSidebar") })}
+          onClick={() => ui.runAction("toggleSidebar")}
+        >
           <Icon name="sidebar" />
         </button>
         <button

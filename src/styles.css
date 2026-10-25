@@ -182,7 +182,7 @@ kbd {
   height: 14px;
 }
 
-/* The top bar lock button is highlighted while the bar is locked (anchored). */
+/* The sidebar and top bar lock buttons are highlighted while their bar is locked (anchored). */
 .topbar .topbar-locked {
   color: var(--fg);
 }
