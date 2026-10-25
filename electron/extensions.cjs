@@ -4,7 +4,7 @@
 const { dialog, session: electronSession } = require("electron");
 const { randomUUID } = require("node:crypto");
 const { ElectronChromeExtensions } = require("electron-chrome-extensions");
-const { installChromeWebStore, uninstallExtension } = require("electron-chrome-web-store");
+const { installChromeWebStore, installExtension, uninstallExtension } = require("electron-chrome-web-store");
 const { t } = require("./i18n.cjs");
 
 /** Permissions shown in plain words in the install confirmation (others are listed as-is). */
@@ -145,6 +145,15 @@ async function setupExtensions({ session, getWindow, getUi, getViews }) {
           optionsUrl: optionsPage ? `${ext.url}${optionsPage.replace(/^\//, "")}` : null,
         };
       });
+    },
+    /**
+     * Installs an extension from the Chrome Web Store without the permission dialog (used by the
+     * Arc import, which the user confirmed as a whole).
+     * @param {string} id Extension id.
+     * @returns {Promise<void>}
+     */
+    async install(id) {
+      await installExtension(id, { session });
     },
     async uninstall(id) {
       try {

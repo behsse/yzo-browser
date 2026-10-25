@@ -8,6 +8,7 @@ const { createViewManager } = require("./views.cjs");
 const { createMenuPopup } = require("./menu-popup.cjs");
 const { setupExtensions } = require("./extensions.cjs");
 const { createAccount, AccountError } = require("./account.cjs");
+const { readArc, countTabs, EXTENSION_ID } = require("./arc-import.cjs");
 const { t } = require("./i18n.cjs");
 
 const PARTITION = "persist:yzo";
@@ -360,6 +361,38 @@ ipcMain.on("window:control", (event, action) => {
 
 // Menus are drawn above the live pages (electron/menu-popup.cjs); resolves to the picked index or null.
 ipcMain.handle("menu:popup", (event, entries, x, y) => (isTrustedSender(event) && menuPopup ? menuPopup.show(entries, x, y) : null));
+
+/**
+ * "Import from Arc": reads Arc's spaces, tabs, favorites and extensions, asks for confirmation, then
+ * installs the extensions Yzo does not have yet (in the background) and returns the sidebar data for
+ * the UI to add.
+ * @returns {Promise<{ status: "notFound" | "cancelled" | "imported", data?: object, extensions?: number }>} Outcome.
+ */
+async function importFromArc() {
+  const arc = readArc();
+  const win = mainWindow;
+  if (!arc || !win) return { status: "notFound" };
+  const installed = new Set(extensionController?.list().map((ext) => ext.id) ?? []);
+  const extensions = arc.extensions.filter((id) => EXTENSION_ID.test(id) && !installed.has(id));
+  const tabs = arc.spaces.reduce((sum, space) => sum + countTabs(space.pinned) + countTabs(space.today), 0) + arc.favorites.length;
+  const { response } = await electron.dialog.showMessageBox(win, {
+    type: "question",
+    buttons: [t("arcImport.import"), t("common.cancel")],
+    defaultId: 0,
+    cancelId: 1,
+    title: t("arcImport.title"),
+    message: t("arcImport.title"),
+    detail: t("arcImport.detail", { spaces: arc.spaces.length, tabs, extensions: extensions.length }),
+  });
+  if (response !== 0) return { status: "cancelled" };
+  // Web Store installs, one at a time; failures (removed from the store…) are skipped.
+  void (async () => {
+    for (const id of extensions) await extensionController?.install(id).catch(() => undefined);
+  })();
+  return { status: "imported", data: { spaces: arc.spaces, favorites: arc.favorites }, extensions: extensions.length };
+}
+
+ipcMain.handle("arc:import", (event) => (isTrustedSender(event) ? importFromArc() : null));
 
 ipcMain.handle("window:isMaximized", (event) => isTrustedSender(event) && Boolean(mainWindow?.isMaximized()));
 

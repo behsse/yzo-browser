@@ -197,5 +197,12 @@
 
   "extensions.title": "Extensions",
   "extensions.pin": "Pin to the top bar",
-  "extensions.unpin": "Unpin from the top bar"
+  "extensions.unpin": "Unpin from the top bar",
+
+  "appMenu.importArc": "Import from Arc…",
+  "arcImport.title": "Import from Arc",
+  "arcImport.import": "Import",
+  "arcImport.detail": "{spaces} spaces and {tabs} tabs (pinned, today and favorites) will be added to Yzo, and {extensions} extensions will be installed from the Chrome Web Store. Your current spaces are kept.",
+  "arcImport.notFound": "Arc's data was not found on this computer",
+  "arcImport.done": "Imported from Arc: {spaces} spaces, {extensions} extensions installing"
 }

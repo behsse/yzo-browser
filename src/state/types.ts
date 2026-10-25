@@ -119,6 +119,17 @@ export interface WindowState {
   sidebarWidth: number;
 }
 
+/** Data read from Arc by "Import from Arc" (electron/arc-import.cjs). */
+export type ArcImportTab = { kind: "tab"; url: string; title: string };
+export type ArcImportNode =
+  | ArcImportTab
+  | { kind: "folder"; title: string; children: ArcImportNode[] }
+  | { kind: "split"; orientation: SplitOrientation; factors: number[]; children: ArcImportTab[] };
+export interface ArcImportData {
+  spaces: { name: string | null; icon: string | null; pinned: ArcImportNode[]; today: ArcImportNode[] }[];
+  favorites: ArcImportTab[];
+}
+
 export interface Settings {
   autoArchive: AutoArchiveThreshold;
   searchEngine: SearchEngine;

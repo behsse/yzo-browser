@@ -98,6 +98,8 @@ export interface YzoBridge {
   cursorPosition(): Promise<{ x: number; y: number; width: number; height: number } | null>;
   /** Shows a popup menu above the pages; resolves to the picked entry index, or null when dismissed. */
   showMenu(entries: (NativeMenuEntry | "separator")[], x: number, y: number): Promise<number | null>;
+  /** Reads Arc's data after a confirmation dialog; extensions install in the background. */
+  importArc(): Promise<{ status: "notFound" | "cancelled" | "imported"; data?: import("./state/types").ArcImportData; extensions?: number } | null>;
   /** Manual update check; "dev" outside packaged builds. */
   checkForUpdates(): Promise<{ status: "dev" | "upToDate" | "available" | "error"; version?: string } | null>;
   syncViews(payload: ViewSyncPayload): void;

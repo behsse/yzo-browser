@@ -197,5 +197,12 @@
 
   "extensions.title": "Extensions",
   "extensions.pin": "Épingler dans la barre du haut",
-  "extensions.unpin": "Retirer de la barre du haut"
+  "extensions.unpin": "Retirer de la barre du haut",
+
+  "appMenu.importArc": "Importer depuis Arc…",
+  "arcImport.title": "Importer depuis Arc",
+  "arcImport.import": "Importer",
+  "arcImport.detail": "{spaces} espaces et {tabs} onglets (épinglés, du jour et favoris) seront ajoutés à Yzo, et {extensions} extensions seront installées depuis le Chrome Web Store. Tes espaces actuels sont conservés.",
+  "arcImport.notFound": "Les données d'Arc sont introuvables sur cet ordinateur",
+  "arcImport.done": "Importé depuis Arc : {spaces} espaces, {extensions} extensions en cours d'installation"
 }

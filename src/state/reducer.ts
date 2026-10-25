@@ -26,6 +26,8 @@ import {
 } from "./tree";
 import type {
   AppState,
+  ArcImportData,
+  ArcImportNode,
   ContainerData,
   ID,
   Settings,
@@ -71,6 +73,8 @@ export type Action =
   | { type: "toggleFolder"; id: ID }
   | { type: "deleteFolder"; id: ID; now: number }
   | { type: "createSpace"; name: string; icon: string; theme: SpaceTheme; now: number }
+  /** Adds Arc's spaces (pinned and today tabs, folders, split views) and favorites; nothing is replaced. */
+  | { type: "importArc"; data: ArcImportData; now: number }
   | { type: "updateSpace"; id: ID; name?: string; icon?: string; theme?: SpaceTheme }
   | { type: "deleteSpace"; id: ID; now: number }
   | { type: "switchSpace"; id: ID }
@@ -159,6 +163,43 @@ function addSpace(draft: AppState, name: string, icon: string, theme: SpaceTheme
   draft.window.selection[id] = { itemId: null, focusedTabId: null };
   draft.window.focusedSpaceId = id;
   return id;
+}
+
+/**
+ * Adds imported Arc nodes (tabs, folders, split views) under a parent, in order. Non-http(s) tabs
+ * and split views with fewer than two tabs are flattened or dropped, like the rest of the model.
+ * @param draft Mutable state copy.
+ * @param nodes Nodes to add.
+ * @param parentId Container, folder or split receiving them.
+ * @param now Current epoch ms.
+ */
+function addImportedNodes(draft: AppState, nodes: ArcImportNode[], parentId: ID, now: number): void {
+  for (const node of nodes) {
+    if (node.kind === "tab") {
+      if (!/^https?:\/\//i.test(node.url)) continue;
+      const tab = makeItem(makeTabData(node.url, now, node.title), now);
+      draft.items[tab.id] = tab;
+      attach(draft, tab.id, parentId);
+    } else if (node.kind === "folder") {
+      const folder = makeItem({ kind: "folder", title: node.title.trim() || t("default.folderName"), collapsed: false }, now);
+      draft.items[folder.id] = folder;
+      attach(draft, folder.id, parentId);
+      addImportedNodes(draft, node.children, folder.id, now);
+    } else {
+      const tabs = node.children.filter((child) => /^https?:\/\//i.test(child.url)).slice(0, MAX_SPLIT_PANES);
+      if (tabs.length < 2) {
+        addImportedNodes(draft, tabs, parentId, now);
+        continue;
+      }
+      const split = makeItem(
+        { kind: "split", orientation: node.orientation, widthFactors: normalizeFactors(node.factors.slice(0, tabs.length), tabs.length), focusedChildId: null, lastActiveAt: now },
+        now,
+      );
+      draft.items[split.id] = split;
+      attach(draft, split.id, parentId);
+      addImportedNodes(draft, tabs, split.id, now);
+    }
+  }
 }
 
 /**
@@ -478,6 +519,31 @@ export function reducer(state: AppState, action: Action): AppState {
     case "createSpace":
       addSpace(draft, action.name, action.icon, action.theme, action.now);
       return draft;
+
+    case "importArc": {
+      const { spaces, favorites } = action.data;
+      if (!spaces.length && !favorites.length) return state;
+      let firstImported: ID | null = null;
+      for (const space of spaces) {
+        const name = space.name?.trim() || t("default.spaceName");
+        // Spaces without an emoji show their initial, like Arc's lettered space icons.
+        const id = addSpace(draft, name, space.icon || [...name][0].toUpperCase(), DEFAULT_THEME, action.now);
+        firstImported ??= id;
+        addImportedNodes(draft, space.pinned, draft.spaces[id].pinnedId, action.now);
+        addImportedNodes(draft, space.today, draft.spaces[id].todayId, action.now);
+      }
+      const known = new Set(draft.items[draft.favoritesId].childrenIds.flatMap((id) => { const item = draft.items[id]; return isTab(item) ? [item.data.savedUrl] : []; }));
+      addImportedNodes(
+        draft,
+        favorites.filter((tab) => !known.has(tab.url)),
+        draft.favoritesId,
+        action.now,
+      );
+      // Show the first imported space; addSpace focused the last one.
+      draft.window.focusedSpaceId = firstImported ?? focused;
+      loadSelection(draft, draft.window.focusedSpaceId);
+      return draft;
+    }
 
     case "updateSpace": {
       const space = draft.spaces[action.id];

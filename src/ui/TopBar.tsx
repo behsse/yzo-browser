@@ -44,7 +44,7 @@ function WindowControls() {
  * @returns Top bar element.
  */
 export function TopBar() {
-  const { state } = useStore();
+  const { state, dispatch } = useStore();
   const ui = useUi();
   const sync = useSync();
   const host = useViewHost();
@@ -70,6 +70,17 @@ export function TopBar() {
         // Multi-window is not built yet: shown so the menu matches Arc, but disabled.
         { icon: "restore", label: t("appMenu.newWindow"), hint: "Ctrl+N", disabled: true, onSelect: () => {} },
         "separator",
+        {
+          icon: "archive",
+          label: t("appMenu.importArc"),
+          onSelect: async () => {
+            const result = await window.yzo?.importArc();
+            if (!result || result.status === "cancelled") return;
+            if (result.status === "notFound" || !result.data) return ui.showToast(t("arcImport.notFound"));
+            dispatch({ type: "importArc", data: result.data, now: Date.now() });
+            ui.showToast(t("arcImport.done", { spaces: result.data.spaces.length, extensions: result.extensions ?? 0 }));
+          },
+        },
         {
           icon: "sync",
           label: t("appMenu.checkUpdates"),
