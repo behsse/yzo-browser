@@ -100,7 +100,7 @@ export interface NativeMenuEntry {
   danger?: boolean;
   disabled?: boolean;
   /** Drawn as a zoom row (− value + and full screen) instead of a plain entry. */
-  zoom?: { value: string };
+  zoom?: { value: string; fullScreen?: boolean };
 }
 
 export interface YzoBridge {

@@ -26,12 +26,18 @@ function createIcon(d) {
 }
 
 /** Icons of the zoom row's buttons (24-unit paths, like src/ui/Icon.tsx). */
-const ZOOM_ICONS = { out: "M5 12h14", in: "M12 5v14M5 12h14", fullscreen: "M14 4h6v6M20 4l-6 6M10 20H4v-6M4 20l6-6" };
+const ZOOM_ICONS = {
+  out: "M5 12h14",
+  in: "M12 5v14M5 12h14",
+  fullscreen: "M14 4h6v6M20 4l-6 6M10 20H4v-6M4 20l6-6",
+  // Arrows pointing inward while the window is in full screen, like the top bar's button.
+  exitFullscreen: "M14 4v6h6M20 4l-6 6M4 14h6v6M4 20l6-6",
+};
 
 /**
  * Builds a zoom row, like Brave's: icon and label, then − value + and a full screen button. Its
  * buttons keep the menu open (except full screen); the new value comes back through onUpdate.
- * @param {{ label: string, icon?: string, disabled?: boolean, zoom: { value: string }, index: number }} entry Entry.
+ * @param {{ label: string, icon?: string, disabled?: boolean, zoom: { value: string, fullScreen: boolean }, index: number }} entry Entry.
  * @param {boolean} hasIcons Whether the menu has an icon column.
  * @returns {HTMLDivElement} Row element.
  */
@@ -54,7 +60,7 @@ function createZoomRow(entry, hasIcons) {
     button.className = "zoom-button";
     // Zooming needs a web page; full screen always works.
     button.disabled = Boolean(entry.disabled) && action !== "fullscreen";
-    button.append(createIcon(ZOOM_ICONS[action]));
+    button.append(createIcon(ZOOM_ICONS[action === "fullscreen" && entry.zoom.fullScreen ? "exitFullscreen" : action]));
     button.addEventListener("click", () => window.menuHost.act(token, entry.index, action));
     return button;
   };

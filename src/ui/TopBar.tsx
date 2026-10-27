@@ -168,6 +168,7 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
     // Print, save and zoom act on a web page (not on Yzo's own pages).
     const pageTab = url && !isInternalUrl(url) ? focusedId : null;
     const zoom = pageTab ? await tabCommand(pageTab, "zoom", "get") : null;
+    const fullScreen = Boolean(await window.yzo?.isFullScreen());
     const openPage = (target: string, title: string) =>
       dispatch({ type: "createTab", url: target, title, target: "today", activate: true, now: Date.now() });
     const account: MenuEntry = sync.status?.signedIn
@@ -196,6 +197,7 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
           disabled: !pageTab,
           zoom: {
             value: zoomLabel(zoom),
+            fullScreen,
             onAction: async (action) => {
               if (action === "fullscreen") {
                 window.yzo?.windowControl("fullscreen");

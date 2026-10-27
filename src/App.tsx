@@ -197,7 +197,7 @@ export function App() {
             hint: entry.hint,
             danger: entry.danger,
             disabled: entry.disabled,
-            zoom: entry.zoom ? { value: entry.zoom.value } : undefined,
+            zoom: entry.zoom ? { value: entry.zoom.value, fullScreen: entry.zoom.fullScreen } : undefined,
           },
     );
     nativeMenuEntries.current = next.entries;

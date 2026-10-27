@@ -18,7 +18,7 @@ const ICON_PATH_PATTERN = /^[MmLlHhVvCcSsQqTtAaZz0-9.,\s-]{1,2000}$/;
 const ZOOM_ACTIONS = new Set(["out", "in", "fullscreen"]);
 
 /**
- * @typedef {{ separator: true } | { label: string, icon?: string, hint?: string, danger?: boolean, disabled?: boolean, zoom?: { value: string }, index: number }} MenuItem
+ * @typedef {{ separator: true } | { label: string, icon?: string, hint?: string, danger?: boolean, disabled?: boolean, zoom?: { value: string, fullScreen: boolean }, index: number }} MenuItem
  */
 
 /**
@@ -42,7 +42,10 @@ function sanitizeEntries(entries) {
       hint: typeof entry.hint === "string" ? entry.hint.slice(0, 40) : undefined,
       danger: entry.danger === true,
       disabled: entry.disabled === true,
-      zoom: entry.zoom && typeof entry.zoom.value === "string" ? { value: entry.zoom.value.slice(0, 12) } : undefined,
+      zoom:
+        entry.zoom && typeof entry.zoom.value === "string"
+          ? { value: entry.zoom.value.slice(0, 12), fullScreen: entry.zoom.fullScreen === true }
+          : undefined,
     });
   }
   return clean;
