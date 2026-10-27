@@ -6,6 +6,9 @@ const { randomUUID } = require("node:crypto");
 const { ElectronChromeExtensions } = require("electron-chrome-extensions");
 const { installChromeWebStore, installExtension, uninstallExtension } = require("electron-chrome-web-store");
 const { t } = require("./i18n.cjs");
+const { discoverInstalled, localize, readIcon, readDisabled, writeDisabled, loadInstalled } = require("./extension-store.cjs");
+
+const WEB_STORE_DETAIL_URL = "https://chromewebstore.google.com/detail/";
 
 /** Permissions shown in plain words in the install confirmation (others are listed as-is). */
 const LABELLED_PERMISSIONS = new Set([
@@ -54,7 +57,8 @@ function describePermissions(manifest) {
  *   the view manager of that window.
  * @returns {Promise<{
  *   extensions: ElectronChromeExtensions,
- *   list(): { id: string, name: string, version: string, optionsUrl: string | null }[],
+ *   list(): Promise<object[]>,
+ *   setEnabled(id: string, enabled: boolean): Promise<boolean>,
  *   uninstall(id: string): Promise<boolean>,
  *   contextMenuItems(contents: Electron.WebContents, params: Electron.ContextMenuParams): Electron.MenuItem[],
  * }>} Extension controller.
@@ -114,8 +118,12 @@ async function setupExtensions({ session, getWindow, getUi, getViews }) {
   // the session of the page that shows them: the UI's default session.
   ElectronChromeExtensions.handleCRXProtocol(electronSession.defaultSession);
 
+  const disabled = await readDisabled();
+
+  // Yzo loads the installs itself (below) so that turned-off extensions never run.
   await installChromeWebStore({
     session,
+    loadExtensions: false,
     async beforeInstall({ localizedName, manifest }) {
       const win = getWindow();
       const permissions = describePermissions(manifest);
@@ -133,18 +141,61 @@ async function setupExtensions({ session, getWindow, getUi, getViews }) {
     },
   });
 
+  for (const [id, install] of await discoverInstalled()) {
+    if (disabled.has(id) || session.extensions.getExtension(id)) continue;
+    await loadInstalled(session, install.path).catch((error) => console.error(`Extension ${id} not loaded:`, error));
+  }
+
   return {
     extensions,
-    list() {
-      return session.extensions.getAllExtensions().map((ext) => {
-        const optionsPage = ext.manifest.options_ui?.page ?? ext.manifest.options_page ?? null;
-        return {
-          id: ext.id,
-          name: ext.name,
-          version: ext.version,
-          optionsUrl: optionsPage ? `${ext.url}${optionsPage.replace(/^\//, "")}` : null,
-        };
-      });
+    /**
+     * Every installed extension, turned on or off, with what the extensions page shows.
+     * @returns {Promise<object[]>} InstalledExtension entries (src/env.d.ts).
+     */
+    async list() {
+      const installed = await discoverInstalled();
+      // Extensions loaded from elsewhere (none today) are listed too.
+      for (const ext of session.extensions.getAllExtensions()) {
+        if (!installed.has(ext.id)) installed.set(ext.id, { path: ext.path, manifest: ext.manifest });
+      }
+      const entries = [];
+      for (const [id, { path: dir, manifest }] of installed) {
+        const loaded = session.extensions.getExtension(id);
+        const optionsPage = manifest.options_ui?.page ?? manifest.options_page ?? null;
+        entries.push({
+          id,
+          name: (await localize(dir, manifest, manifest.name)) || loaded?.name || id,
+          description: await localize(dir, manifest, manifest.description),
+          version: manifest.version ?? "",
+          icon: await readIcon(dir, manifest),
+          enabled: Boolean(loaded),
+          optionsUrl: loaded && optionsPage ? `${loaded.url}${optionsPage.replace(/^\//, "")}` : null,
+          permissions: describePermissions(manifest),
+          storeUrl: manifest.key || manifest.update_url ? WEB_STORE_DETAIL_URL + id : null,
+        });
+      }
+      return entries.sort((a, b) => a.name.localeCompare(b.name));
+    },
+    /**
+     * Turns an installed extension on (loads it) or off (unloads it, and it stays off on later starts).
+     * @param {string} id Extension id.
+     * @param {boolean} enabled New state.
+     * @returns {Promise<boolean>} False when it is not installed or failed to load.
+     */
+    async setEnabled(id, enabled) {
+      const install = (await discoverInstalled()).get(id);
+      if (!install) return false;
+      if (enabled) disabled.delete(id);
+      else disabled.add(id);
+      await writeDisabled(disabled).catch((error) => console.error("Extension state not saved:", error));
+      try {
+        if (!enabled && session.extensions.getExtension(id)) session.extensions.removeExtension(id);
+        if (enabled && !session.extensions.getExtension(id)) await loadInstalled(session, install.path);
+        return true;
+      } catch (error) {
+        console.error(`Extension ${id} could not be turned ${enabled ? "on" : "off"}:`, error);
+        return false;
+      }
     },
     /**
      * Installs an extension from the Chrome Web Store without the permission dialog (used by the
@@ -156,6 +207,7 @@ async function setupExtensions({ session, getWindow, getUi, getViews }) {
       await installExtension(id, { session });
     },
     async uninstall(id) {
+      if (disabled.delete(id)) await writeDisabled(disabled).catch(() => {});
       try {
         await uninstallExtension(id, { session });
         return true;

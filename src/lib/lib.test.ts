@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isArchivable, THRESHOLD_MS } from "./autoArchive";
 import { dedupKey, matchScore } from "./commandBar";
-import { isInternalUrl, parseInternalUrl, siteSettingsUrl } from "./internalPages";
+import { EXTENSIONS_URL, extensionDetailsUrl, isInternalUrl, parseInternalUrl, siteSettingsUrl } from "./internalPages";
 import { cursorOnTopEdge, floatingSidebarDecision, floatingTopBarDecision } from "./floatingSidebar";
 import { matchShortcut, shortcutLabel } from "./shortcuts";
 import { hexToRgb, relativeLuminance, resolveAppearance, rgbToHex } from "./theme";
@@ -64,6 +64,13 @@ describe("internal pages", () => {
     expect(parseInternalUrl("yzo://settings")).toEqual({ kind: "notFound" });
     expect(parseInternalUrl("yzo://settings/sites/a b")).toEqual({ kind: "notFound" });
     expect(parseInternalUrl("yzo://settings/sites/x.com/../y")).toEqual({ kind: "notFound" });
+  });
+
+  it("routes the extensions page and an extension's details", () => {
+    const id = "cjpalhdlnbpafiamejdnhcphjbkeiagm";
+    expect(parseInternalUrl(EXTENSIONS_URL)).toEqual({ kind: "extensions" });
+    expect(parseInternalUrl(extensionDetailsUrl(id))).toEqual({ kind: "extensionDetails", id });
+    expect(parseInternalUrl("yzo://extensions/not-an-id")).toEqual({ kind: "notFound" });
   });
 
   it("shows the whole address of a Yzo page", () => {

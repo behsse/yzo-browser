@@ -401,7 +401,7 @@ async function importFromArc() {
   const arc = readArc();
   const win = mainWindow;
   if (!arc || !win) return { status: "notFound" };
-  const installed = new Set(extensionController?.list().map((ext) => ext.id) ?? []);
+  const installed = new Set((await extensionController?.list())?.map((ext) => ext.id) ?? []);
   const extensions = arc.extensions.filter((id) => EXTENSION_ID.test(id) && !installed.has(id));
   const tabs = arc.spaces.reduce((sum, space) => sum + countTabs(space.pinned) + countTabs(space.today), 0) + arc.favorites.length;
   const { response } = await electron.dialog.showMessageBox(win, {
@@ -444,6 +444,11 @@ ipcMain.on("views:sync", (event, payload) => {
 
 
 ipcMain.handle("extensions:list", (event) => (isTrustedSender(event) ? (extensionController?.list() ?? []) : []));
+
+ipcMain.handle("extensions:setEnabled", (event, id, enabled) => {
+  if (!isTrustedSender(event) || typeof id !== "string" || !/^[a-p]{32}$/.test(id) || typeof enabled !== "boolean") return false;
+  return extensionController?.setEnabled(id, enabled) ?? false;
+});
 
 ipcMain.handle("extensions:uninstall", (event, id) => {
   if (!isTrustedSender(event) || typeof id !== "string" || !/^[a-p]{32}$/.test(id)) return false;

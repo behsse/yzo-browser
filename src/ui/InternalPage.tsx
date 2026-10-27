@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { SiteInfo } from "../env";
 import { t } from "../lib/i18n";
 import { parseInternalUrl } from "../lib/internalPages";
+import { ExtensionsPage } from "./ExtensionsPage";
 import { Icon } from "./Icon";
 import { useUi } from "./UiContext";
 
@@ -99,11 +100,14 @@ function SiteSettingsPage({ host }: { host: string }) {
 /**
  * One of Yzo's own pages, drawn in a tab's slot.
  * @param props.url yzo:// address of the tab.
+ * @param props.navigate Changes the tab's address.
  * @returns Page content.
  */
-export function InternalPage({ url }: { url: string }) {
+export function InternalPage({ url, navigate }: { url: string; navigate: (url: string) => void }) {
   const page = parseInternalUrl(url);
   if (page.kind === "siteSettings") return <SiteSettingsPage key={page.host} host={page.host} />;
+  if (page.kind === "extensions") return <ExtensionsPage navigate={navigate} />;
+  if (page.kind === "extensionDetails") return <ExtensionsPage detailsId={page.id} navigate={navigate} />;
   return (
     <div className="internal-page">
       <p className="muted">{t("siteSettings.notFound")}</p>

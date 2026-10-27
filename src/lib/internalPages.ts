@@ -2,7 +2,16 @@
 
 const SITE_SETTINGS_PATTERN = /^yzo:\/\/settings\/sites\/([a-z0-9.-]+(?::\d{1,5})?)\/?$/i;
 
-export type InternalPage = { kind: "siteSettings"; host: string } | { kind: "notFound" };
+const EXTENSIONS_PATTERN = /^yzo:\/\/extensions(?:\/([a-p]{32}))?\/?$/i;
+
+/** Address of the extensions page. */
+export const EXTENSIONS_URL = "yzo://extensions";
+
+export type InternalPage =
+  | { kind: "siteSettings"; host: string }
+  | { kind: "extensions" }
+  | { kind: "extensionDetails"; id: string }
+  | { kind: "notFound" };
 
 /**
  * Whether a tab URL is one of Yzo's own pages.
@@ -28,6 +37,18 @@ export function siteSettingsUrl(host: string): string {
  * @returns The page, or notFound.
  */
 export function parseInternalUrl(url: string): InternalPage {
-  const match = SITE_SETTINGS_PATTERN.exec(url);
-  return match ? { kind: "siteSettings", host: match[1].toLowerCase() } : { kind: "notFound" };
+  const site = SITE_SETTINGS_PATTERN.exec(url);
+  if (site) return { kind: "siteSettings", host: site[1].toLowerCase() };
+  const extensions = EXTENSIONS_PATTERN.exec(url);
+  if (extensions) return extensions[1] ? { kind: "extensionDetails", id: extensions[1].toLowerCase() } : { kind: "extensions" };
+  return { kind: "notFound" };
+}
+
+/**
+ * Address of one extension's details page.
+ * @param id Extension id.
+ * @returns yzo://extensions/<id>
+ */
+export function extensionDetailsUrl(id: string): string {
+  return `${EXTENSIONS_URL}/${id}`;
 }

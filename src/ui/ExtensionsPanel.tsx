@@ -1,4 +1,5 @@
 import { t } from "../lib/i18n";
+import { EXTENSIONS_URL } from "../lib/internalPages";
 import { useStore } from "../state/store";
 import { Icon } from "./Icon";
 import { ExtensionActionButton, useExtensionActions } from "./extensionActions";
@@ -10,8 +11,8 @@ const PANEL_WIDTH = 248;
 
 /**
  * Extensions panel under the puzzle button, like Arc's: every extension as a tile (click opens its
- * popup), a pin on hover to show it in the top bar, right-click for options and removal, and "+" to
- * add more from the Chrome Web Store.
+ * popup), a pin on hover to show it in the top bar, right-click for options and removal, "+" to
+ * add more from the Chrome Web Store, and a link to the extensions page (yzo://extensions).
  * @param props.anchor Bottom-right corner of the puzzle button, in window coordinates.
  * @param props.onClose Closes the panel.
  * @returns Panel overlay.
@@ -24,7 +25,7 @@ export function ExtensionsPanel({ anchor, onClose }: { anchor: { right: number; 
   const pinned = state.settings.pinnedExtensions ?? [];
   const tabId = host.webContentsIdOf(state.window.selection[state.window.focusedSpaceId]?.focusedTabId ?? null) ?? -1;
 
-  const openTab = (url: string) => dispatch({ type: "createTab", url, target: "today", activate: true, now: Date.now() });
+  const openTab = (url: string, title?: string) => dispatch({ type: "createTab", url, title, target: "today", activate: true, now: Date.now() });
   const togglePin = (id: string) =>
     dispatch({ type: "updateSettings", settings: { pinnedExtensions: pinned.includes(id) ? pinned.filter((p) => p !== id) : [...pinned, id] } });
 
@@ -100,6 +101,15 @@ export function ExtensionsPanel({ anchor, onClose }: { anchor: { right: number; 
             <Icon name="plus" />
           </button>
         </div>
+        <button
+          className="extensions-manage"
+          onClick={() => {
+            openTab(EXTENSIONS_URL, t("extensions.title"));
+            onClose();
+          }}
+        >
+          <Icon name="settings" /> {t("extensions.manage")}
+        </button>
       </div>
     </div>
   );

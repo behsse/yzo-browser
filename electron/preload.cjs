@@ -52,6 +52,7 @@ contextBridge.exposeInMainWorld("yzo", {
     pull: (since) => ipcRenderer.invoke("sync:pull", since),
   },
   uninstallExtension: (id) => ipcRenderer.invoke("extensions:uninstall", id),
+  setExtensionEnabled: (id, enabled) => ipcRenderer.invoke("extensions:setEnabled", id, enabled),
   onMaximized: (callback) => subscribe("window:maximized", callback),
   onFullScreen: (callback) => subscribe("window:fullscreen", callback),
   onShortcut: (callback) => subscribe("shortcut", callback),

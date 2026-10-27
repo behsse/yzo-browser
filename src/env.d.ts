@@ -23,9 +23,18 @@ export interface ViewSyncPayload {
 export interface InstalledExtension {
   id: string;
   name: string;
+  description: string;
   version: string;
-  /** Extension options page, if it declares one. */
+  /** Largest icon up to 128px, as a data: URL. */
+  icon: string | null;
+  /** Loaded and running; off extensions stay installed but never run. */
+  enabled: boolean;
+  /** Extension options page, if it declares one (only while it is on). */
   optionsUrl: string | null;
+  /** Its permissions in plain words. */
+  permissions: string[];
+  /** Its Chrome Web Store page, for store installs. */
+  storeUrl: string | null;
 }
 
 export type TabCommand = "back" | "forward" | "reload" | "load" | "devtools" | "focus" | "state";
@@ -120,6 +129,8 @@ export interface YzoBridge {
   onTabClose(callback: (request: { id: string }) => void): () => void;
   listExtensions(): Promise<InstalledExtension[]>;
   uninstallExtension(id: string): Promise<boolean>;
+  /** Turns an installed extension on or off (kept across restarts). */
+  setExtensionEnabled(id: string, enabled: boolean): Promise<boolean>;
   onMaximized(callback: (maximized: boolean) => void): () => void;
   /** Fires when the window enters or leaves full screen. */
   onFullScreen(callback: (fullScreen: boolean) => void): () => void;

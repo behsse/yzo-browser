@@ -99,7 +99,7 @@ export function WebArea() {
         if (isTab(item) && isInternalUrl(item.data.url)) {
           return (
             <div key={id} className={className + " internal-pane"} style={pane.style} onMouseDown={() => dispatch({ type: "activate", id, now: Date.now() })}>
-              <InternalPage url={item.data.url} />
+              <InternalPage url={item.data.url} navigate={(next) => dispatch({ type: "updateTab", id, url: next, now: Date.now() })} />
             </div>
           );
         }
