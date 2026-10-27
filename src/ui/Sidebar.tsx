@@ -1,6 +1,7 @@
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { t } from "../lib/i18n";
 import { shortcutLabel } from "../lib/shortcuts";
+import { displayTheme } from "../lib/privateMode";
 import { resolveAppearance, sidebarBackground } from "../lib/theme";
 import { canMove } from "../state/reducer";
 import { useStore } from "../state/store";
@@ -132,7 +133,8 @@ export function Sidebar({ floating = false }: { floating?: boolean }) {
   const { state, dispatch } = useStore();
   const ui = useUi();
   const space = state.spaces[state.window.focusedSpaceId];
-  const appearance = resolveAppearance(space.theme);
+  const theme = displayTheme(space.theme);
+  const appearance = resolveAppearance(theme);
   const resizing = useRef(false);
   const host = useViewHost();
 
@@ -160,7 +162,7 @@ export function Sidebar({ floating = false }: { floating?: boolean }) {
   return (
     <aside
       className={`sidebar sidebar-${appearance}${floating ? " sidebar-floating" : ""}`}
-      style={{ width: state.window.sidebarWidth, background: floating ? sidebarBackground(space.theme) : undefined }}
+      style={{ width: state.window.sidebarWidth, background: floating ? sidebarBackground(theme) : undefined }}
     >
       <Favorites />
 

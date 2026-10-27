@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cursorOnTopEdge, floatingSidebarDecision, floatingTopBarDecision } from "./lib/floatingSidebar";
 import { t } from "./lib/i18n";
 import { matchShortcut, type ShortcutAction } from "./lib/shortcuts";
+import { displayTheme } from "./lib/privateMode";
 import { resolveAppearance, sidebarBackground } from "./lib/theme";
 import { PEEK_ID, tabCommand } from "./lib/tabs";
 import { useStore } from "./state/store";
@@ -358,7 +359,7 @@ export function App() {
   const overlayOpen = Boolean(
     commandBar || peekUrl || archiveOpen || accountOpen || spaceEditor || menu || extensionsAnchor || (hidden && floatingFrozen) || (topHidden && topFrozen),
   );
-  const theme = state.spaces[state.window.focusedSpaceId].theme;
+  const theme = displayTheme(state.spaces[state.window.focusedSpaceId].theme);
 
   return (
     <ViewHostProvider overlayOpen={overlayOpen} peekUrl={peekUrl}>
