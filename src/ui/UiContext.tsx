@@ -14,6 +14,11 @@ export interface MenuEntry {
   danger?: boolean;
   /** Informational entry: shown greyed out and not clickable. */
   disabled?: boolean;
+  /**
+   * Zoom row (− value + and full screen) instead of a plain entry. Its buttons keep the menu open
+   * (except full screen); onAction returns the value to show next, if it changed.
+   */
+  zoom?: { value: string; onAction(action: "out" | "in" | "fullscreen"): Promise<string | null> };
   onSelect: () => void;
 }
 

@@ -334,9 +334,7 @@
   "mainMenu.newPrivateWindow": "New private window",
   "mainMenu.print": "Print…",
   "mainMenu.savePage": "Save page as…",
-  "mainMenu.zoomIn": "Zoom in",
-  "mainMenu.zoomOut": "Zoom out",
-  "mainMenu.zoomReset": "Actual size ({zoom} %)",
+  "mainMenu.zoom": "Zoom",
   "mainMenu.help": "Help and feedback",
   "mainMenu.quit": "Quit"
 }

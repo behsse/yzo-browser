@@ -400,6 +400,9 @@ ipcMain.on("window:drag", (event) => {
 
 // Menus are drawn above the live pages (electron/menu-popup.cjs); resolves to the picked index or null.
 ipcMain.handle("menu:popup", (event, entries, x, y) => (isTrustedSender(event) && menuPopup ? menuPopup.show(entries, x, y) : null));
+ipcMain.on("menu:updateZoom", (event, index, value) => {
+  if (isTrustedSender(event)) menuPopup?.updateZoom(index, value);
+});
 
 /**
  * "Import from Arc": reads Arc's spaces, tabs, favorites and extensions, asks for confirmation, then

@@ -63,6 +63,15 @@ const BROWSER_MENU_WIDTH = 300;
 /** Where "Help and feedback" leads: the project's issue tracker. */
 const HELP_URL = "https://github.com/behsse/yzo-browser/issues";
 
+/**
+ * Zoom shown in the browser menu, "110 %"; "100 %" when unknown.
+ * @param factor Zoom factor from the page.
+ * @returns Label.
+ */
+function zoomLabel(factor: unknown): string {
+  return `${Math.round((typeof factor === "number" ? factor : 1) * 100)} %`;
+}
+
 /** Distance the pointer must travel, button held, before a press on the floating top bar moves the window. */
 const DRAG_THRESHOLD_PX = 3;
 
@@ -181,16 +190,22 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
         { icon: "print", label: t("mainMenu.print"), hint: shortcutLabel("print"), disabled: !pageTab, onSelect: () => ui.runAction("print") },
         { icon: "save", label: t("mainMenu.savePage"), disabled: !pageTab, onSelect: () => void tabCommand(pageTab, "savePage") },
         "separator",
-        { icon: "plus", label: t("mainMenu.zoomIn"), hint: shortcutLabel("zoomIn"), disabled: !pageTab, onSelect: () => ui.runAction("zoomIn") },
-        { icon: "minus", label: t("mainMenu.zoomOut"), hint: shortcutLabel("zoomOut"), disabled: !pageTab, onSelect: () => ui.runAction("zoomOut") },
         {
-          icon: "search",
-          label: t("mainMenu.zoomReset", { zoom: typeof zoom === "number" ? Math.round(zoom * 100) : 100 }),
-          hint: shortcutLabel("zoomReset"),
+          icon: "zoom",
+          label: t("mainMenu.zoom"),
           disabled: !pageTab,
-          onSelect: () => ui.runAction("zoomReset"),
+          zoom: {
+            value: zoomLabel(zoom),
+            onAction: async (action) => {
+              if (action === "fullscreen") {
+                window.yzo?.windowControl("fullscreen");
+                return null;
+              }
+              return zoomLabel(await tabCommand(pageTab, "zoom", action));
+            },
+          },
+          onSelect: () => {},
         },
-        { icon: "fullscreen", label: t("topbar.fullscreen"), onSelect: () => window.yzo?.windowControl("fullscreen") },
         "separator",
         { icon: "settings", label: t("settings.title"), onSelect: () => openPage(settingsUrl(), t("settings.title")) },
         { icon: "code", label: t("topbar.devTools"), hint: shortcutLabel("devTools"), disabled: !pageTab, onSelect: () => ui.runAction("devTools") },

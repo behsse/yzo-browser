@@ -172,6 +172,17 @@ export function App() {
     [dispatch, showToast],
   );
 
+  // Entries of the open native menu, for the buttons of its zoom row (they act without closing it).
+  const nativeMenuEntries = useRef<MenuState["entries"]>([]);
+  useEffect(() => {
+    return window.yzo?.onMenuAction(async ({ index, action }) => {
+      const entry = nativeMenuEntries.current[index];
+      if (!entry || entry === "separator" || !entry.zoom) return;
+      const value = await entry.zoom.onAction(action);
+      if (value !== null) window.yzo?.updateMenuZoom(index, value);
+    });
+  }, []);
+
   // Inside Electron, menus are drawn above the live pages by the main process, so videos keep playing.
   // Elsewhere (tests, plain browser) they fall back to the HTML ContextMenu.
   const openMenu = useCallback((next: MenuState) => {
@@ -180,8 +191,16 @@ export function App() {
     const entries = next.entries.map((entry) =>
       entry === "separator"
         ? ("separator" as const)
-        : { label: entry.label, icon: entry.icon ? ICON_PATHS[entry.icon] : undefined, hint: entry.hint, danger: entry.danger, disabled: entry.disabled },
+        : {
+            label: entry.label,
+            icon: entry.icon ? ICON_PATHS[entry.icon] : undefined,
+            hint: entry.hint,
+            danger: entry.danger,
+            disabled: entry.disabled,
+            zoom: entry.zoom ? { value: entry.zoom.value } : undefined,
+          },
     );
+    nativeMenuEntries.current = next.entries;
     setNativeMenuOpen(true);
     void bridge.showMenu(entries, next.x, next.y).then((index) => {
       setNativeMenuOpen(false);

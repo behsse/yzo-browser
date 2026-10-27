@@ -95,3 +95,36 @@ hr {
   border: 0;
   border-top: 1px solid var(--surface-border);
 }
+
+/* Zoom row (browser menu): label, then − value + and full screen on the right, like Brave's. */
+.zoom-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 4px 0 10px;
+}
+
+.zoom-row .zoom-button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 28px;
+  padding: 0;
+}
+
+.zoom-row .zoom-button:not(:disabled):hover {
+  background: var(--surface-border);
+}
+
+.zoom-value {
+  min-width: 44px;
+  text-align: center;
+}
+
+.zoom-divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 2px;
+  background: var(--surface-border);
+}

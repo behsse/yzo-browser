@@ -14,9 +14,11 @@ const MEASURE_SIZE = { width: 420, height: 900 };
 const MAX_ENTRIES = 64;
 const MAX_TEXT = 200;
 const ICON_PATH_PATTERN = /^[MmLlHhVvCcSsQqTtAaZz0-9.,\s-]{1,2000}$/;
+/** Buttons of a zoom row; "fullscreen" also closes the menu. */
+const ZOOM_ACTIONS = new Set(["out", "in", "fullscreen"]);
 
 /**
- * @typedef {{ separator: true } | { label: string, icon?: string, hint?: string, danger?: boolean, disabled?: boolean, index: number }} MenuItem
+ * @typedef {{ separator: true } | { label: string, icon?: string, hint?: string, danger?: boolean, disabled?: boolean, zoom?: { value: string }, index: number }} MenuItem
  */
 
 /**
@@ -40,6 +42,7 @@ function sanitizeEntries(entries) {
       hint: typeof entry.hint === "string" ? entry.hint.slice(0, 40) : undefined,
       danger: entry.danger === true,
       disabled: entry.disabled === true,
+      zoom: entry.zoom && typeof entry.zoom.value === "string" ? { value: entry.zoom.value.slice(0, 12) } : undefined,
     });
   }
   return clean;
@@ -50,7 +53,7 @@ function sanitizeEntries(entries) {
  * @param {object} options Wiring provided by the main process.
  * @param {() => Electron.BaseWindow | null} options.getWindow Returns the owning window.
  * @param {() => Electron.WebContents | null} options.getUi Returns the UI renderer's contents.
- * @returns {{ show(entries: unknown, x: unknown, y: unknown): Promise<number | null>, close(): void, bringToFront(): void }}
+ * @returns {{ show(entries: unknown, x: unknown, y: unknown): Promise<number | null>, close(): void, updateZoom(index: unknown, value: unknown): void, bringToFront(): void }}
  */
 function createMenuPopup({ getWindow, getUi }) {
   /** @type {WebContentsView | null} */
@@ -129,6 +132,12 @@ function createMenuPopup({ getWindow, getUi }) {
   ipcMain.on("menu:close", (event, forToken) => {
     if (fromMenu(event)) finish(forToken, null, true);
   });
+  // A button of a zoom row: the UI runs it and sends back the new value; the menu stays open.
+  ipcMain.on("menu:act", (event, forToken, index, action) => {
+    if (!fromMenu(event) || !pending || pending.token !== forToken || !Number.isInteger(index) || !ZOOM_ACTIONS.has(action)) return;
+    getUi()?.send("menu:action", { index, action });
+    if (action === "fullscreen") finish(forToken, null, true);
+  });
 
   return {
     async show(entries, x, y) {
@@ -149,6 +158,15 @@ function createMenuPopup({ getWindow, getUi }) {
     },
     close() {
       if (pending) finish(pending.token, null, false);
+    },
+    /**
+     * Shows a new value in the open menu's zoom row.
+     * @param {unknown} index Entry index.
+     * @param {unknown} value Text, such as "110 %".
+     */
+    updateZoom(index, value) {
+      if (!pending || !view || !Number.isInteger(index) || typeof value !== "string") return;
+      view.webContents.send("menu:update", { token: pending.token, index, value: value.slice(0, 12) });
     },
     /** Keeps an open menu above views restacked after it was shown (e.g. the UI being raised). */
     bringToFront() {

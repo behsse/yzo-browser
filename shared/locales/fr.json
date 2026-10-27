@@ -334,9 +334,7 @@
   "mainMenu.newPrivateWindow": "Nouvelle fenêtre privée",
   "mainMenu.print": "Imprimer…",
   "mainMenu.savePage": "Enregistrer sous…",
-  "mainMenu.zoomIn": "Zoom avant",
-  "mainMenu.zoomOut": "Zoom arrière",
-  "mainMenu.zoomReset": "Taille réelle ({zoom} %)",
+  "mainMenu.zoom": "Zoom",
   "mainMenu.help": "Aide et signalements",
   "mainMenu.quit": "Quitter"
 }

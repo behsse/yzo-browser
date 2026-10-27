@@ -67,6 +67,8 @@ contextBridge.exposeInMainWorld("yzo", {
   setExtensionEnabled: (id, enabled) => ipcRenderer.invoke("extensions:setEnabled", id, enabled),
   setExtensionPrivateAllowed: (id, allowed) => ipcRenderer.invoke("extensions:setPrivateAllowed", id, allowed),
   onMaximized: (callback) => subscribe("window:maximized", callback),
+  onMenuAction: (callback) => subscribe("menu:action", callback),
+  updateMenuZoom: (index, value) => ipcRenderer.send("menu:updateZoom", index, value),
   onFullScreen: (callback) => subscribe("window:fullscreen", callback),
   onShortcut: (callback) => subscribe("shortcut", callback),
   onPeek: (callback) => subscribe("peek:open", callback),

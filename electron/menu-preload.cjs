@@ -6,4 +6,6 @@ contextBridge.exposeInMainWorld("menuHost", {
   resize: (token, width, height) => ipcRenderer.send("menu:resize", token, width, height),
   select: (token, index) => ipcRenderer.send("menu:select", token, index),
   close: (token) => ipcRenderer.send("menu:close", token),
+  act: (token, index, action) => ipcRenderer.send("menu:act", token, index, action),
+  onUpdate: (callback) => ipcRenderer.on("menu:update", (_event, update) => callback(update)),
 });

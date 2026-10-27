@@ -99,6 +99,8 @@ export interface NativeMenuEntry {
   hint?: string;
   danger?: boolean;
   disabled?: boolean;
+  /** Drawn as a zoom row (− value + and full screen) instead of a plain entry. */
+  zoom?: { value: string };
 }
 
 export interface YzoBridge {
@@ -141,6 +143,10 @@ export interface YzoBridge {
   /** Lets an extension run in private windows, from the next one opened. */
   setExtensionPrivateAllowed(id: string, allowed: boolean): Promise<boolean>;
   onMaximized(callback: (maximized: boolean) => void): () => void;
+  /** A button of an open menu's zoom row was pressed. */
+  onMenuAction(callback: (event: { index: number; action: "out" | "in" | "fullscreen" }) => void): () => void;
+  /** Shows a new value in the open menu's zoom row. */
+  updateMenuZoom(index: number, value: string): void;
   /** Fires when the window enters or leaves full screen. */
   onFullScreen(callback: (fullScreen: boolean) => void): () => void;
   onShortcut(callback: (action: ShortcutAction) => void): () => void;

@@ -25,6 +25,48 @@ function createIcon(d) {
   return svg;
 }
 
+/** Icons of the zoom row's buttons (24-unit paths, like src/ui/Icon.tsx). */
+const ZOOM_ICONS = { out: "M5 12h14", in: "M12 5v14M5 12h14", fullscreen: "M14 4h6v6M20 4l-6 6M10 20H4v-6M4 20l6-6" };
+
+/**
+ * Builds a zoom row, like Brave's: icon and label, then − value + and a full screen button. Its
+ * buttons keep the menu open (except full screen); the new value comes back through onUpdate.
+ * @param {{ label: string, icon?: string, disabled?: boolean, zoom: { value: string }, index: number }} entry Entry.
+ * @param {boolean} hasIcons Whether the menu has an icon column.
+ * @returns {HTMLDivElement} Row element.
+ */
+function createZoomRow(entry, hasIcons) {
+  const row = document.createElement("div");
+  row.className = "zoom-row";
+  row.dataset.index = String(entry.index);
+  if (hasIcons) {
+    const icon = document.createElement("span");
+    icon.className = "icon";
+    if (entry.icon) icon.append(createIcon(entry.icon));
+    row.append(icon);
+  }
+  const label = document.createElement("span");
+  label.className = "label";
+  label.textContent = entry.label;
+  row.append(label);
+  const control = (action) => {
+    const button = document.createElement("button");
+    button.className = "zoom-button";
+    // Zooming needs a web page; full screen always works.
+    button.disabled = Boolean(entry.disabled) && action !== "fullscreen";
+    button.append(createIcon(ZOOM_ICONS[action]));
+    button.addEventListener("click", () => window.menuHost.act(token, entry.index, action));
+    return button;
+  };
+  const value = document.createElement("span");
+  value.className = "zoom-value";
+  value.textContent = entry.zoom.value;
+  const divider = document.createElement("span");
+  divider.className = "zoom-divider";
+  row.append(control("out"), value, control("in"), divider, control("fullscreen"));
+  return row;
+}
+
 /**
  * Highlights one enabled entry (hover or keyboard).
  * @param {number} index Button index, or -1 for none.
@@ -49,7 +91,7 @@ function moveActive(step) {
 
 /**
  * Renders a menu and reports its size so the main process can fit the view to it.
- * @param {{ token: number, entries: ({ separator: true } | { label: string, icon?: string, hint?: string, danger?: boolean, disabled?: boolean, index: number })[] }} spec Menu.
+ * @param {{ token: number, entries: ({ separator: true } | { label: string, icon?: string, hint?: string, danger?: boolean, disabled?: boolean, zoom?: { value: string }, index: number })[] }} spec Menu.
  */
 function render(spec) {
   token = spec.token;
@@ -60,6 +102,10 @@ function render(spec) {
   for (const entry of spec.entries) {
     if ("separator" in entry) {
       root.append(document.createElement("hr"));
+      continue;
+    }
+    if (entry.zoom) {
+      root.append(createZoomRow(entry, hasIcons));
       continue;
     }
     const button = document.createElement("button");
@@ -103,3 +149,8 @@ window.addEventListener("keydown", (event) => {
   event.preventDefault();
 });
 window.menuHost.onShow(render);
+window.menuHost.onUpdate((update) => {
+  if (update.token !== token) return;
+  const value = root.querySelector(`.zoom-row[data-index="${Number(update.index)}"] .zoom-value`);
+  if (value) value.textContent = update.value;
+});
