@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld("yzo", {
   isFullScreen: () => ipcRenderer.invoke("window:isFullScreen"),
   cursorPosition: () => ipcRenderer.invoke("window:cursor"),
   checkForUpdates: () => ipcRenderer.invoke("app:checkForUpdates"),
+  openPrivateWindow: () => ipcRenderer.send("app:openPrivate"),
   importArc: () => ipcRenderer.invoke("arc:import"),
   resolveFavicon: (url) => ipcRenderer.invoke("favicon:resolve", url),
   showMenu: (entries, x, y) => ipcRenderer.invoke("menu:popup", entries, x, y),

@@ -18,6 +18,7 @@ Stack: Electron 43 in its [castLabs ECS](https://github.com/castlabs/electron-re
 | Folders | Create, rename, collapse, drag and drop, nesting. |
 | Pinned tabs | Closing a pinned tab unloads it and brings it back to its original URL, like Arc. |
 | Hidden sidebar and top bar | `Ctrl+S` hides the sidebar; it reappears when hovering the left edge. `Ctrl+Shift+S` (or the lock button) hides the top bar for a full-screen view; it slides down over the pages when the pointer reaches the top edge, and still moves the window (drag it, double-click to maximize). |
+| Private browsing | The incognito button (next to reload) opens a private Yzo in its own process, like Zen: its tabs live in an in-memory session, so cookies, site storage, cache and history never reach the disk, and it starts from a fresh state that is never saved. No account, sync, extensions or Arc import there. The button stays lit in a private window. |
 | Chrome extensions | Install from the Chrome Web Store ("Add to Chrome" button, with a permission confirmation), automatic updates. The puzzle button opens the extensions panel: click an extension to open its popup, hover it and click the pin to show it in the top bar, right-click for options and removal, "+" to add more. Popups, badges, context menus and the tabs API (`chrome.tabs`) are supported. |
 | Account and sync | Yzo account (sign in from the menu behind the logo): spaces, favorites, pinned tabs, folders and settings synced across computers, **end-to-end encrypted** (the server sees neither the password nor the data). Recovery key at sign-up, session kept in the system keychain. See [docs/sync.md](docs/sync.md). |
 | Protected video (DRM) | Widevine through castLabs ECS: Spotify, Deezer, Prime Video, Disney+… Netflix and the strictest services also require production VMP signing (see "Distribution"). |
@@ -187,6 +188,7 @@ Each loaded tab is a native `WebContentsView` managed by the main process ([elec
 - Extensions: `chrome.runtime.onInstalled` does not fire under Electron; extensions that only create their context menus at that moment will have none. Chrome APIs not covered by Electron or `electron-chrome-extensions` remain unavailable.
 - Arc's default shortcuts could not be extracted from the binary. The ones above follow Chromium's and Arc's public conventions.
 - Without an EVS account, builds keep castLabs' development VMP signature: Netflix refuses playback.
+- Private browsing: Chromium still writes its own files (GPU caches, local settings) to a throwaway profile under `userData/Private profiles/`, deleted the next time a private window opens. Extensions are not available there.
 - Builds are unsigned until a certificate is provided: SmartScreen (Windows) and Gatekeeper (macOS) warn at install.
 
 ## License

@@ -1,5 +1,6 @@
 import { useEffect, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { t } from "../lib/i18n";
+import { IS_PRIVATE } from "../lib/privateMode";
 import { shortcutLabel } from "../lib/shortcuts";
 import { tabCommand } from "../lib/tabs";
 import { displayHost } from "../lib/url";
@@ -107,6 +108,27 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
     const account: MenuEntry = sync.status?.signedIn
       ? { icon: "user", label: t("appMenu.account", { email: sync.status.email ?? "" }), onSelect: () => ui.openAccount() }
       : { icon: "user", label: t("account.signIn"), onSelect: () => ui.openAccount("signIn") };
+    const importArc: MenuEntry = {
+      icon: "archive",
+      label: t("appMenu.importArc"),
+      onSelect: async () => {
+        const result = await window.yzo?.importArc();
+        if (!result || result.status === "cancelled") return;
+        if (result.status === "notFound" || !result.data) return ui.showToast(t("arcImport.notFound"));
+        dispatch({ type: "importArc", data: result.data, now: Date.now() });
+        ui.showToast(t("arcImport.done", { spaces: result.data.spaces.length, extensions: result.extensions ?? 0 }));
+      },
+    };
+    const checkUpdates: MenuEntry = {
+      icon: "sync",
+      label: t("appMenu.checkUpdates"),
+      onSelect: async () => {
+        ui.showToast(t("updates.checking"));
+        const result = await window.yzo?.checkForUpdates();
+        const status = result?.status ?? "dev";
+        ui.showToast(t(`updates.${status}`, { version: result?.version ?? "" }));
+      },
+    };
     ui.openMenu({
       x: rect.left,
       y: rect.bottom + 4,
@@ -115,29 +137,10 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
         // Multi-window is not built yet: shown so the menu matches Arc, but disabled.
         { icon: "restore", label: t("appMenu.newWindow"), hint: "Ctrl+N", disabled: true, onSelect: () => {} },
         "separator",
-        {
-          icon: "archive",
-          label: t("appMenu.importArc"),
-          onSelect: async () => {
-            const result = await window.yzo?.importArc();
-            if (!result || result.status === "cancelled") return;
-            if (result.status === "notFound" || !result.data) return ui.showToast(t("arcImport.notFound"));
-            dispatch({ type: "importArc", data: result.data, now: Date.now() });
-            ui.showToast(t("arcImport.done", { spaces: result.data.spaces.length, extensions: result.extensions ?? 0 }));
-          },
-        },
-        {
-          icon: "sync",
-          label: t("appMenu.checkUpdates"),
-          onSelect: async () => {
-            ui.showToast(t("updates.checking"));
-            const result = await window.yzo?.checkForUpdates();
-            const status = result?.status ?? "dev";
-            ui.showToast(t(`updates.${status}`, { version: result?.version ?? "" }));
-          },
-        },
-        "separator",
-        account,
+        // A private instance keeps nothing: no import into it, no account.
+        ...(IS_PRIVATE ? [] : [importArc, "separator" as const]),
+        checkUpdates,
+        ...(IS_PRIVATE ? [] : ["separator" as const, account]),
       ],
     });
   };
@@ -195,8 +198,8 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
         <button title={t("sidebar.reload", { shortcut: shortcutLabel("reload") })} onClick={() => ui.runAction("reload")}>
           <Icon name="reload" />
         </button>
-        {/* Visual only for now: private browsing is not built yet. */}
-        <button title={t("topbar.private")}>
+        {/* Opens a private instance; lit in one, like the locks. */}
+        <button className={IS_PRIVATE ? "topbar-locked" : ""} title={t("topbar.private")} onClick={() => window.yzo?.openPrivateWindow()}>
           <Icon name="incognito" />
         </button>
       </div>

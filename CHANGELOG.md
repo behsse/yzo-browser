@@ -8,11 +8,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 - Hideable top bar for a real full-screen view: the new lock button next to the sidebar toggle (or Ctrl+Shift+S) hides it and the pages take the full height. Moving the pointer to the top edge slides it down over the pages, like Zen Browser, and it hides again when the pointer leaves it. It still works as a title bar: dragging it moves the window (Windows runs the move, so snapping and restoring a maximized window work), and a double-click maximizes.
 
+- Private browsing: the incognito button opens a private Yzo in its own process, like Zen. Its tabs use an in-memory session (no cookies, storage, cache or history on disk), it starts from a fresh state that is never saved, and it has no account, sync, extensions or Arc import. Each private instance gets a throwaway profile, deleted once it is closed and another private window opens.
 - Full screen button in the top bar, after the top bar lock: it puts the window in full screen, and its arrows point inward while full screen is on, to leave it.
 
 ### Changed
 
-- Top bar layout: full screen button and a divider after the top bar lock, private browsing next to reload, downloads after the extensions, a menu button after split view, and more room around the address. Private browsing, downloads and the menu are placeholders for now.
+- Top bar layout: full screen button and a divider after the top bar lock, private browsing next to reload, downloads after the extensions, a menu button after split view, and more room around the address. Downloads and the menu are placeholders for now.
 
 ## [0.8.0] - 2026-10-25
 

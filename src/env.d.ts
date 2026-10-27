@@ -107,6 +107,8 @@ export interface YzoBridge {
   resolveFavicon(url: string): Promise<string | null>;
   /** Reads Arc's data after a confirmation dialog; extensions install in the background. */
   importArc(): Promise<{ status: "notFound" | "cancelled" | "imported"; data?: import("./state/types").ArcImportData; extensions?: number } | null>;
+  /** Starts a private instance of Yzo in its own process (electron/private-mode.cjs). */
+  openPrivateWindow(): void;
   /** Manual update check; "dev" outside packaged builds. */
   checkForUpdates(): Promise<{ status: "dev" | "upToDate" | "available" | "error"; version?: string } | null>;
   syncViews(payload: ViewSyncPayload): void;

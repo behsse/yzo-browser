@@ -11,9 +11,13 @@ const { createAccount, AccountError } = require("./account.cjs");
 const { readArc, countTabs, EXTENSION_ID } = require("./arc-import.cjs");
 const { resolveFavicon } = require("./favicon.cjs");
 const { startNativeWindowDrag } = require("./window-drag.cjs");
+const { isPrivateInstance, launchPrivateInstance, claimPrivateProfile } = require("./private-mode.cjs");
 const { t } = require("./i18n.cjs");
 
-const PARTITION = "persist:yzo";
+/** Private instance (electron/private-mode.cjs): nothing it browses or changes is kept. */
+const PRIVATE = isPrivateInstance();
+// Without the "persist:" prefix the session lives in memory only.
+const PARTITION = PRIVATE ? "yzo-private" : "persist:yzo";
 const STATE_FILE = () => path.join(app.getPath("userData"), "yzo-state.json");
 const MAX_STATE_BYTES = 10 * 1024 * 1024;
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
@@ -272,6 +276,7 @@ function createWindow() {
     frame: false,
     backgroundColor: "#1d1d22",
     show: false,
+    ...(PRIVATE && { title: `Yzo (${t("topbar.private")})` }),
   });
   uiView = new WebContentsView({
     webPreferences: {
@@ -341,14 +346,18 @@ function createWindow() {
   // Tabs are native views managed here; the UI is not allowed to embed <webview> guests.
   ui.webContents.on("will-attach-webview", (event) => event.preventDefault());
 
-  if (DEV_URL) ui.webContents.loadURL(DEV_URL);
-  else ui.webContents.loadFile(path.join(__dirname, "..", "dist", "index.html"));
+  // The UI reads "?private" to show the private look and leave out account and import.
+  const query = PRIVATE ? { private: "1" } : {};
+  if (DEV_URL) ui.webContents.loadURL(`${DEV_URL}${PRIVATE ? "?private=1" : ""}`);
+  else ui.webContents.loadFile(path.join(__dirname, "..", "dist", "index.html"), { query });
 }
 
-ipcMain.handle("state:load", (event) => (isTrustedSender(event) ? readState() : null));
+// A private instance starts from a fresh state and keeps it in memory only.
+ipcMain.handle("state:load", (event) => (isTrustedSender(event) && !PRIVATE ? readState() : null));
 
 ipcMain.handle("state:save", (event, json) => {
   if (!isTrustedSender(event) || typeof json !== "string" || json.length > MAX_STATE_BYTES) return false;
+  if (PRIVATE) return true;
   try {
     JSON.parse(json);
     writeState(json);
@@ -409,7 +418,7 @@ async function importFromArc() {
 // Icon of a tab that was never opened (imported, restored, synced), found without loading it.
 ipcMain.handle("favicon:resolve", (event, url) => (isTrustedSender(event) ? resolveFavicon(session.fromPartition(PARTITION), url) : null));
 
-ipcMain.handle("arc:import", (event) => (isTrustedSender(event) ? importFromArc() : null));
+ipcMain.handle("arc:import", (event) => (isTrustedSender(event) && !PRIVATE ? importFromArc() : null));
 
 ipcMain.handle("window:isMaximized", (event) => isTrustedSender(event) && Boolean(mainWindow?.isMaximized()));
 ipcMain.handle("window:isFullScreen", (event) => isTrustedSender(event) && Boolean(mainWindow?.isFullScreen()));
@@ -509,6 +518,15 @@ async function checkForUpdatesNow() {
 
 ipcMain.handle("app:checkForUpdates", (event) => (isTrustedSender(event) ? checkForUpdatesNow() : null));
 
+ipcMain.on("app:openPrivate", (event) => {
+  if (!isTrustedSender(event)) return;
+  try {
+    launchPrivateInstance();
+  } catch (error) {
+    console.error("Private browsing unavailable:", error);
+  }
+});
+
 app.whenReady().then(async () => {
   Menu.setApplicationMenu(null);
   await prepareWidevine();
@@ -517,6 +535,12 @@ app.whenReady().then(async () => {
   tabsSession.setPermissionRequestHandler((_wc, permission, callback) => {
     callback(ALLOWED_PERMISSIONS.has(permission));
   });
+  if (PRIVATE) {
+    // No account, sync, extensions or updates: they would keep data or run outside the private session.
+    claimPrivateProfile();
+    createWindow();
+    return;
+  }
   account = createAccount({ userDataPath: app.getPath("userData"), defaultServerUrl: DEFAULT_SYNC_URL });
   // Extensions load before the first tab exists so every tab is registered with them.
   try {
