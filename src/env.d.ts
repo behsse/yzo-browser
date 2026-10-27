@@ -41,7 +41,7 @@ export interface InstalledExtension {
   storeUrl: string | null;
 }
 
-export type TabCommand = "back" | "forward" | "reload" | "load" | "devtools" | "focus" | "state";
+export type TabCommand = "back" | "forward" | "reload" | "load" | "devtools" | "focus" | "state" | "print" | "savePage" | "zoom";
 
 export type TabEvent =
   | { tabId: string; type: "navigate" | "navigate-in-page"; url: string }

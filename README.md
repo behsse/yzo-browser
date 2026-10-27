@@ -20,6 +20,7 @@ Stack: Electron 43 in its [castLabs ECS](https://github.com/castlabs/electron-re
 | Hidden sidebar and top bar | `Ctrl+S` hides the sidebar; it reappears when hovering the left edge. `Ctrl+Shift+S` (or the lock button) hides the top bar for a full-screen view; it slides down over the pages when the pointer reaches the top edge, and still moves the window (drag it, double-click to maximize). |
 | Site panel | The sliders next to the address open a panel like Arc's: "Share URL", the tracking protection (with the number of requests it blocked on the page; click to turn it off or on for the site), and a footer with the connection ("Secure" opens the site's certificate in the system's certificate window on Windows and macOS), developer tools and "…" (clear the site's cache or cookies, all site settings). |
 | Shield | Blocks ads and trackers like Brave, with Ghostery's adblocker engine (`@ghostery/adblocker-electron`, MPL-2.0) and the EasyList / EasyPrivacy family of lists: blocked requests and hidden ad slots. On for every site by default; the sites it is turned off for are kept in `userData/shield.json`. The compiled engine is cached in `userData/shield-engine.bin` and rebuilt from fresh lists once a week. |
+| Browser menu | The "…" button: account, new tab and private window, downloads, extensions, print, save page as, zoom (kept per site), full screen, settings, developer tools, help, quit. |
 | Downloads | The download button lists this session's downloads with their progress, a folder button and a "…" menu (open, copy link, remove, Recycle Bin, pause, cancel); `yzo://downloads` keeps the history by day, with search. Files go to the folder chosen in the settings, or Yzo asks each time. |
 | Settings | `yzo://settings/<section>` ("Settings" in the Yzo menu): account, search engine, tabs, downloads, about. |
 | Extensions page | `yzo://extensions` ("Manage extensions" in the extensions panel): search, one card per extension with details, removal and an on/off switch; `yzo://extensions/<id>` shows, like Arc, its version, size, permission warnings, a pin to the toolbar, its options, Chrome Web Store page and source. Turned-off extensions are not loaded; "Allow in private browsing" lets one run in private windows. Choices in `userData/extension-settings.json`. |
@@ -55,6 +56,11 @@ They also work while a web page has focus: the main process intercepts them befo
 | `Ctrl+Alt+N` | New folder |
 | `Ctrl+Y` | Archive and settings |
 | `Ctrl+Shift+I`, `F12` | Page developer tools |
+| `Ctrl+Shift+N` | New private window |
+| `Ctrl+J` | Downloads |
+| `Ctrl+P` | Print the page |
+| `Ctrl+=`, `Ctrl+-`, `Ctrl+0` | Zoom in, zoom out, actual size |
+| `Ctrl+Shift+Q` | Quit |
 
 The full table lives in [shared/shortcuts.json](shared/shortcuts.json), shared by the UI and the main process.
 

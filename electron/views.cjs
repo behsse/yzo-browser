@@ -5,7 +5,8 @@
 // match. The tab views normally sit above the UI view; while an overlay is open (command bar, floating
 // sidebar, panels, divider drag) the UI asks to be "raised" above them and draws over the live pages
 // through its transparent slots (see stackUi in main.cjs).
-const { WebContentsView } = require("electron");
+const { WebContentsView, app, dialog } = require("electron");
+const path = require("node:path");
 
 const PEEK_ID = "__peek__";
 const ID_PATTERN = /^[\w-]{1,64}$/;
@@ -36,6 +37,40 @@ function toBounds(value) {
   if (!numbers.every((n) => typeof n === "number" && Number.isFinite(n))) return null;
   const rect = { x: Math.round(Number(x)), y: Math.round(Number(y)), width: Math.round(Number(width)), height: Math.round(Number(height)) };
   return rect.width > 0 && rect.height > 0 ? rect : null;
+}
+
+/** Zoom steps, like Chrome's. */
+const ZOOM_FACTORS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5];
+
+/**
+ * Zooms a page one step in or out, back to 100 %, or reads its zoom. Chromium keeps the zoom per site.
+ * @param {Electron.WebContents} contents Page.
+ * @param {unknown} step "in", "out", "reset" or "get".
+ * @returns {number} Zoom factor after the change.
+ */
+function zoomPage(contents, step) {
+  const current = contents.getZoomFactor();
+  let next = current;
+  if (step === "in") next = ZOOM_FACTORS.find((f) => f > current + 0.001) ?? current;
+  else if (step === "out") next = [...ZOOM_FACTORS].reverse().find((f) => f < current - 0.001) ?? current;
+  else if (step === "reset") next = 1;
+  if (next !== current) contents.setZoomFactor(next);
+  return next;
+}
+
+/**
+ * Saves a page with its resources ("Save page as…"), where the user picks.
+ * @param {Electron.WebContents} contents Page.
+ * @param {Electron.BaseWindow | null} win Parent of the save dialog.
+ * @returns {Promise<boolean>} Whether it was saved.
+ */
+async function savePage(contents, win) {
+  const name = (contents.getTitle() || "page").replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_").slice(0, 120);
+  const options = { defaultPath: path.join(app.getPath("downloads"), `${name}.html`), filters: [{ name: "HTML", extensions: ["html", "htm"] }] };
+  const result = win && !win.isDestroyed() ? await dialog.showSaveDialog(win, options) : await dialog.showSaveDialog(options);
+  if (result.canceled || !result.filePath) return false;
+  await contents.savePage(result.filePath, "HTMLComplete");
+  return true;
 }
 
 /**
@@ -249,6 +284,13 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
           return undefined;
         case "state":
           return { url: contents.getURL(), canGoBack: history.canGoBack(), canGoForward: history.canGoForward() };
+        case "print":
+          contents.print();
+          return undefined;
+        case "savePage":
+          return savePage(contents, getWindow());
+        case "zoom":
+          return zoomPage(contents, arg);
         default:
           return undefined;
       }

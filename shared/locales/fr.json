@@ -326,5 +326,17 @@
   "settings.downloadLocation": "Emplacement",
   "settings.change": "Modifier",
   "settings.askWhere": "Toujours demander où enregistrer les fichiers",
-  "settings.version": "Version {version}"
+  "settings.version": "Version {version}",
+
+  "mainMenu.syncPitch": "Synchroniser et enregistrer les données",
+  "mainMenu.syncedAs": "Synchronisé en tant que {email}",
+  "mainMenu.signIn": "Connexion",
+  "mainMenu.newPrivateWindow": "Nouvelle fenêtre privée",
+  "mainMenu.print": "Imprimer…",
+  "mainMenu.savePage": "Enregistrer sous…",
+  "mainMenu.zoomIn": "Zoom avant",
+  "mainMenu.zoomOut": "Zoom arrière",
+  "mainMenu.zoomReset": "Taille réelle ({zoom} %)",
+  "mainMenu.help": "Aide et signalements",
+  "mainMenu.quit": "Quitter"
 }

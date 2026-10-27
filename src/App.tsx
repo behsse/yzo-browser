@@ -13,6 +13,7 @@ import { ArchivePanel } from "./ui/ArchivePanel";
 import { CommandBar } from "./ui/CommandBar";
 import { ExtensionsPanel } from "./ui/ExtensionsPanel";
 import { SitePanel } from "./ui/SitePanel";
+import { DOWNLOADS_URL } from "./lib/internalPages";
 import { DownloadsPanel } from "./ui/DownloadsPanel";
 import { ContextMenu } from "./ui/ContextMenu";
 import { ICON_PATHS } from "./ui/Icon";
@@ -144,6 +145,27 @@ export function App() {
           break;
         case "devTools":
           void tabCommand(focusedId, "devtools");
+          break;
+        case "privateWindow":
+          window.yzo?.openPrivateWindow();
+          break;
+        case "downloads":
+          dispatch({ type: "createTab", url: DOWNLOADS_URL, title: t("downloads.title"), target: "today", activate: true, now: Date.now() });
+          break;
+        case "print":
+          void tabCommand(focusedId, "print");
+          break;
+        case "zoomIn":
+          void tabCommand(focusedId, "zoom", "in");
+          break;
+        case "zoomOut":
+          void tabCommand(focusedId, "zoom", "out");
+          break;
+        case "zoomReset":
+          void tabCommand(focusedId, "zoom", "reset");
+          break;
+        case "quit":
+          window.yzo?.windowControl("close");
           break;
       }
     },

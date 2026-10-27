@@ -326,5 +326,17 @@
   "settings.downloadLocation": "Location",
   "settings.change": "Change",
   "settings.askWhere": "Always ask where to save files",
-  "settings.version": "Version {version}"
+  "settings.version": "Version {version}",
+
+  "mainMenu.syncPitch": "Sync and save your data",
+  "mainMenu.syncedAs": "Syncing as {email}",
+  "mainMenu.signIn": "Sign in",
+  "mainMenu.newPrivateWindow": "New private window",
+  "mainMenu.print": "Print…",
+  "mainMenu.savePage": "Save page as…",
+  "mainMenu.zoomIn": "Zoom in",
+  "mainMenu.zoomOut": "Zoom out",
+  "mainMenu.zoomReset": "Actual size ({zoom} %)",
+  "mainMenu.help": "Help and feedback",
+  "mainMenu.quit": "Quit"
 }

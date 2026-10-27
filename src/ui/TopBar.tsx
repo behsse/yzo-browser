@@ -1,6 +1,6 @@
 import { useEffect, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { t } from "../lib/i18n";
-import { isInternalUrl, settingsUrl } from "../lib/internalPages";
+import { EXTENSIONS_URL, isInternalUrl, settingsUrl } from "../lib/internalPages";
 import { IS_PRIVATE } from "../lib/privateMode";
 import { checkForUpdatesWithToasts } from "../lib/updates";
 import { shortcutLabel } from "../lib/shortcuts";
@@ -57,6 +57,11 @@ function FullScreenButton() {
     </button>
   );
 }
+
+/** Approximate width of the browser menu, so it opens aligned on the "…" button's right edge. */
+const BROWSER_MENU_WIDTH = 300;
+/** Where "Help and feedback" leads: the project's issue tracker. */
+const HELP_URL = "https://github.com/behsse/yzo-browser/issues";
 
 /** Distance the pointer must travel, button held, before a press on the floating top bar moves the window. */
 const DRAG_THRESHOLD_PX = 3;
@@ -143,6 +148,55 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
         ...(IS_PRIVATE ? [] : [importArc, "separator" as const]),
         checkUpdates,
         ...(IS_PRIVATE ? [] : ["separator" as const, account]),
+      ],
+    });
+  };
+
+  // Browser menu behind the "…" button, like Brave's (same look as the logo's menu): account, windows,
+  // downloads and extensions, print and save, zoom of the page, settings, developer tools, help, quit.
+  const openBrowserMenu = async (anchor: HTMLElement) => {
+    const rect = anchor.getBoundingClientRect();
+    // Print, save and zoom act on a web page (not on Yzo's own pages).
+    const pageTab = url && !isInternalUrl(url) ? focusedId : null;
+    const zoom = pageTab ? await tabCommand(pageTab, "zoom", "get") : null;
+    const openPage = (target: string, title: string) =>
+      dispatch({ type: "createTab", url: target, title, target: "today", activate: true, now: Date.now() });
+    const account: MenuEntry = sync.status?.signedIn
+      ? { icon: "user", label: t("mainMenu.syncedAs", { email: sync.status.email ?? "" }), onSelect: () => ui.openAccount() }
+      : { icon: "user", label: t("mainMenu.syncPitch"), hint: t("mainMenu.signIn"), onSelect: () => ui.openAccount("signIn") };
+    ui.openMenu({
+      x: rect.right - BROWSER_MENU_WIDTH,
+      y: rect.bottom + 4,
+      entries: [
+        // A private window has no account.
+        ...(IS_PRIVATE ? [] : [account, "separator" as const]),
+        { icon: "tab", label: t("appMenu.newTab"), hint: shortcutLabel("newTab"), onSelect: () => ui.runAction("newTab") },
+        // Multi-window is not built yet: shown like in the logo's menu, but disabled.
+        { icon: "restore", label: t("appMenu.newWindow"), hint: "Ctrl+N", disabled: true, onSelect: () => {} },
+        { icon: "incognito", label: t("mainMenu.newPrivateWindow"), hint: shortcutLabel("privateWindow"), onSelect: () => ui.runAction("privateWindow") },
+        "separator",
+        { icon: "download", label: t("downloads.title"), hint: shortcutLabel("downloads"), onSelect: () => ui.runAction("downloads") },
+        { icon: "extensions", label: t("extensions.title"), onSelect: () => openPage(EXTENSIONS_URL, t("extensions.title")) },
+        "separator",
+        { icon: "print", label: t("mainMenu.print"), hint: shortcutLabel("print"), disabled: !pageTab, onSelect: () => ui.runAction("print") },
+        { icon: "save", label: t("mainMenu.savePage"), disabled: !pageTab, onSelect: () => void tabCommand(pageTab, "savePage") },
+        "separator",
+        { icon: "plus", label: t("mainMenu.zoomIn"), hint: shortcutLabel("zoomIn"), disabled: !pageTab, onSelect: () => ui.runAction("zoomIn") },
+        { icon: "minus", label: t("mainMenu.zoomOut"), hint: shortcutLabel("zoomOut"), disabled: !pageTab, onSelect: () => ui.runAction("zoomOut") },
+        {
+          icon: "search",
+          label: t("mainMenu.zoomReset", { zoom: typeof zoom === "number" ? Math.round(zoom * 100) : 100 }),
+          hint: shortcutLabel("zoomReset"),
+          disabled: !pageTab,
+          onSelect: () => ui.runAction("zoomReset"),
+        },
+        { icon: "fullscreen", label: t("topbar.fullscreen"), onSelect: () => window.yzo?.windowControl("fullscreen") },
+        "separator",
+        { icon: "settings", label: t("settings.title"), onSelect: () => openPage(settingsUrl(), t("settings.title")) },
+        { icon: "code", label: t("topbar.devTools"), hint: shortcutLabel("devTools"), disabled: !pageTab, onSelect: () => ui.runAction("devTools") },
+        { icon: "help", label: t("mainMenu.help"), onSelect: () => openPage(HELP_URL, t("mainMenu.help")) },
+        "separator",
+        { icon: "close", label: t("mainMenu.quit"), hint: shortcutLabel("quit"), onSelect: () => ui.runAction("quit") },
       ],
     });
   };
@@ -241,11 +295,10 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
         >
           <Icon name="download" />
         </button>
-        {/* The menu is visual only for now. */}
         <button title={t("topbar.splitView", { shortcut: shortcutLabel("addSplit") })} onClick={() => ui.runAction("addSplit")}>
           <Icon name="split" />
         </button>
-        <button title={t("topbar.more")} aria-haspopup="menu">
+        <button title={t("topbar.more")} aria-haspopup="menu" onClick={(event) => void openBrowserMenu(event.currentTarget)}>
           <Icon name="more" />
         </button>
         <span className="topbar-divider" />
