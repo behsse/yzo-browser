@@ -259,7 +259,7 @@ export function WebArea() {
 
   return (
     <main
-      className={"web-area" + (split && !resizing ? " web-area-animated" : "") + (host.raised ? " web-area-raised" : "")}
+      className={"web-area" + (split && !resizing ? " web-area-animated" : "")}
       ref={areaRef}
     >
       {visible.map((id) => {

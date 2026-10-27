@@ -1076,21 +1076,25 @@ kbd {
   background: var(--pane-color, var(--surface));
 }
 
-/* Fills the corners the page's rounded top leaves under the bar; hidden while the UI is above the
-   pages, where it would cover the page's top edge. */
+/* Squares off the page's rounded top corners under the bar: two corner-sized patches in the bar's
+   color. Only the corners, so they can stay while the UI is above the pages without hiding the page. */
+.pane-bar::before,
 .pane-bar::after {
   content: "";
   position: absolute;
   top: 100%;
-  left: 0;
-  right: 0;
+  width: var(--radius);
   height: var(--radius);
   background: inherit;
   pointer-events: none;
 }
 
-.web-area-raised .pane-bar::after {
-  display: none;
+.pane-bar::before {
+  left: 0;
+}
+
+.pane-bar::after {
+  right: 0;
 }
 
 .pane-bar .pane-grip {
