@@ -109,6 +109,7 @@ export interface YzoBridge {
   importArc(): Promise<{ status: "notFound" | "cancelled" | "imported"; data?: import("./state/types").ArcImportData; extensions?: number } | null>;
   /** Starts a private instance of Yzo in its own process (electron/private-mode.cjs). */
   openPrivateWindow(): void;
+  site: SiteBridge;
   /** Manual update check; "dev" outside packaged builds. */
   checkForUpdates(): Promise<{ status: "dev" | "upToDate" | "available" | "error"; version?: string } | null>;
   syncViews(payload: ViewSyncPayload): void;
@@ -125,6 +126,27 @@ export interface YzoBridge {
   onShortcut(callback: (action: ShortcutAction) => void): () => void;
   onPeek(callback: (payload: { url: string }) => void): () => void;
   onOpenTab(callback: (payload: { url: string; background: boolean }) => void): () => void;
+}
+
+/** What the site menu shows about the focused page. */
+export interface SiteInfo {
+  /** Ad and tracker shield: on for this site, requests blocked since the page loaded. */
+  shield: { enabled: boolean; blocked: number };
+  /** Loaded over https (an invalid certificate is refused, so https means a valid one). */
+  secure: boolean;
+  /** A certificate can be shown for the host. */
+  certificate: boolean;
+}
+
+/** Site controls (electron/shield.cjs, electron/site-info.cjs). */
+export interface SiteBridge {
+  info(webContentsId: number, url: string): Promise<SiteInfo | null>;
+  /** Turns the shield on or off for the page's site; reload the page to apply it. */
+  setShield(url: string, enabled: boolean): Promise<boolean>;
+  /** Opens the system's certificate window for a host; false when unavailable. */
+  showCertificate(host: string): Promise<boolean>;
+  /** Clears the site's cache or cookies. */
+  clear(url: string, kind: "cache" | "cookies"): Promise<boolean>;
 }
 
 /** State of the extension actions, from electron-chrome-extensions' browser-action preload. */

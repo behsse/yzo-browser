@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { ViewBounds, ViewSyncPayload } from "../env";
+import { isInternalUrl } from "../lib/internalPages";
 import { pageHolesMask } from "../lib/pageMask";
 import { tabCommand } from "../lib/tabs";
 import { useStore } from "../state/store";
@@ -80,7 +81,8 @@ export function ViewHostProvider({ overlayOpen, peekUrl, children }: { overlayOp
     const tabs: ViewSyncPayload["tabs"] = [];
     for (const id of ids) {
       const item = s.items[id];
-      if (!isTab(item)) continue;
+      // Yzo's own pages are drawn by the UI: no native view.
+      if (!isTab(item) || isInternalUrl(item.data.url)) continue;
       tabs.push({ id, url: item.data.url, bounds: boundsOf(slots.current.get(id)) });
     }
     const mask = pageHolesMask(

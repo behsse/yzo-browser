@@ -1,5 +1,6 @@
 import { useEffect, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { t } from "../lib/i18n";
+import { isInternalUrl, siteSettingsUrl } from "../lib/internalPages";
 import { IS_PRIVATE } from "../lib/privateMode";
 import { shortcutLabel } from "../lib/shortcuts";
 import { tabCommand } from "../lib/tabs";
@@ -101,6 +102,7 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
   const actions = useExtensionActions();
   const pinned = state.settings.pinnedExtensions ?? [];
   const pinnedActions = pinned.filter((id) => actions.some((action) => action.id === id));
+  const webContentsId = host.webContentsIdOf(focusedId);
 
   // Arc-style app menu behind the logo: new tab / window, updates, account at the bottom.
   const openAppMenu = (anchor: HTMLElement) => {
@@ -145,19 +147,71 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
     });
   };
 
-  // Site controls behind the sliders icon, next to the address.
-  const openSiteMenu = (anchor: HTMLElement) => {
+  // Site controls behind the sliders icon, next to the address: share, shield, connection, dev tools, more.
+  const openSiteMenu = async (anchor: HTMLElement) => {
     const rect = anchor.getBoundingClientRect();
+    const position = { x: rect.left, y: rect.bottom + 4 };
+    const pageUrl = url;
+    const tabId = focusedId;
+    const pageHost = displayHost(pageUrl);
+    const info = await window.yzo?.site.info(webContentsId ?? -1, pageUrl);
+    const shield: MenuEntry = info?.shield.enabled
+      ? { icon: "shield", label: t("site.shieldOn", { count: info.shield.blocked }), onSelect: () => void setShield(pageUrl, tabId, false) }
+      : { icon: "shield", label: t("site.shieldOff"), disabled: !info, onSelect: () => void setShield(pageUrl, tabId, true) };
+    const connection: MenuEntry = info?.secure
+      ? {
+          icon: "lock",
+          label: t("site.secure"),
+          disabled: !info.certificate,
+          onSelect: async () => {
+            if (!(await window.yzo?.site.showCertificate(new URL(pageUrl).hostname))) ui.showToast(t("site.certificateUnavailable"));
+          },
+        }
+      : { icon: "unlock", label: t("site.notSecure"), disabled: true, onSelect: () => {} };
+    const clear = async (kind: "cache" | "cookies") => {
+      if (await window.yzo?.site.clear(pageUrl, kind)) ui.showToast(t(kind === "cache" ? "site.cacheCleared" : "site.cookiesCleared", { host: pageHost }));
+    };
+    const more: MenuEntry = {
+      icon: "more",
+      label: t("site.more"),
+      // The picked menu closes first; open the next one after it.
+      onSelect: () =>
+        window.setTimeout(() =>
+          ui.openMenu({
+            ...position,
+            entries: [
+              { icon: "trash", label: t("site.clearCache"), onSelect: () => void clear("cache") },
+              { icon: "trash", label: t("site.clearCookies"), onSelect: () => void clear("cookies") },
+              "separator",
+              {
+                icon: "settings",
+                label: t("site.allSettings"),
+                onSelect: () => {
+                  const siteHost = new URL(pageUrl).host;
+                  dispatch({ type: "createTab", url: siteSettingsUrl(siteHost), title: t("siteSettings.title", { host: siteHost }), target: "today", activate: true, now: Date.now() });
+                },
+              },
+            ],
+          }),
+        ),
+    };
     ui.openMenu({
-      x: rect.left,
-      y: rect.bottom + 4,
+      ...position,
       entries: [
-        { icon: "copy", label: t("common.copyLink"), hint: shortcutLabel("copyUrl"), onSelect: () => ui.runAction("copyUrl") },
-        { icon: "reload", label: t("page.reload"), hint: shortcutLabel("reload"), onSelect: () => ui.runAction("reload") },
+        { icon: "share", label: t("site.share"), hint: shortcutLabel("copyUrl"), onSelect: () => ui.runAction("copyUrl") },
+        "separator",
+        shield,
+        connection,
         "separator",
         { icon: "settings", label: t("topbar.devTools"), hint: shortcutLabel("devTools"), onSelect: () => ui.runAction("devTools") },
+        more,
       ],
     });
+  };
+
+  // Turning the shield on or off for a site applies on the next load: reload the page.
+  const setShield = async (pageUrl: string, tabId: string | null, enabled: boolean) => {
+    if (await window.yzo?.site.setShield(pageUrl, enabled)) void tabCommand(tabId, "reload");
   };
 
   return (
@@ -213,8 +267,8 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
         <button className="topbar-host" title={url || t("sidebar.searchOrUrl")} onClick={() => ui.openCommandBar(url ? "current" : "new")}>
           {url ? displayHost(url) : t("sidebar.searchOrUrl")}
         </button>
-        {url && (
-          <button title={t("topbar.siteMenu")} aria-haspopup="menu" onClick={(event) => openSiteMenu(event.currentTarget)}>
+        {url && !isInternalUrl(url) && (
+          <button title={t("topbar.siteMenu")} aria-haspopup="menu" onClick={(event) => void openSiteMenu(event.currentTarget)}>
             <Icon name="sliders" />
           </button>
         )}

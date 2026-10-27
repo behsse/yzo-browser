@@ -24,6 +24,12 @@ contextBridge.exposeInMainWorld("yzo", {
   cursorPosition: () => ipcRenderer.invoke("window:cursor"),
   checkForUpdates: () => ipcRenderer.invoke("app:checkForUpdates"),
   openPrivateWindow: () => ipcRenderer.send("app:openPrivate"),
+  site: {
+    info: (webContentsId, url) => ipcRenderer.invoke("site:info", webContentsId, url),
+    setShield: (url, enabled) => ipcRenderer.invoke("site:setShield", url, enabled),
+    showCertificate: (host) => ipcRenderer.invoke("site:certificate", host),
+    clear: (url, kind) => ipcRenderer.invoke("site:clear", url, kind),
+  },
   importArc: () => ipcRenderer.invoke("arc:import"),
   resolveFavicon: (url) => ipcRenderer.invoke("favicon:resolve", url),
   showMenu: (entries, x, y) => ipcRenderer.invoke("menu:popup", entries, x, y),

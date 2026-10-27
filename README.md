@@ -18,6 +18,9 @@ Stack: Electron 43 in its [castLabs ECS](https://github.com/castlabs/electron-re
 | Folders | Create, rename, collapse, drag and drop, nesting. |
 | Pinned tabs | Closing a pinned tab unloads it and brings it back to its original URL, like Arc. |
 | Hidden sidebar and top bar | `Ctrl+S` hides the sidebar; it reappears when hovering the left edge. `Ctrl+Shift+S` (or the lock button) hides the top bar for a full-screen view; it slides down over the pages when the pointer reaches the top edge, and still moves the window (drag it, double-click to maximize). |
+| Site menu | The sliders next to the address: share the URL, the shield (with the number of requests it blocked on the page; click to turn it off or on for the site), the connection ("Secure" opens the site's certificate in the system's certificate window on Windows and macOS), developer tools, and "More": clear the site's cache or cookies, and all site settings. |
+| Shield | Blocks ads and trackers like Brave, with Ghostery's adblocker engine (`@ghostery/adblocker-electron`, MPL-2.0) and the EasyList / EasyPrivacy family of lists: blocked requests and hidden ad slots. On for every site by default; the sites it is turned off for are kept in `userData/shield.json`. The compiled engine is cached in `userData/shield-engine.bin` and rebuilt from fresh lists once a week. |
+| Yzo pages | `yzo://settings/sites/<site>` shows a site's settings in a tab (shield, connection, permissions, clearing cookies and cache). Yzo pages are drawn by the interface itself, not loaded as web pages. |
 | Private browsing | The incognito button (next to reload) opens a private Yzo in its own process, like Zen: its tabs live in an in-memory session, so cookies, site storage, cache and history never reach the disk, and it starts from a fresh state that is never saved. No account, sync, extensions or Arc import there. Private windows are near-black and the button stays lit there. |
 | Chrome extensions | Install from the Chrome Web Store ("Add to Chrome" button, with a permission confirmation), automatic updates. The puzzle button opens the extensions panel: click an extension to open its popup, hover it and click the pin to show it in the top bar, right-click for options and removal, "+" to add more. Popups, badges, context menus and the tabs API (`chrome.tabs`) are supported. |
 | Account and sync | Yzo account (sign in from the menu behind the logo): spaces, favorites, pinned tabs, folders and settings synced across computers, **end-to-end encrypted** (the server sees neither the password nor the data). Recovery key at sign-up, session kept in the system keychain. See [docs/sync.md](docs/sync.md). |
@@ -177,6 +180,8 @@ Each loaded tab is a native `WebContentsView` managed by the main process ([elec
 - Popups (OAuth sign-ins): real windows sharing the tabs' session, same scheme rules.
 - Identity: a standard Chrome user agent, with no mention of Electron.
 - IPC channels only accept the UI as sender. State size and JSON are validated before writing.
+- Ads and trackers are blocked by the shield (Ghostery's engine) unless the user turns it off for a site. Its lists are downloaded from Ghostery's GitHub repository.
+- Certificates: Chromium verifies them as usual; Yzo only records the certificate each host presented, to show it on request.
 - Site permissions are denied by default, except fullscreen, clipboard write, pointer lock and key system access (DRM).
 - A corrupted or unknown state file is ignored at startup: the app starts from a fresh state instead of crashing.
 

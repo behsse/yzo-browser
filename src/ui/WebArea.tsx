@@ -1,9 +1,11 @@
 import { useRef, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { t } from "../lib/i18n";
+import { isInternalUrl } from "../lib/internalPages";
 import { shortcutLabel } from "../lib/shortcuts";
 import { useStore } from "../state/store";
 import { isSplit, isTab } from "../state/tree";
 import type { ID } from "../state/types";
+import { InternalPage } from "./InternalPage";
 import { useViewHost } from "./ViewHost";
 
 interface PaneLayout {
@@ -92,7 +94,16 @@ export function WebArea() {
     <main className="web-area" ref={areaRef}>
       {visible.map((id) => {
         const pane = layout.get(id)!;
-        return <div key={id} ref={host.slotRef(id)} className={"web-pane" + (pane.focused ? " web-pane-focused" : "")} style={pane.style} />;
+        const item = state.items[id];
+        const className = "web-pane" + (pane.focused ? " web-pane-focused" : "");
+        if (isTab(item) && isInternalUrl(item.data.url)) {
+          return (
+            <div key={id} className={className + " internal-pane"} style={pane.style} onMouseDown={() => dispatch({ type: "activate", id, now: Date.now() })}>
+              <InternalPage url={item.data.url} />
+            </div>
+          );
+        }
+        return <div key={id} ref={host.slotRef(id)} className={className} style={pane.style} />;
       })}
 
       {visible.slice(0, -1).map((_, i) => {

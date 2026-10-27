@@ -72,6 +72,8 @@ export function toNavigableUrl(input: string, engine: SearchEngine): string {
  * @returns Host name, or the input itself when it cannot be parsed.
  */
 export function displayHost(url: string): string {
+  // Yzo's own pages show their whole address.
+  if (url.toLowerCase().startsWith("yzo://")) return url;
   try {
     const host = new URL(url).hostname;
     return host.replace(/^www\./, "") || url;

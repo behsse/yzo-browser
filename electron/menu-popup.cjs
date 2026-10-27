@@ -60,6 +60,8 @@ function createMenuPopup({ getWindow, getUi }) {
   let token = 0;
   /** @type {{ token: number, x: number, y: number, resolve: (index: number | null) => void } | null} */
   let pending = null;
+  /** Whether the layer is on screen. A blur while hidden is the previous menu's, not this one's. */
+  let shown = false;
 
   /**
    * Creates the layer view on first use.
@@ -76,8 +78,11 @@ function createMenuPopup({ getWindow, getUi }) {
     const contents = view.webContents;
     contents.on("will-navigate", (event) => event.preventDefault());
     contents.setWindowOpenHandler(() => ({ action: "deny" }));
-    // Clicking anywhere else (page, UI, another app) moves focus away: the menu closes.
-    contents.on("blur", () => finish(token, null, false));
+    // Clicking anywhere else (page, UI, another app) moves focus away: the menu closes. A menu opened
+    // from another menu's entry gets the first one's blur late, once it already has the focus back.
+    contents.on("blur", () => {
+      if (shown && !contents.isFocused()) finish(token, null, false);
+    });
     win.contentView.addChildView(view);
     ready = contents.loadFile(path.join(__dirname, "menu.html")).catch(() => {});
     return ready;
@@ -93,6 +98,7 @@ function createMenuPopup({ getWindow, getUi }) {
     if (!pending || pending.token !== forToken) return;
     const { resolve } = pending;
     pending = null;
+    shown = false;
     view?.setVisible(false);
     if (refocus) getUi()?.focus();
     resolve(index);
@@ -114,6 +120,7 @@ function createMenuPopup({ getWindow, getUi }) {
     view.setBounds({ x: Math.round(x), y: Math.round(y), width: outerWidth, height: outerHeight });
     win.contentView.addChildView(view); // re-adding moves the layer above views created since
     view.setVisible(true);
+    shown = true;
     view.webContents.focus();
   });
   ipcMain.on("menu:select", (event, forToken, index) => {

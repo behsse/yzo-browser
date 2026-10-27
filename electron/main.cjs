@@ -11,7 +11,9 @@ const { createAccount, AccountError } = require("./account.cjs");
 const { readArc, countTabs, EXTENSION_ID } = require("./arc-import.cjs");
 const { resolveFavicon } = require("./favicon.cjs");
 const { startNativeWindowDrag } = require("./window-drag.cjs");
-const { isPrivateInstance, launchPrivateInstance, claimPrivateProfile } = require("./private-mode.cjs");
+const { isPrivateInstance, launchPrivateInstance, claimPrivateProfile, mainProfilePath } = require("./private-mode.cjs");
+const { setupShield } = require("./shield.cjs");
+const { createSiteInfo } = require("./site-info.cjs");
 const { t } = require("./i18n.cjs");
 
 /** Private instance (electron/private-mode.cjs): nothing it browses or changes is kept. */
@@ -53,6 +55,10 @@ let menuPopup = null;
 let extensionController = null;
 /** @type {ReturnType<typeof createAccount> | null} */
 let account = null;
+/** @type {ReturnType<typeof setupShield> | null} */
+let shield = null;
+/** @type {ReturnType<typeof createSiteInfo> | null} */
+let siteInfo = null;
 
 /** Official Yzo sync server (private yzo-cloud deployment). */
 const PRODUCTION_SYNC_URL = "https://yzo-browser-backend.vercel.app";
@@ -518,6 +524,36 @@ async function checkForUpdatesNow() {
 
 ipcMain.handle("app:checkForUpdates", (event) => (isTrustedSender(event) ? checkForUpdatesNow() : null));
 
+// Site menu: shield state and blocked count, connection security, certificate, clearing site data.
+ipcMain.handle("site:info", (event, webContentsId, url) => {
+  if (!isTrustedSender(event) || typeof url !== "string" || !Number.isInteger(webContentsId)) return null;
+  let host = "";
+  let https = false;
+  try {
+    ({ hostname: host } = new URL(url));
+    https = new URL(url).protocol === "https:";
+  } catch {
+    return null;
+  }
+  return {
+    shield: shield?.status(webContentsId, url) ?? { enabled: false, blocked: 0 },
+    secure: https,
+    certificate: https && Boolean(siteInfo?.hasCertificate(host)),
+  };
+});
+
+ipcMain.handle("site:setShield", (event, url, enabled) =>
+  isTrustedSender(event) && typeof url === "string" && typeof enabled === "boolean" ? (shield?.setEnabled(url, enabled) ?? false) : false,
+);
+
+ipcMain.handle("site:certificate", (event, host) =>
+  isTrustedSender(event) && typeof host === "string" && mainWindow ? (siteInfo?.showCertificate(mainWindow, host) ?? false) : false,
+);
+
+ipcMain.handle("site:clear", (event, url, kind) =>
+  isTrustedSender(event) && typeof url === "string" && (kind === "cache" || kind === "cookies") ? (siteInfo?.clear(url, kind) ?? false) : false,
+);
+
 ipcMain.on("app:openPrivate", (event) => {
   if (!isTrustedSender(event)) return;
   try {
@@ -535,6 +571,9 @@ app.whenReady().then(async () => {
   tabsSession.setPermissionRequestHandler((_wc, permission, callback) => {
     callback(ALLOWED_PERMISSIONS.has(permission));
   });
+  siteInfo = createSiteInfo(tabsSession);
+  // A private instance uses the normal profile's engine and site choices, but writes neither.
+  shield = setupShield({ session: tabsSession, dataPath: PRIVATE ? mainProfilePath() : app.getPath("userData"), readOnly: PRIVATE });
   if (PRIVATE) {
     // No account, sync, extensions or updates: they would keep data or run outside the private session.
     claimPrivateProfile();

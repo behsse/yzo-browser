@@ -37,6 +37,14 @@ function privateProfilesRoot() {
 }
 
 /**
+ * The normal profile's folder, also from a private instance (whose profile lives inside it).
+ * @returns {string} Absolute path.
+ */
+function mainProfilePath() {
+  return path.dirname(privateProfilesRoot());
+}
+
+/**
  * Whether a process is still running.
  * @param {number} pid Process id.
  * @returns {boolean} True if alive.
@@ -104,4 +112,4 @@ function claimPrivateProfile() {
   fs.writeFileSync(path.join(app.getPath("userData"), PID_FILE), String(process.pid));
 }
 
-module.exports = { isPrivateInstance, launchPrivateInstance, claimPrivateProfile };
+module.exports = { isPrivateInstance, launchPrivateInstance, claimPrivateProfile, mainProfilePath };

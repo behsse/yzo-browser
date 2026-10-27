@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isArchivable, THRESHOLD_MS } from "./autoArchive";
 import { dedupKey, matchScore } from "./commandBar";
+import { isInternalUrl, parseInternalUrl, siteSettingsUrl } from "./internalPages";
 import { cursorOnTopEdge, floatingSidebarDecision, floatingTopBarDecision } from "./floatingSidebar";
 import { matchShortcut, shortcutLabel } from "./shortcuts";
 import { hexToRgb, relativeLuminance, resolveAppearance, rgbToHex } from "./theme";
@@ -45,6 +46,28 @@ describe("url", () => {
   it("shows hosts without www", () => {
     expect(displayHost("https://www.youtube.com/watch?v=1")).toBe("youtube.com");
     expect(displayHost("not a url")).toBe("not a url");
+  });
+});
+
+describe("internal pages", () => {
+  it("recognizes yzo:// addresses", () => {
+    expect(isInternalUrl("yzo://settings/sites/twitch.tv")).toBe(true);
+    expect(isInternalUrl("https://twitch.tv")).toBe(false);
+  });
+
+  it("round-trips a site settings address, port included", () => {
+    expect(parseInternalUrl(siteSettingsUrl("Twitch.tv"))).toEqual({ kind: "siteSettings", host: "twitch.tv" });
+    expect(parseInternalUrl(siteSettingsUrl("localhost:5173"))).toEqual({ kind: "siteSettings", host: "localhost:5173" });
+  });
+
+  it("rejects unknown pages and odd hosts", () => {
+    expect(parseInternalUrl("yzo://settings")).toEqual({ kind: "notFound" });
+    expect(parseInternalUrl("yzo://settings/sites/a b")).toEqual({ kind: "notFound" });
+    expect(parseInternalUrl("yzo://settings/sites/x.com/../y")).toEqual({ kind: "notFound" });
+  });
+
+  it("shows the whole address of a Yzo page", () => {
+    expect(displayHost("yzo://settings/sites/twitch.tv")).toBe("yzo://settings/sites/twitch.tv");
   });
 });
 

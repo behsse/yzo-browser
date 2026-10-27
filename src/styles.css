@@ -896,6 +896,118 @@ kbd {
   box-shadow: var(--shadow-card), 0 0 0 2px var(--accent);
 }
 
+/* Yzo's own pages (yzo://…), drawn by the UI where a page view would be. */
+.internal-pane {
+  background: var(--surface);
+  color: #1d1d22;
+  overflow-y: auto;
+}
+
+@media (prefers-color-scheme: dark) {
+  .internal-pane {
+    color: #f4f4f7;
+  }
+}
+
+.internal-page {
+  display: grid;
+  gap: 18px;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+
+.internal-header h1 {
+  margin: 2px 0 0;
+  font-size: 24px;
+}
+
+.internal-section {
+  display: grid;
+  gap: 2px;
+  padding: 8px 14px 10px;
+  border-radius: 10px;
+  background: var(--surface-2, rgba(0, 0, 0, 0.04));
+}
+
+.internal-section h2 {
+  margin: 4px 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.internal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+}
+
+.internal-row > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.internal-row svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.internal-page button {
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: var(--surface-border);
+}
+
+.internal-page button:hover {
+  background: var(--divider);
+}
+
+.internal-actions {
+  display: flex;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+/* Toggle switch drawn from a checkbox. */
+.switch {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 34px;
+  height: 20px;
+  margin: 0;
+  border-radius: 10px;
+  background: rgba(127, 127, 127, 0.4);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s;
+}
+
+.switch:checked {
+  background: var(--accent);
+}
+
+.switch:checked::after {
+  transform: translateX(14px);
+}
+
 .split-divider {
   position: absolute;
   top: 0;
