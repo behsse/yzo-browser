@@ -318,6 +318,8 @@ function createWindow() {
   fitUi();
   win.on("resize", fitUi);
   ui.webContents.once("did-finish-load", () => win.show());
+  // A reloaded UI lost the pages' colors; the views keep them.
+  ui.webContents.on("did-finish-load", () => viewManager?.resendColors());
   win.on("maximize", () => ui.webContents.send("window:maximized", true));
   win.on("unmaximize", () => ui.webContents.send("window:maximized", false));
   win.on("enter-full-screen", () => ui.webContents.send("window:fullscreen", true));

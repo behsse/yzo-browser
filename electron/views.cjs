@@ -44,8 +44,6 @@ function toBounds(value) {
 const COLOR_STRIP_HEIGHT = 4;
 /** Wait after a page settles before reading its color (late styles, fades). */
 const COLOR_DELAY_MS = 350;
-/** How often the color of the shown pages is read again. */
-const COLOR_REFRESH_MS = 2000;
 
 /** Zoom steps, like Chrome's. */
 const ZOOM_FACTORS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5];
@@ -124,7 +122,9 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
   const toUi = (channel, payload) => getUi()?.send(channel, payload);
 
   /**
-   * Reads the color at the top of a shown page and tells the UI when it changed (split pane bars).
+   * Reads the color at the top of a shown page, once it has loaded, for its split pane bar. The bar
+   * keeps that color: what the page shows later (bars appearing on scroll, overlays) does not change
+   * it. Only a page scrolled to the top is read.
    * @param {string} id Tab id.
    */
   const sampleColor = async (id) => {
@@ -133,10 +133,11 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
     const { width } = view.getBounds();
     if (width < 8) return;
     try {
+      const atTop = await view.webContents.executeJavaScript("window.scrollY === 0", true).catch(() => true);
+      if (!atTop) return;
       const image = await view.webContents.capturePage({ x: 0, y: 0, width: Math.min(width, 800), height: COLOR_STRIP_HEIGHT });
       const color = image.isEmpty() ? null : dominantColor(image.toBitmap());
       if (!color) return;
-      // Sent on every read, not only on changes: a UI that reloaded gets the colors back.
       colors.set(id, color);
       toUi("tab:event", { tabId: id, type: "color", color });
     } catch {
@@ -152,12 +153,6 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
     clearTimeout(colorTimers.get(id));
     colorTimers.set(id, setTimeout(() => void sampleColor(id), COLOR_DELAY_MS));
   };
-
-  // Pages change color without loading (banners closing, overlays, themes): shown pages are read again
-  // every few seconds.
-  const colorRefresh = setInterval(() => {
-    for (const id of shown) void sampleColor(id);
-  }, COLOR_REFRESH_MS);
 
   /**
    * Creates a view for a tab (or Peek), forwards its page events to the UI and loads its URL.
@@ -235,7 +230,7 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
       if (rect) view.setBounds(rect);
       view.setVisible(Boolean(rect));
       // A page coming on screen (or resized) gets its color read again.
-      if (rect && id !== PEEK_ID && (!shown.has(id) || !colors.has(id))) scheduleColor(id);
+      if (rect && id !== PEEK_ID && !colors.has(id)) scheduleColor(id);
       if (rect) shown.add(id);
       else shown.delete(id);
     }
@@ -356,9 +351,13 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
       }
     },
 
+    /** Sends the colors already read to the UI again (after it reloaded and lost them). */
+    resendColors() {
+      for (const [tabId, color] of colors) toUi("tab:event", { tabId, type: "color", color });
+    },
+
     /** Closes every page; used when the window goes away. */
     destroyAll() {
-      clearInterval(colorRefresh);
       for (const id of [...views.keys()]) destroyView(id);
     },
   };
