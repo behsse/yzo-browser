@@ -13,6 +13,7 @@ import { ArchivePanel } from "./ui/ArchivePanel";
 import { CommandBar } from "./ui/CommandBar";
 import { ExtensionsPanel } from "./ui/ExtensionsPanel";
 import { SitePanel } from "./ui/SitePanel";
+import { DownloadsPanel } from "./ui/DownloadsPanel";
 import { ContextMenu } from "./ui/ContextMenu";
 import { ICON_PATHS } from "./ui/Icon";
 import { Peek } from "./ui/Peek";
@@ -52,6 +53,7 @@ export function App() {
   const [accountOpen, setAccountOpen] = useState<AccountMode | null>(null);
   const [extensionsAnchor, setExtensionsAnchor] = useState<{ right: number; bottom: number } | null>(null);
   const [sitePanelAnchor, setSitePanelAnchor] = useState<{ left: number; bottom: number } | null>(null);
+  const [downloadsAnchor, setDownloadsAnchor] = useState<{ right: number; bottom: number } | null>(null);
   const [spaceEditor, setSpaceEditor] = useState<ID | "new" | null>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
   /** A menu shown by the popup layer above the pages (no freeze needed). */
@@ -176,6 +178,7 @@ export function App() {
       openMenu,
       openExtensions: setExtensionsAnchor,
       openSitePanel: setSitePanelAnchor,
+      openDownloads: setDownloadsAnchor,
       showToast,
       runAction,
     }),
@@ -190,6 +193,7 @@ export function App() {
         setAccountOpen(null);
         setExtensionsAnchor(null);
         setSitePanelAnchor(null);
+        setDownloadsAnchor(null);
         setSpaceEditor(null);
         return;
       }
@@ -211,6 +215,16 @@ export function App() {
       offTab?.();
     };
   }, [runAction, dispatch]);
+
+  // A new download opens the downloads panel under its button, like Chrome's bubble (not while the top
+  // bar is hidden: the button is not on screen then).
+  useEffect(() => {
+    return window.yzo?.downloads.onStarted(() => {
+      const button = document.querySelector<HTMLElement>(".topbar-slot [data-downloads-button]");
+      const rect = button?.getBoundingClientRect();
+      if (rect && rect.width) setDownloadsAnchor({ right: rect.right, bottom: rect.bottom });
+    });
+  }, []);
 
   // Page events from the native tab views feed the store (URL, title, favicon, history, focus).
   useEffect(() => {
@@ -273,7 +287,7 @@ export function App() {
   }, []);
   // A menu or dialog opened from the floating sidebar (extensions, space editor…) can extend past it:
   // the sidebar stays open until it closes, then the cursor position decides again.
-  const holdFloating = nativeMenuOpen || Boolean(menu || commandBar || peekUrl || archiveOpen || accountOpen || spaceEditor || extensionsAnchor || sitePanelAnchor);
+  const holdFloating = nativeMenuOpen || Boolean(menu || commandBar || peekUrl || archiveOpen || accountOpen || spaceEditor || extensionsAnchor || sitePanelAnchor || downloadsAnchor);
   const holdFloatingRef = useRef(holdFloating);
   holdFloatingRef.current = holdFloating;
   const scheduleHide = useCallback(() => {
@@ -361,7 +375,7 @@ export function App() {
     return () => window.clearTimeout(timer);
   }, [topRevealed]);
   const overlayOpen = Boolean(
-    commandBar || peekUrl || archiveOpen || accountOpen || spaceEditor || menu || extensionsAnchor || sitePanelAnchor || (hidden && floatingFrozen) || (topHidden && topFrozen),
+    commandBar || peekUrl || archiveOpen || accountOpen || spaceEditor || menu || extensionsAnchor || sitePanelAnchor || downloadsAnchor || (hidden && floatingFrozen) || (topHidden && topFrozen),
   );
   const theme = displayTheme(state.spaces[state.window.focusedSpaceId].theme);
 
@@ -427,6 +441,7 @@ export function App() {
         {accountOpen && <AccountPanel initialMode={accountOpen} onClose={() => setAccountOpen(null)} />}
         {extensionsAnchor && <ExtensionsPanel anchor={extensionsAnchor} onClose={() => setExtensionsAnchor(null)} />}
         {sitePanelAnchor && <SitePanel anchor={sitePanelAnchor} onClose={() => setSitePanelAnchor(null)} />}
+        {downloadsAnchor && <DownloadsPanel anchor={downloadsAnchor} onClose={() => setDownloadsAnchor(null)} />}
         {spaceEditor && <SpaceEditor spaceId={spaceEditor} onClose={() => setSpaceEditor(null)} />}
         {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
         {toast && <div className="toast">{toast}</div>}

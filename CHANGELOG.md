@@ -6,8 +6,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ### Added
 
+- Downloads: the top bar's download button opens this session's downloads, like Chrome's and Arc's (it opens by itself when a download starts and turns blue while one runs). Each shows its file icon and progress ("118 MB of 1 GB"); a finished one opens on click, with "Show in folder" and a "…" menu (open, show in folder, copy link, remove from list, move to the Recycle Bin; pause, resume and cancel while it runs). "Show all downloads" opens `yzo://downloads`: the history grouped by day, with search, "Clear all", and deleted files struck through. Files go to a folder of your choice, or Yzo asks each time; names never overwrite an existing file ("notes (1).txt"). History in `userData/downloads.json`, settings in `userData/download-settings.json`; a private window keeps its downloads in memory.
+- Settings (`yzo://settings`, "Settings" in the Yzo menu), laid out like Arc's: You and Yzo (account and sync), Search engine, Tabs (auto-archiving), Downloads (location and "Always ask where to save files"), a link to the extensions page and About Yzo (version, update check). `yzo://settings` opens the first section.
 - Hideable top bar for a real full-screen view: the new lock button next to the sidebar toggle (or Ctrl+Shift+S) hides it and the pages take the full height. Moving the pointer to the top edge slides it down over the pages, like Zen Browser, and it hides again when the pointer leaves it. It still works as a title bar: dragging it moves the window (Windows runs the move, so snapping and restoring a maximized window work), and a double-click maximizes.
-
 - Shield against ads and trackers, like Brave's: Ghostery's adblocker engine with the EasyList / EasyPrivacy family of lists blocks requests and hides ad slots on every site. The site panel shows how many requests it blocked on the page and turns it off or on for the site (the page reloads).
 - Site panel under the sliders next to the address, like Arc's: a wide "Share URL" button, the tracking protection (on/off for the site, with the number of requests blocked on the page), and a footer with "Secure" (opens the site's certificate in the Windows certificate window, or macOS's), developer tools and "…" ("Clear cache", "Clear cookies", "All site settings").
 - Extensions page (`yzo://extensions`, from "Manage extensions" at the bottom of the extensions panel), like Brave's and Arc's: search, one card per extension (icon, name, description) with "Details", "Remove" and an on/off switch. Details (`yzo://extensions/<id>`), laid out like Arc's: on/off, description, version, size, permissions, site settings (placeholder for now), pin to the toolbar, allow in private browsing, the extension's options, its Chrome Web Store page, source and removal.
@@ -18,9 +19,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ### Changed
 
+- Pinned extension icons in the top bar are smaller (15 px).
 - Extension permissions (install prompt and details) are listed like Chrome's warnings: access to sites first ("all sites" covers the browsing history), then the sensitive APIs; harmless ones (storage, alarms, context menus…) are no longer listed.
 - The site menu becomes the site panel: "Reload" leaves it (the reload button is next to it) and "Copy link" becomes "Share URL".
-- Top bar layout: full screen button and a divider after the top bar lock, private browsing next to reload, downloads after the extensions, a menu button after split view, and more room around the address. Downloads and the menu are placeholders for now.
+- Top bar layout: full screen button and a divider after the top bar lock, private browsing next to reload, downloads after the extensions, a menu button after split view, and more room around the address. The menu is a placeholder for now.
 
 ### Fixed
 

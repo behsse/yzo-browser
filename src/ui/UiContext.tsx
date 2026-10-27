@@ -36,6 +36,8 @@ export interface UiValue {
   openExtensions(anchor: { right: number; bottom: number }): void;
   /** Opens the site panel under the sliders next to the address (their bottom-left corner). */
   openSitePanel(anchor: { left: number; bottom: number }): void;
+  /** Opens the downloads panel under the download button (its bottom-right corner). */
+  openDownloads(anchor: { right: number; bottom: number }): void;
   showToast(message: string): void;
   runAction(action: ShortcutAction): void;
 }

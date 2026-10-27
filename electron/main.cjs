@@ -15,6 +15,7 @@ const { isPrivateInstance, launchPrivateInstance, claimPrivateProfile, mainProfi
 const { setupShield } = require("./shield.cjs");
 const { hasPrivateExtensions } = require("./extension-store.cjs");
 const { createSiteInfo } = require("./site-info.cjs");
+const { setupDownloads } = require("./downloads.cjs");
 const { t } = require("./i18n.cjs");
 
 /** Private instance (electron/private-mode.cjs): nothing it browses or changes is kept. */
@@ -65,6 +66,8 @@ let account = null;
 let shield = null;
 /** @type {ReturnType<typeof createSiteInfo> | null} */
 let siteInfo = null;
+/** @type {ReturnType<typeof setupDownloads> | null} */
+let downloads = null;
 
 /** Official Yzo sync server (private yzo-cloud deployment). */
 const PRODUCTION_SYNC_URL = "https://yzo-browser-backend.vercel.app";
@@ -540,6 +543,7 @@ async function checkForUpdatesNow() {
 }
 
 ipcMain.handle("app:checkForUpdates", (event) => (isTrustedSender(event) ? checkForUpdatesNow() : null));
+ipcMain.handle("app:version", (event) => (isTrustedSender(event) ? app.getVersion() : ""));
 
 // Site menu: shield state and blocked count, connection security, certificate, clearing site data.
 ipcMain.handle("site:info", (event, webContentsId, url) => {
@@ -571,6 +575,19 @@ ipcMain.handle("site:clear", (event, url, kind) =>
   isTrustedSender(event) && typeof url === "string" && (kind === "cache" || kind === "cookies") ? (siteInfo?.clear(url, kind) ?? false) : false,
 );
 
+// Downloads panel, yzo://downloads and yzo://settings/downloads (electron/downloads.cjs).
+ipcMain.handle("downloads:list", (event) => (isTrustedSender(event) ? (downloads?.list() ?? []) : []));
+ipcMain.handle("downloads:act", (event, id, action) =>
+  isTrustedSender(event) && typeof id === "string" && typeof action === "string" ? (downloads?.act(id, action) ?? false) : false,
+);
+ipcMain.handle("downloads:clear", (event) => {
+  if (isTrustedSender(event)) downloads?.clear();
+});
+ipcMain.handle("downloads:getSettings", (event) => (isTrustedSender(event) ? (downloads?.getSettings() ?? null) : null));
+ipcMain.handle("downloads:updateSettings", (event, change) =>
+  isTrustedSender(event) && change && typeof change === "object" ? (downloads?.updateSettings(change) ?? null) : null,
+);
+
 ipcMain.on("app:openPrivate", (event) => {
   if (!isTrustedSender(event)) return;
   try {
@@ -589,6 +606,13 @@ app.whenReady().then(async () => {
     callback(ALLOWED_PERMISSIONS.has(permission));
   });
   siteInfo = createSiteInfo(tabsSession);
+  downloads = setupDownloads({
+    session: tabsSession,
+    profile: PRIVATE ? mainProfilePath() : app.getPath("userData"),
+    privateMode: PRIVATE,
+    getUi: uiContents,
+    getWindow: () => mainWindow,
+  });
   // A private instance uses the normal profile's engine and site choices, but writes neither.
   shield = setupShield({ session: tabsSession, dataPath: PRIVATE ? mainProfilePath() : app.getPath("userData"), readOnly: PRIVATE });
   if (PRIVATE) {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { InstalledExtension } from "../env";
+import { formatBytes } from "../lib/downloads";
 import { t } from "../lib/i18n";
 import { EXTENSIONS_URL, extensionDetailsUrl } from "../lib/internalPages";
 import { IS_PRIVATE } from "../lib/privateMode";
@@ -24,16 +25,6 @@ function useInstalledExtensions(): [InstalledExtension[] | null, () => void] {
     return () => window.removeEventListener("focus", reload);
   }, [reload]);
   return [list, reload];
-}
-
-/**
- * Size in Ko / Mo (KB / MB), like Chrome's extension details.
- * @param bytes Size in bytes.
- * @returns Readable size.
- */
-function formatSize(bytes: number): string {
-  if (bytes < 1024 * 1024) return t("extensionsPage.kilobytes", { size: Math.max(1, Math.round(bytes / 1024)) });
-  return t("extensionsPage.megabytes", { size: (bytes / (1024 * 1024)).toLocaleString(undefined, { maximumFractionDigits: 1 }) });
 }
 
 /**
@@ -153,7 +144,7 @@ export function ExtensionsPage({ detailsId, navigate }: { detailsId?: string; na
                 </div>
                 <div className="ext-row ext-row-stack">
                   <span>{t("extensionsPage.size")}</span>
-                  <span className="ext-row-value">{formatSize(details.size)}</span>
+                  <span className="ext-row-value">{formatBytes(details.size)}</span>
                 </div>
                 <div className="ext-row ext-row-stack">
                   <span>{t("extensionsPage.permissions")}</span>

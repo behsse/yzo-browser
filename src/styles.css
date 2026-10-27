@@ -390,7 +390,7 @@ kbd {
 
 .topbar .topbar-extension {
   height: 26px;
-  background-size: 18px;
+  background-size: 15px;
 }
 
 .topbar-extension:hover {
@@ -1427,6 +1427,310 @@ ul.ext-row-value {
 .extensions-manage svg {
   width: 16px;
   height: 16px;
+}
+
+/* Download button while a download runs. */
+.topbar .topbar-downloading {
+  color: color-mix(in srgb, var(--accent) 70%, white);
+}
+
+/* Downloads panel under the download button, like Chrome's and Arc's. */
+.downloads-panel {
+  position: fixed;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+  color: #1d1d22;
+  animation: pop-in 0.12s ease-out;
+}
+
+@media (prefers-color-scheme: dark) {
+  .downloads-panel {
+    color: #f4f4f7;
+  }
+}
+
+.downloads-panel hr {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--surface-border);
+}
+
+.downloads-empty {
+  margin: 0;
+  padding: 14px 10px;
+  font-size: 13px;
+}
+
+.downloads-list {
+  display: grid;
+  gap: 4px;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.download-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.download-row-openable {
+  cursor: pointer;
+}
+
+.download-row-openable:hover {
+  filter: brightness(1.12);
+}
+
+.download-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.download-text {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+
+.download-name {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.download-gone {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.download-status {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.download-bar {
+  display: block;
+  height: 3px;
+  margin-top: 3px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--surface-border);
+}
+
+.download-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s;
+}
+
+.download-button {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: inherit;
+}
+
+.download-button:hover {
+  background: var(--surface-border);
+}
+
+.download-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.downloads-all {
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: inherit;
+  font-size: 13px;
+  text-align: left;
+}
+
+.downloads-all:hover {
+  background: var(--surface-2);
+}
+
+/* Download history (yzo://downloads), like Brave's. */
+.dl-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.dl-header {
+  display: grid;
+  grid-template-columns: 1fr minmax(0, 560px) 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+}
+
+.dl-header h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.dl-header .ext-search {
+  width: 100%;
+}
+
+.dl-header .ext-pill {
+  justify-self: end;
+}
+
+.dl-main {
+  display: grid;
+  gap: 18px;
+  align-self: center;
+  width: min(560px, calc(100% - 40px));
+  padding-bottom: 32px;
+}
+
+.dl-day {
+  display: grid;
+  gap: 8px;
+}
+
+.dl-day h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.dl-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.dl-card-gone .download-icon,
+.dl-card-gone .dl-name {
+  opacity: 0.5;
+}
+
+.dl-card-gone .dl-name {
+  text-decoration: line-through;
+}
+
+.dl-text {
+  display: grid;
+  flex: 1;
+  gap: 3px;
+  min-width: 0;
+}
+
+.dl-name {
+  overflow: hidden;
+  padding: 0;
+  color: color-mix(in srgb, var(--accent) 55%, white);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: underline;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dl-name:disabled {
+  color: inherit;
+  cursor: default;
+}
+
+.dl-status {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.dl-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.dl-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.dl-actions button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: inherit;
+  opacity: 0.8;
+}
+
+.dl-actions button:hover {
+  background: var(--surface-border);
+  opacity: 1;
+}
+
+.dl-actions svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* Settings (yzo://settings/<section>), like Arc's. */
+.settings-heading {
+  align-self: center;
+  width: min(680px, 100%);
+  margin: 20px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.settings-card {
+  align-self: center;
+  width: min(680px, 100%);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.ext-row-first {
+  border-top: 0;
+}
+
+.settings-select {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
 }
 
 /* Toggle switch drawn from a checkbox. */

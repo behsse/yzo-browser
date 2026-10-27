@@ -123,6 +123,9 @@ export interface YzoBridge {
   /** Starts a private instance of Yzo in its own process (electron/private-mode.cjs). */
   openPrivateWindow(): void;
   site: SiteBridge;
+  downloads: DownloadsBridge;
+  /** Yzo's version (package.json). */
+  appVersion(): Promise<string>;
   /** Manual update check; "dev" outside packaged builds. */
   checkForUpdates(): Promise<{ status: "dev" | "upToDate" | "available" | "error"; version?: string } | null>;
   syncViews(payload: ViewSyncPayload): void;
@@ -143,6 +146,54 @@ export interface YzoBridge {
   onShortcut(callback: (action: ShortcutAction) => void): () => void;
   onPeek(callback: (payload: { url: string }) => void): () => void;
   onOpenTab(callback: (payload: { url: string; background: boolean }) => void): () => void;
+}
+
+/** One download (electron/downloads.cjs). */
+export interface DownloadEntry {
+  id: string;
+  url: string;
+  filename: string;
+  /** Where it is saved; empty while the save dialog is open. */
+  path: string;
+  mime: string;
+  totalBytes: number;
+  receivedBytes: number;
+  state: "progressing" | "completed" | "cancelled" | "interrupted";
+  paused: boolean;
+  startTime: number;
+  endTime: number | null;
+  /** File icon from the system, as a data: URL, once completed. */
+  icon: string | null;
+  /** Started since the app opened (listed in the downloads panel). */
+  thisSession: boolean;
+  /** False when a completed download's file was deleted or moved. */
+  exists: boolean;
+}
+
+export type DownloadAction = "open" | "show" | "pause" | "resume" | "cancel" | "remove" | "trash" | "copyLink";
+
+export interface DownloadSettings {
+  directory: string;
+  /** Ask where to save each file. */
+  ask: boolean;
+  /** Private window: shown but not changeable. */
+  readOnly: boolean;
+}
+
+/** Downloads (electron/downloads.cjs). */
+export interface DownloadsBridge {
+  list(): Promise<DownloadEntry[]>;
+  act(id: string, action: DownloadAction): Promise<boolean>;
+  /** Forgets finished downloads; the files stay. */
+  clear(): Promise<void>;
+  getSettings(): Promise<DownloadSettings | null>;
+  /** chooseDirectory opens a folder picker. */
+  updateSettings(change: { ask?: boolean; chooseDirectory?: boolean }): Promise<DownloadSettings | null>;
+  onChanged(callback: (entry: DownloadEntry) => void): () => void;
+  /** A new download began (the panel opens). */
+  onStarted(callback: (id: string) => void): () => void;
+  onRemoved(callback: (id: string) => void): () => void;
+  onCleared(callback: () => void): () => void;
 }
 
 /** What the site menu shows about the focused page. */

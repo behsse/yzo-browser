@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { isArchivable, THRESHOLD_MS } from "./autoArchive";
 import { dedupKey, matchScore } from "./commandBar";
-import { EXTENSIONS_URL, extensionDetailsUrl, isInternalUrl, parseInternalUrl, siteSettingsUrl } from "./internalPages";
+import { DOWNLOADS_URL, EXTENSIONS_URL, extensionDetailsUrl, isInternalUrl, parseInternalUrl, settingsUrl, siteSettingsUrl } from "./internalPages";
+import { downloadProgress, groupByDay } from "./downloads";
 import { cursorOnTopEdge, floatingSidebarDecision, floatingTopBarDecision } from "./floatingSidebar";
 import { matchShortcut, shortcutLabel } from "./shortcuts";
 import { hexToRgb, relativeLuminance, resolveAppearance, rgbToHex } from "./theme";
@@ -61,7 +62,6 @@ describe("internal pages", () => {
   });
 
   it("rejects unknown pages and odd hosts", () => {
-    expect(parseInternalUrl("yzo://settings")).toEqual({ kind: "notFound" });
     expect(parseInternalUrl("yzo://settings/sites/a b")).toEqual({ kind: "notFound" });
     expect(parseInternalUrl("yzo://settings/sites/x.com/../y")).toEqual({ kind: "notFound" });
   });
@@ -73,8 +73,31 @@ describe("internal pages", () => {
     expect(parseInternalUrl("yzo://extensions/not-an-id")).toEqual({ kind: "notFound" });
   });
 
+  it("opens the first settings section for yzo://settings and rejects unknown ones", () => {
+    expect(parseInternalUrl("yzo://settings")).toEqual({ kind: "settings", section: "account" });
+    expect(parseInternalUrl(settingsUrl("downloads"))).toEqual({ kind: "settings", section: "downloads" });
+    expect(parseInternalUrl("yzo://settings/nope")).toEqual({ kind: "notFound" });
+    expect(parseInternalUrl(siteSettingsUrl("x.com"))).toEqual({ kind: "siteSettings", host: "x.com" });
+    expect(parseInternalUrl(DOWNLOADS_URL)).toEqual({ kind: "downloads" });
+  });
+
   it("shows the whole address of a Yzo page", () => {
     expect(displayHost("yzo://settings/sites/twitch.tv")).toBe("yzo://settings/sites/twitch.tv");
+  });
+});
+
+describe("downloads", () => {
+  it("measures progress, 0 when the size is unknown", () => {
+    expect(downloadProgress({ receivedBytes: 50, totalBytes: 200 })).toBe(0.25);
+    expect(downloadProgress({ receivedBytes: 50, totalBytes: 0 })).toBe(0);
+    expect(downloadProgress({ receivedBytes: 300, totalBytes: 200 })).toBe(1);
+  });
+
+  it("groups downloads by day, keeping their order", () => {
+    const at = (iso: string, id: string) => ({ id, startTime: new Date(iso).getTime() }) as Parameters<typeof groupByDay>[0][number];
+    const groups = groupByDay([at("2026-10-27T15:00:00", "a"), at("2026-10-27T09:00:00", "b"), at("2026-10-25T12:00:00", "c")], "en-US");
+    expect(groups.map((g) => g.entries.map((e) => e.id))).toEqual([["a", "b"], ["c"]]);
+    expect(groups[0].day).toBe("October 27, 2026");
   });
 });
 

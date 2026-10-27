@@ -2,8 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import type { SiteInfo } from "../env";
 import { t } from "../lib/i18n";
 import { parseInternalUrl } from "../lib/internalPages";
+import { DownloadsPage } from "./DownloadsPage";
 import { ExtensionsPage } from "./ExtensionsPage";
 import { Icon } from "./Icon";
+import { SettingsPage } from "./SettingsPage";
 import { useUi } from "./UiContext";
 
 /** Permissions Yzo grants every site (electron/main.cjs ALLOWED_PERMISSIONS); the rest is refused. */
@@ -108,6 +110,8 @@ export function InternalPage({ url, navigate }: { url: string; navigate: (url: s
   if (page.kind === "siteSettings") return <SiteSettingsPage key={page.host} host={page.host} />;
   if (page.kind === "extensions") return <ExtensionsPage navigate={navigate} />;
   if (page.kind === "extensionDetails") return <ExtensionsPage detailsId={page.id} navigate={navigate} />;
+  if (page.kind === "settings") return <SettingsPage section={page.section} navigate={navigate} />;
+  if (page.kind === "downloads") return <DownloadsPage />;
   return (
     <div className="internal-page">
       <p className="muted">{t("siteSettings.notFound")}</p>

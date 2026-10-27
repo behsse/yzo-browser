@@ -1,7 +1,8 @@
 import { useEffect, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { t } from "../lib/i18n";
-import { isInternalUrl } from "../lib/internalPages";
+import { isInternalUrl, settingsUrl } from "../lib/internalPages";
 import { IS_PRIVATE } from "../lib/privateMode";
+import { checkForUpdatesWithToasts } from "../lib/updates";
 import { shortcutLabel } from "../lib/shortcuts";
 import { tabCommand } from "../lib/tabs";
 import { displayHost } from "../lib/url";
@@ -11,6 +12,7 @@ import { useSync } from "../sync/SyncProvider";
 import { ExtensionActionButton, useExtensionActions } from "./extensionActions";
 import { BrandMark, Icon } from "./Icon";
 import { useUi, type MenuEntry } from "./UiContext";
+import { useDownloads } from "./useDownloads";
 import { useViewHost } from "./ViewHost";
 
 /**
@@ -102,6 +104,7 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
   const actions = useExtensionActions();
   const pinned = state.settings.pinnedExtensions ?? [];
   const pinnedActions = pinned.filter((id) => actions.some((action) => action.id === id));
+  const downloading = useDownloads().some((entry) => entry.state === "progressing" && !entry.paused);
 
   // Arc-style app menu behind the logo: new tab / window, updates, account at the bottom.
   const openAppMenu = (anchor: HTMLElement) => {
@@ -120,15 +123,11 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
         ui.showToast(t("arcImport.done", { spaces: result.data.spaces.length, extensions: result.extensions ?? 0 }));
       },
     };
-    const checkUpdates: MenuEntry = {
-      icon: "sync",
-      label: t("appMenu.checkUpdates"),
-      onSelect: async () => {
-        ui.showToast(t("updates.checking"));
-        const result = await window.yzo?.checkForUpdates();
-        const status = result?.status ?? "dev";
-        ui.showToast(t(`updates.${status}`, { version: result?.version ?? "" }));
-      },
+    const checkUpdates: MenuEntry = { icon: "sync", label: t("appMenu.checkUpdates"), onSelect: () => void checkForUpdatesWithToasts(ui.showToast) };
+    const settings: MenuEntry = {
+      icon: "settings",
+      label: t("appMenu.settings"),
+      onSelect: () => dispatch({ type: "createTab", url: settingsUrl(), title: t("settings.title"), target: "today", activate: true, now: Date.now() }),
     };
     ui.openMenu({
       x: rect.left,
@@ -139,6 +138,8 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
         { icon: "restore", label: t("appMenu.newWindow"), hint: "Ctrl+N", disabled: true, onSelect: () => {} },
         "separator",
         // A private instance keeps nothing: no import into it, no account.
+        settings,
+        "separator",
         ...(IS_PRIVATE ? [] : [importArc, "separator" as const]),
         checkUpdates,
         ...(IS_PRIVATE ? [] : ["separator" as const, account]),
@@ -228,10 +229,19 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
         >
           <Icon name="extensions" />
         </button>
-        {/* Downloads and the menu are visual only for now. */}
-        <button title={t("topbar.downloads")}>
+        <button
+          className={downloading ? "topbar-downloading" : ""}
+          title={t("topbar.downloads")}
+          aria-haspopup="dialog"
+          data-downloads-button=""
+          onClick={(event) => {
+            const rect = event.currentTarget.getBoundingClientRect();
+            ui.openDownloads({ right: rect.right, bottom: rect.bottom });
+          }}
+        >
           <Icon name="download" />
         </button>
+        {/* The menu is visual only for now. */}
         <button title={t("topbar.splitView", { shortcut: shortcutLabel("addSplit") })} onClick={() => ui.runAction("addSplit")}>
           <Icon name="split" />
         </button>
