@@ -135,7 +135,8 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
     try {
       const image = await view.webContents.capturePage({ x: 0, y: 0, width: Math.min(width, 800), height: COLOR_STRIP_HEIGHT });
       const color = image.isEmpty() ? null : dominantColor(image.toBitmap());
-      if (!color || colors.get(id) === color) return;
+      if (!color) return;
+      // Sent on every read, not only on changes: a UI that reloaded gets the colors back.
       colors.set(id, color);
       toUi("tab:event", { tabId: id, type: "color", color });
     } catch {
@@ -153,7 +154,7 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
   };
 
   // Pages change color without loading (banners closing, overlays, themes): shown pages are read again
-  // every few seconds; only changes reach the UI.
+  // every few seconds.
   const colorRefresh = setInterval(() => {
     for (const id of shown) void sampleColor(id);
   }, COLOR_REFRESH_MS);

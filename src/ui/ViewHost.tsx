@@ -20,6 +20,8 @@ interface ViewHostValue {
   setDragging(dragging: boolean): void;
   /** Chromium id of a tab's page, needed by extension icons to show per-tab state. */
   webContentsIdOf(id: ID | null): number | undefined;
+  /** Keeps the pages on their slots every frame for a while (slots moving with a CSS transition). */
+  followAnimation(ms: number): void;
 }
 
 const ViewHostContext = createContext<ViewHostValue | null>(null);
@@ -174,9 +176,25 @@ export function ViewHostProvider({ overlayOpen, peekUrl, children }: { overlayOp
 
   const webContentsIdOf = useCallback((id: ID | null) => (id ? webContentsIds[id] : undefined), [webContentsIds]);
 
+  // Slots moved by a CSS transition change place without a re-render or a resize: sync every frame.
+  const followUntil = useRef(0);
+  const followAnimation = useCallback(
+    (ms: number) => {
+      const running = followUntil.current > performance.now();
+      followUntil.current = Math.max(followUntil.current, performance.now() + ms);
+      if (running) return;
+      const tick = () => {
+        sendSync();
+        if (performance.now() < followUntil.current) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    },
+    [sendSync],
+  );
+
   const value = useMemo<ViewHostValue>(
-    () => ({ slotRef, peekRef, raised, setDragging, webContentsIdOf }),
-    [slotRef, peekRef, raised, webContentsIdOf],
+    () => ({ slotRef, peekRef, raised, setDragging, webContentsIdOf, followAnimation }),
+    [slotRef, peekRef, raised, webContentsIdOf, followAnimation],
   );
   return <ViewHostContext.Provider value={value}>{children}</ViewHostContext.Provider>;
 }

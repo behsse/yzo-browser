@@ -1022,8 +1022,9 @@ kbd {
   box-shadow: var(--shadow-card), 0 0 0 2px var(--accent);
 }
 
-/* Each pane sits in a frame. In a split, the frame is a card in the site's color (read from the top of
-   the page) holding the pane's bar above the page, like Arc. */
+/* Each pane sits in a frame. In a split, the frame holds the pane's bar, in the site's color (read from
+   the top of the page), above the page, like Arc. Only the bar is painted: when the UI is raised above
+   the pages (panels, floating bars, drags), the page must show through its slot. */
 .web-pane-frame {
   position: absolute;
 }
@@ -1035,9 +1036,22 @@ kbd {
 .web-pane-frame-split {
   overflow: hidden;
   border-radius: var(--radius);
-  background: var(--pane-color, var(--surface));
   box-shadow: var(--shadow-card);
   color: var(--pane-fg, var(--fg));
+}
+
+/* Panes slide to their new place when the order changes (grip, split menu). */
+.web-area-animated .web-pane-frame {
+  transition:
+    left 0.22s var(--ease-out),
+    top 0.22s var(--ease-out),
+    width 0.22s var(--ease-out),
+    height 0.22s var(--ease-out);
+}
+
+/* The pane being moved with its grip. */
+.web-pane-frame-moving {
+  box-shadow: var(--shadow-card), 0 0 0 2px var(--accent) !important;
 }
 
 .web-pane-frame-focused {
@@ -1059,6 +1073,24 @@ kbd {
   align-items: center;
   height: 30px;
   padding: 0 6px;
+  background: var(--pane-color, var(--surface));
+}
+
+/* Fills the corners the page's rounded top leaves under the bar; hidden while the UI is above the
+   pages, where it would cover the page's top edge. */
+.pane-bar::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: var(--radius);
+  background: inherit;
+  pointer-events: none;
+}
+
+.web-area-raised .pane-bar::after {
+  display: none;
 }
 
 .pane-bar .pane-grip {
@@ -1108,11 +1140,6 @@ kbd {
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* Pane a dragged pane would take the place of. */
-.web-pane-reorder {
-  box-shadow: var(--shadow-card), 0 0 0 2px var(--accent) !important;
 }
 
 /* Drop zones while a tab is dragged from the sidebar over the pages. */

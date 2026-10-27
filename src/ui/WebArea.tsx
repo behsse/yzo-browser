@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { t } from "../lib/i18n";
 import { isInternalUrl } from "../lib/internalPages";
 import { dropPlacement, dropPreview, dropSide, type DropSide, type Rect } from "../lib/splitDrop";
@@ -17,6 +17,21 @@ interface PaneLayout {
 }
 
 const GAP_PX = 6;
+/** Duration of the panes sliding to a new order (.web-area-animated in styles.css). */
+const PANE_SLIDE_MS = 220;
+
+/**
+ * Pane sizes as shares adding up to 1, one per pane (equal shares when the stored ones do not fit).
+ * @param factors Stored shares.
+ * @param count Number of panes.
+ * @returns Shares.
+ */
+function normalizePaneFactors(factors: number[], count: number): number[] {
+  const valid = factors.length === count && factors.every((f) => Number.isFinite(f) && f > 0);
+  if (!valid) return Array.from({ length: count }, () => 1 / count);
+  const total = factors.reduce((a, b) => a + b, 0);
+  return factors.map((f) => f / total);
+}
 
 /**
  * Computes the on-screen rectangle of each visible tab: the whole area for a single tab, or one
@@ -51,7 +66,7 @@ function usePageColors(): Record<ID, string> {
   const [colors, setColors] = useState<Record<ID, string>>({});
   useEffect(() => {
     return window.yzo?.onTabEvent((event) => {
-      if (event.type === "color") setColors((all) => ({ ...all, [event.tabId]: event.color }));
+      if (event.type === "color") setColors((all) => (all[event.tabId] === event.color ? all : { ...all, [event.tabId]: event.color }));
     });
   }, []);
   return colors;
@@ -80,7 +95,31 @@ export function WebArea() {
     factors = content.data.widthFactors;
     vertical = content.data.orientation === "vertical";
   }
+  const [reorder, setReorder] = useState<{ id: ID; to: number } | null>(null);
+  const [resizing, setResizing] = useState(false);
+  // While a pane is moved with its grip, the others make room live: show the order it would give.
+  if (reorder && visible.includes(reorder.id)) {
+    const from = visible.indexOf(reorder.id);
+    const order = [...visible];
+    const moved = [...normalizePaneFactors(factors, visible.length)];
+    order.splice(from, 1);
+    order.splice(reorder.to, 0, reorder.id);
+    const [factor] = moved.splice(from, 1);
+    moved.splice(reorder.to, 0, factor);
+    visible = order;
+    factors = moved;
+  }
   const layout = layoutPanes(visible, factors, vertical, selection?.focusedTabId ?? null);
+
+  // Panes slide to a new order: the pages follow their slots every frame during the transition.
+  const orderKey = visible.join(",");
+  const lastOrder = useRef(orderKey);
+  useLayoutEffect(() => {
+    if (lastOrder.current !== orderKey && lastOrder.current.split(",").sort().join() === orderKey.split(",").sort().join()) {
+      host.followAnimation(PANE_SLIDE_MS + 60);
+    }
+    lastOrder.current = orderKey;
+  }, [orderKey, host]);
 
   // Pages are native views that swallow the pointer, so dividers raise the UI above them while
   // dragging and end the drag on release (or as soon as no button is pressed anymore).
@@ -89,6 +128,7 @@ export function WebArea() {
     event.preventDefault();
     const rect = areaRef.current.getBoundingClientRect();
     host.setDragging(true);
+    setResizing(true);
     const move = (e: PointerEvent) => {
       if (e.buttons === 0) return up();
       const position = vertical ? (e.clientY - rect.top) / rect.height : (e.clientX - rect.left) / rect.width;
@@ -104,6 +144,7 @@ export function WebArea() {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       host.setDragging(false);
+      setResizing(false);
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
@@ -113,7 +154,6 @@ export function WebArea() {
   const draggedTab = useSidebarDrag();
   const tabDragged = draggedTab !== null && isTab(state.items[draggedTab]);
   const [dropTarget, setDropTarget] = useState<{ paneId: ID | null; side: DropSide | null; rect: Rect } | null>(null);
-  const [reorder, setReorder] = useState<{ id: ID; to: number } | null>(null);
   const frames = useRef(new Map<ID, HTMLElement>());
   const colors = usePageColors();
 
@@ -175,17 +215,34 @@ export function WebArea() {
     dispatch({ type: "splitWithTab", tabId: target.paneId, otherTabId: dragged, index, orientation, now: Date.now() });
   };
 
-  // Dragging a pane's bar moves it among the panes; the UI is raised so the pointer is seen over pages.
+  // The grip of a pane's bar moves it among the panes, the others making room as it goes; the UI is
+  // raised so the pointer is seen over the pages.
   const startReorder = (id: ID) => (event: ReactPointerEvent<HTMLElement>) => {
     event.preventDefault();
+    const area = areaRef.current?.getBoundingClientRect();
+    if (!area || !split) return;
+    const count = visible.length;
+    const original = split.childrenIds.filter((child) => isTab(state.items[child]));
+    const baseFactors = normalizePaneFactors(split.data.widthFactors, original.length);
+    const from = original.indexOf(id);
     host.setDragging(true);
-    let to = visible.indexOf(id);
+    let to = from;
     setReorder({ id, to });
     const move = (e: PointerEvent) => {
       if (e.buttons === 0) return up();
-      const pane = paneAt(e.clientX, e.clientY);
-      if (pane && pane.index !== to) {
-        to = pane.index;
+      // The pane goes where the pointer is along the split, measured on the layout without it moved.
+      const position = vertical ? (e.clientY - area.top) / area.height : (e.clientX - area.left) / area.width;
+      let edge = 0;
+      let next = count - 1;
+      for (let i = 0; i < count; i++) {
+        edge += baseFactors[i];
+        if (position < edge) {
+          next = i;
+          break;
+        }
+      }
+      if (next !== to) {
+        to = next;
         setReorder({ id, to });
       }
     };
@@ -194,15 +251,18 @@ export function WebArea() {
       window.removeEventListener("pointerup", up);
       host.setDragging(false);
       setReorder(null);
-      dispatch({ type: "moveSplitPane", id, index: to });
+      if (to !== from) dispatch({ type: "moveSplitPane", id, index: to });
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
   };
 
   return (
-    <main className="web-area" ref={areaRef}>
-      {visible.map((id, index) => {
+    <main
+      className={"web-area" + (split && !resizing ? " web-area-animated" : "") + (host.raised ? " web-area-raised" : "")}
+      ref={areaRef}
+    >
+      {visible.map((id) => {
         const pane = layout.get(id)!;
         const item = state.items[id];
         const className = "web-pane" + (pane.focused ? " web-pane-focused" : "") + (split ? " web-pane-split" : "");
@@ -218,7 +278,7 @@ export function WebArea() {
               "web-pane-frame" +
               (split ? " web-pane-frame-split" : "") +
               (split && pane.focused ? " web-pane-frame-focused" : "") +
-              (reorder && reorder.to === index && reorder.id !== id ? " web-pane-reorder" : "")
+              (reorder?.id === id ? " web-pane-frame-moving" : "")
             }
             style={{ ...pane.style, ...(split ? paneBarColors(colors[id]) : {}) }}
           >
