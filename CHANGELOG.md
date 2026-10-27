@@ -4,6 +4,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-27
+
 ### Added
 
 - Split view by drag and drop, like Zen and Arc: drag a tab from the sidebar onto the pages and drop it on a side (the half it will take is highlighted) to split with that page, left/right side by side or top/bottom stacked; in a split, it goes before or after the pane it is dropped on. In the sidebar, dropping a tab in the middle of another tab (or of a split) splits them too.
@@ -17,7 +19,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 - Extensions page (`yzo://extensions`, from "Manage extensions" at the bottom of the extensions panel), like Brave's and Arc's: search, one card per extension (icon, name, description) with "Details", "Remove" and an on/off switch. Details (`yzo://extensions/<id>`), laid out like Arc's: on/off, description, version, size, permissions, site settings (placeholder for now), pin to the toolbar, allow in private browsing, the extension's options, its Chrome Web Store page, source and removal.
 - Extensions in private windows: "Allow in private browsing" in an extension's details lets it run in the next private windows (off by default, like Chrome). Electron cannot load extensions in an in-memory session, so a private window that runs extensions uses an on-disk session in its throwaway profile, wiped (storage and cache) when the window closes. Extension choices are read-only from a private window. The choices live in `userData/extension-settings.json`. A turned-off extension is not loaded at all, also on later starts: Yzo now loads the installed extensions itself instead of electron-chrome-web-store.
 - Yzo pages: `yzo://settings/sites/<site>` opens a site's settings in a tab (shield, connection and certificate, permissions, clearing cookies and cache), drawn by the interface instead of a web page.
-- Private browsing: the incognito button opens a private Yzo in its own process, like Zen. Its tabs use an in-memory session (no cookies, storage, cache or history on disk), it starts from a fresh state that is never saved, and it has no account, sync, extensions or Arc import. Private windows are always near-black (like Twitch's dark mode), whatever the space's colors. Each private instance gets a throwaway profile, deleted once it is closed and another private window opens.
+- Private browsing: the incognito button opens a private Yzo in its own process, like Zen. Its tabs use an in-memory session (no cookies, storage, cache or history on disk), it starts from a fresh state that is never saved, and it has no account, sync or Arc import; only the extensions allowed in private browsing run there. Private windows are always near-black (like Twitch's dark mode), whatever the space's colors. Each private instance gets a throwaway profile, deleted once it is closed and another private window opens.
 - Full screen button in the top bar, after the top bar lock: it puts the window in full screen, and its arrows point inward while full screen is on, to leave it.
 
 ### Changed
@@ -30,8 +32,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ### Fixed
 
-- Behind the rounded top corners of a split page, the bar's color now shows instead of the space's backdrop, also while a menu or panel is open: two small native views in the bar's color sit right under each split page, and the backdrop leaves the page's top corners free.
-- Split panes no longer turn into a block of the site's color while a panel, the floating sidebar or top bar, or a drag puts the interface above the pages; and the bars get their color back after the interface reloads.
 - A menu opened from another menu's entry no longer closes right away (the first menu's focus loss arrived after the second one opened).
 
 ## [0.8.0] - 2026-10-25
