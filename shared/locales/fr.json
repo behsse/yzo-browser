@@ -58,7 +58,9 @@
   "account.confirmPassword": "Confirmer le mot de passe",
   "account.server": "Serveur",
   "account.encryptingKeys": "Chiffrement des clés…",
-  "account.createAccount": "Créer le compte",
+  "account.createAccount": "Créer le compte",
+
+
 
   "error.invalid_server": "Adresse de serveur invalide.",
   "error.insecure_server": "Le serveur doit utiliser https (http n'est accepté que sur cet ordinateur).",
@@ -208,6 +210,7 @@
 
   "topbar.toggle": "Verrouiller ou masquer la barre du haut ({shortcut})",
   "topbar.fullscreen": "Plein écran",
+  "topbar.exitFullscreen": "Quitter le plein écran",
   "topbar.private": "Navigation privée",
   "topbar.downloads": "Téléchargements",
   "topbar.more": "Menu"

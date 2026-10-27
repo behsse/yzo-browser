@@ -92,12 +92,13 @@ export interface YzoBridge {
   account: AccountBridge;
   loadState(): Promise<string | null>;
   saveState(json: string): Promise<boolean>;
-  windowControl(action: "minimize" | "maximize" | "close"): void;
+  windowControl(action: "minimize" | "maximize" | "fullscreen" | "close"): void;
   /** Hands a press on the floating top bar to the system, which moves the window like from its title bar. */
   windowDrag(): void;
   /** Fires while the window is being moved. */
   onWindowMoved(callback: () => void): () => void;
   isMaximized(): Promise<boolean>;
+  isFullScreen(): Promise<boolean>;
   /** Cursor position relative to the window content (DIPs), or null if unavailable. */
   cursorPosition(): Promise<{ x: number; y: number; width: number; height: number } | null>;
   /** Shows a popup menu above the pages; resolves to the picked entry index, or null when dismissed. */
@@ -117,6 +118,8 @@ export interface YzoBridge {
   listExtensions(): Promise<InstalledExtension[]>;
   uninstallExtension(id: string): Promise<boolean>;
   onMaximized(callback: (maximized: boolean) => void): () => void;
+  /** Fires when the window enters or leaves full screen. */
+  onFullScreen(callback: (fullScreen: boolean) => void): () => void;
   onShortcut(callback: (action: ShortcutAction) => void): () => void;
   onPeek(callback: (payload: { url: string }) => void): () => void;
   onOpenTab(callback: (payload: { url: string; background: boolean }) => void): () => void;

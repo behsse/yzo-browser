@@ -58,7 +58,9 @@
   "account.confirmPassword": "Confirm password",
   "account.server": "Server",
   "account.encryptingKeys": "Encrypting keys…",
-  "account.createAccount": "Create account",
+  "account.createAccount": "Create account",
+
+
 
   "error.invalid_server": "Invalid server address.",
   "error.insecure_server": "The server must use https (http is only accepted on this computer).",
@@ -208,6 +210,7 @@
 
   "topbar.toggle": "Lock or hide the top bar ({shortcut})",
   "topbar.fullscreen": "Full screen",
+  "topbar.exitFullscreen": "Exit full screen",
   "topbar.private": "Private browsing",
   "topbar.downloads": "Downloads",
   "topbar.more": "More"

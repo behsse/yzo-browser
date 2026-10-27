@@ -300,6 +300,8 @@ function createWindow() {
   ui.webContents.once("did-finish-load", () => win.show());
   win.on("maximize", () => ui.webContents.send("window:maximized", true));
   win.on("unmaximize", () => ui.webContents.send("window:maximized", false));
+  win.on("enter-full-screen", () => ui.webContents.send("window:fullscreen", true));
+  win.on("leave-full-screen", () => ui.webContents.send("window:fullscreen", false));
   // Lets the UI keep a revealed top bar open while the user drags the window by it.
   win.on("move", () => ui.webContents.send("window:moved"));
   win.on("closed", () => {
@@ -360,6 +362,7 @@ ipcMain.on("window:control", (event, action) => {
   if (!isTrustedSender(event) || !mainWindow) return;
   if (action === "minimize") mainWindow.minimize();
   else if (action === "maximize") mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize();
+  else if (action === "fullscreen") mainWindow.setFullScreen(!mainWindow.isFullScreen());
   else if (action === "close") mainWindow.close();
 });
 
@@ -409,6 +412,7 @@ ipcMain.handle("favicon:resolve", (event, url) => (isTrustedSender(event) ? reso
 ipcMain.handle("arc:import", (event) => (isTrustedSender(event) ? importFromArc() : null));
 
 ipcMain.handle("window:isMaximized", (event) => isTrustedSender(event) && Boolean(mainWindow?.isMaximized()));
+ipcMain.handle("window:isFullScreen", (event) => isTrustedSender(event) && Boolean(mainWindow?.isFullScreen()));
 
 // Cursor position relative to the window content, in DIPs. Used by the floating sidebar because
 // pointer events over a webview are delivered to the guest process, not to the UI.

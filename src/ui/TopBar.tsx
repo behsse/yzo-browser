@@ -37,6 +37,23 @@ function WindowControls() {
   );
 }
 
+/**
+ * Toggles the window's full screen; the arrows point inward while it is on, to leave it.
+ * @returns Button.
+ */
+function FullScreenButton() {
+  const [fullScreen, setFullScreen] = useState(false);
+  useEffect(() => {
+    window.yzo?.isFullScreen().then(setFullScreen);
+    return window.yzo?.onFullScreen(setFullScreen);
+  }, []);
+  return (
+    <button title={fullScreen ? t("topbar.exitFullscreen") : t("topbar.fullscreen")} onClick={() => window.yzo?.windowControl("fullscreen")}>
+      <Icon name={fullScreen ? "exitFullscreen" : "fullscreen"} />
+    </button>
+  );
+}
+
 /** Distance the pointer must travel, button held, before a press on the floating top bar moves the window. */
 const DRAG_THRESHOLD_PX = 3;
 
@@ -167,10 +184,7 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
         >
           <Icon name="topbar" />
         </button>
-        {/* Visual only for now: full screen is not wired yet. */}
-        <button title={t("topbar.fullscreen")}>
-          <Icon name="fullscreen" />
-        </button>
+        <FullScreenButton />
         <span className="topbar-divider" />
         <button title={t("sidebar.back")} onClick={() => void tabCommand(focusedId, "back")}>
           <Icon name="back" />
