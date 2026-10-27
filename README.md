@@ -12,7 +12,7 @@ Stack: Electron 43 in its [castLabs ECS](https://github.com/castlabs/electron-re
 | Vertical sidebar | Favorites shared across spaces, pinned section, divider, "today" tabs. Resizable (180–420 px). |
 | Spaces | Name, emoji, two-color gradient from Arc's palettes (pastel, muted, gray), light/dark/auto mode. Dock at the bottom of the sidebar. |
 | Command bar | One input for URLs, search and switching to an open tab. Title + domain deduplication for Figma, Notion, GitHub… Remembers the result type picked for each query. |
-| Split view | 2 to 4 panes, side by side or stacked, draggable dividers, saved as a sidebar item. Drag a sidebar tab onto a page (or onto another tab in the sidebar) to split; each page gets an Arc-style bar in the site's color (navigation, address, open alone, stop the split, close; drag it to move the pane). |
+| Split view | 2 to 4 panes, side by side or stacked, draggable dividers, saved as a sidebar item. Drag a sidebar tab onto a page (or onto another tab in the sidebar) to split; each page gets an Arc-style bar in the site's color (navigation, address, a grip to drag the pane, the split controls menu, a cross to take the pane out of the split). |
 | Peek | Links that open a new window (`target=_blank`) show in a preview, with an "Open in a tab" button. |
 | Archive | Closed or idle today tabs are archived and can be restored. Auto-archive delay: 1 h, 12 h (default), 24 h, 7 d, 30 d or never. |
 | Folders | Create, rename, collapse, drag and drop, nesting. |

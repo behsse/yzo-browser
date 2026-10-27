@@ -341,5 +341,19 @@
   "split.move": "Déplacer ce panneau",
   "split.detach": "Ouvrir seul",
   "split.stop": "Arrêter la vue scindée",
-  "split.closePane": "Fermer ce panneau"
+  "split.closePane": "Fermer ce panneau",
+
+  "split.controls": "Contrôles de la vue scindée",
+  "split.moveLeft": "Déplacer à gauche",
+  "split.moveRight": "Déplacer à droite",
+  "split.moveUp": "Déplacer en haut",
+  "split.moveDown": "Déplacer en bas",
+  "split.addRight": "Ajouter un panneau à droite",
+  "split.addLeft": "Ajouter un panneau à gauche",
+  "split.addBelow": "Ajouter un panneau en dessous",
+  "split.addAbove": "Ajouter un panneau au-dessus",
+  "split.separateTab": "Séparer l'onglet de la vue scindée",
+  "split.toStacked": "Passer en vue scindée empilée",
+  "split.toSideBySide": "Passer en vue scindée côte à côte",
+  "split.removePane": "Retirer de la vue scindée"
 }

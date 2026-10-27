@@ -79,7 +79,8 @@ export type Action =
   | { type: "deleteSpace"; id: ID; now: number }
   | { type: "switchSpace"; id: ID }
   | { type: "switchSpaceIndex"; index: number }
-  | { type: "addSplit"; tabId: ID; url: string; now: number }
+  /** Opens a new pane next to a tab; `index` is its place among the panes (end by default). */
+  | { type: "addSplit"; tabId: ID; url: string; now: number; index?: number }
   /**
    * Puts another tab in a split with this one (drag and drop in the sidebar or onto a page). `index`
    * is the other tab's place among the panes (end by default); `orientation` applies when the split
@@ -88,8 +89,11 @@ export type Action =
   | { type: "splitWithTab"; tabId: ID; otherTabId: ID; now: number; index?: number; orientation?: SplitOrientation }
   /** Moves a pane of a split to another place (dragging its handle). */
   | { type: "moveSplitPane"; id: ID; index: number }
-  /** Takes one pane out of its split, as a tab right after it, and shows it alone. */
-  | { type: "detachSplitPane"; id: ID; now: number }
+  /**
+   * Takes one pane out of its split, as a tab right after it. It is shown alone, or with `keepRest`
+   * the rest of the split (or the last tab left) stays on screen.
+   */
+  | { type: "detachSplitPane"; id: ID; now: number; keepRest?: boolean }
   | { type: "setSplitOrientation"; id: ID; orientation: SplitOrientation }
   | { type: "setSplitFactors"; id: ID; factors: number[] }
   | { type: "unsplit"; id: ID }
@@ -658,7 +662,7 @@ export function reducer(state: AppState, action: Action): AppState {
         if (action.type === "addSplit") deleteSubtree(draft, otherId);
         return action.type === "addSplit" ? draft : state;
       }
-      const at = action.type === "splitWithTab" && action.index !== undefined ? Math.max(0, Math.min(action.index, split.childrenIds.length)) : undefined;
+      const at = action.index !== undefined ? Math.max(0, Math.min(action.index, split.childrenIds.length)) : undefined;
       attach(draft, otherId, split.id, at);
       split.data.widthFactors = normalizeFactors([], split.childrenIds.length);
       activateItem(draft, otherId, action.now);
@@ -690,10 +694,11 @@ export function reducer(state: AppState, action: Action): AppState {
       const parentId = split.parentId;
       detach(draft, action.id);
       attach(draft, action.id, parentId, draft.items[parentId].childrenIds.indexOf(splitId!) + 1);
-      collapseSplitIfNeeded(draft, splitId!);
+      const remaining = collapseSplitIfNeeded(draft, splitId!);
       const rest = draft.items[splitId!];
       if (isSplit(rest)) rest.data.widthFactors = normalizeFactors([], rest.childrenIds.length);
-      activateItem(draft, action.id, action.now);
+      if (action.keepRest && remaining) activateItem(draft, remaining, action.now);
+      else activateItem(draft, action.id, action.now);
       return draft;
     }
 

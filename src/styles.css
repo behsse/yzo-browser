@@ -1059,6 +1059,9 @@ kbd {
   align-items: center;
   height: 30px;
   padding: 0 6px;
+}
+
+.pane-bar .pane-grip {
   cursor: grab;
 }
 

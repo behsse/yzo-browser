@@ -41,6 +41,8 @@ export const ICON_PATHS = {
   print: "M7 9V4h10v5M7 17H5a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-2M7 14h10v6H7z",
   save: "M12 4v10M8 10l4 4 4-4M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3",
   minus: "M5 12h14",
+  arrowUp: "M12 19V5M6 11l6-6 6 6",
+  arrowDown: "M12 5v14M6 13l6 6 6-6",
   grip: "M7 9a1 1 0 1 0 0.01 0zM12 9a1 1 0 1 0 0.01 0zM17 9a1 1 0 1 0 0.01 0zM7 15a1 1 0 1 0 0.01 0zM12 15a1 1 0 1 0 0.01 0zM17 15a1 1 0 1 0 0.01 0z",
   closeCircle: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9.5l5 5M14.5 9.5l-5 5",
   zoom: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4M11 8v6M8 11h6",

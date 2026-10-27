@@ -219,6 +219,21 @@ describe("split view", () => {
     expect(s.window.selection[space(s).id].itemId).toBe(b);
   });
 
+  it("removes a pane from the split and keeps the rest on screen", () => {
+    let [s, a] = openTab(createInitialState(T0), "https://a.com");
+    s = reducer(s, { type: "addSplit", tabId: a, url: "https://b.com", now: T0 });
+    s = reducer(s, { type: "addSplit", tabId: a, url: "https://c.com", index: 0, now: T0 });
+    const splitId = s.items[space(s).todayId].childrenIds[0];
+    const [c, , b] = s.items[splitId].childrenIds;
+    expect(s.items[c].data).toMatchObject({ url: "https://c.com" });
+    s = reducer(s, { type: "detachSplitPane", id: c, keepRest: true, now: T0 });
+    expect(s.items[splitId].childrenIds).toEqual([a, b]);
+    expect(s.window.selection[space(s).id].itemId).toBe(splitId);
+    s = reducer(s, { type: "detachSplitPane", id: b, keepRest: true, now: T0 });
+    expect(s.items[splitId]).toBeUndefined();
+    expect(s.window.selection[space(s).id].itemId).toBe(a);
+  });
+
   it("unsplits in place", () => {
     let [s, a] = openTab(createInitialState(T0), "https://a.com");
     s = reducer(s, { type: "addSplit", tabId: a, url: "https://b.com", now: T0 });

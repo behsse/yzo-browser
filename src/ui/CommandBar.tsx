@@ -4,7 +4,7 @@ import { t, type MessageKey } from "../lib/i18n";
 import { displayHost } from "../lib/url";
 import { tabCommand } from "../lib/tabs";
 import { useStore } from "../state/store";
-import { isTab } from "../state/tree";
+import { isSplit, isTab } from "../state/tree";
 import { Favicon } from "./Favicon";
 import { Icon, type IconName } from "./Icon";
 import type { CommandBarMode } from "./UiContext";
@@ -20,6 +20,8 @@ const PLACEHOLDER: Record<CommandBarMode, MessageKey> = {
   new: "commandBar.placeholderNew",
   current: "commandBar.placeholderCurrent",
   split: "commandBar.placeholderSplit",
+  splitBefore: "commandBar.placeholderSplit",
+  splitAfter: "commandBar.placeholderSplit",
 };
 
 /**
@@ -42,12 +44,17 @@ export function CommandBar({ mode, onClose }: { mode: CommandBarMode; onClose: (
     dispatch({ type: "rememberChoice", query, kind: s.kind });
     onClose();
     const focusedId = isTab(focusedTab) ? focusedTab.id : null;
+    const splitting = mode === "split" || mode === "splitBefore" || mode === "splitAfter";
+    // Where the new pane goes: next to the focused pane, before or after it (end by default).
+    const parent = focusedTab?.parentId ? state.items[focusedTab.parentId] : undefined;
+    const position = isSplit(parent) && focusedId ? parent.childrenIds.indexOf(focusedId) : 0;
+    const index = mode === "splitBefore" ? position : mode === "splitAfter" ? position + 1 : undefined;
     if (s.kind === "tab" && s.tabId) {
-      if (mode === "split" && focusedId && s.tabId !== focusedId) dispatch({ type: "splitWithTab", tabId: focusedId, otherTabId: s.tabId, now });
+      if (splitting && focusedId && s.tabId !== focusedId) dispatch({ type: "splitWithTab", tabId: focusedId, otherTabId: s.tabId, index, now });
       else dispatch({ type: "activate", id: s.tabId, now });
       return;
     }
-    if (mode === "split" && focusedId) dispatch({ type: "addSplit", tabId: focusedId, url: s.url, now });
+    if (splitting && focusedId) dispatch({ type: "addSplit", tabId: focusedId, url: s.url, index, now });
     else if (mode === "current" && focusedId) {
       // The store URL covers a page not created yet; the command navigates the live one.
       dispatch({ type: "updateTab", id: focusedId, url: s.url, now });

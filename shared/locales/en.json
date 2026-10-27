@@ -341,5 +341,19 @@
   "split.move": "Move this pane",
   "split.detach": "Open on its own",
   "split.stop": "Stop split view",
-  "split.closePane": "Close this pane"
+  "split.closePane": "Close this pane",
+
+  "split.controls": "Split view controls",
+  "split.moveLeft": "Move left",
+  "split.moveRight": "Move right",
+  "split.moveUp": "Move up",
+  "split.moveDown": "Move down",
+  "split.addRight": "Add split on the right",
+  "split.addLeft": "Add split on the left",
+  "split.addBelow": "Add split below",
+  "split.addAbove": "Add split above",
+  "split.separateTab": "Separate tab from split",
+  "split.toStacked": "Convert to stacked split view",
+  "split.toSideBySide": "Convert to side-by-side split view",
+  "split.removePane": "Remove from split view"
 }

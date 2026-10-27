@@ -3,7 +3,8 @@ import type { ShortcutAction } from "../lib/shortcuts";
 import type { IconName } from "./Icon";
 import type { ID } from "../state/types";
 
-export type CommandBarMode = "new" | "current" | "split";
+/** "splitBefore" / "splitAfter" open the result as a new pane on that side of the focused one. */
+export type CommandBarMode = "new" | "current" | "split" | "splitBefore" | "splitAfter";
 export type AccountMode = "signIn" | "signUp";
 
 export interface MenuEntry {
