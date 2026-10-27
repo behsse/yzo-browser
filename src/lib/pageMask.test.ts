@@ -19,4 +19,9 @@ describe("page holes mask", () => {
     expect(svg.match(/M\d+ \d+h/g)).toEqual(["M250 6h", "M20 10h"]);
     expect(svg).toContain("h480a10 10 0 0 1 10 10v380");
   });
+
+  it("gives a split pane's hole square top corners", () => {
+    const svg = svgOf(pageHolesMask([{ x: 240, y: 62, width: 500, height: 400, squareTop: true }], 800, 600));
+    expect(svg).toContain("M240 62h500v390a10 10 0 0 1 -10 10");
+  });
 });

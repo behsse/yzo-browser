@@ -85,10 +85,11 @@ export function ViewHostProvider({ overlayOpen, peekUrl, children }: { overlayOp
       const item = s.items[id];
       // Yzo's own pages are drawn by the UI: no native view.
       if (!isTab(item) || isInternalUrl(item.data.url)) continue;
-      tabs.push({ id, url: item.data.url, bounds: boundsOf(slots.current.get(id)) });
+      const slot = slots.current.get(id);
+      tabs.push({ id, url: item.data.url, bounds: boundsOf(slot), squareTop: Boolean(slot?.classList.contains("web-pane-split")) });
     }
     const mask = pageHolesMask(
-      tabs.flatMap((tab) => (tab.bounds ? [tab.bounds] : [])),
+      tabs.flatMap((tab) => (tab.bounds ? [{ ...tab.bounds, squareTop: tab.squareTop }] : [])),
       window.innerWidth,
       window.innerHeight,
     );

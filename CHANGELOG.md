@@ -30,6 +30,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ### Fixed
 
+- Behind the rounded top corners of a split page, the bar's color now shows instead of the space's backdrop, also while a menu or panel is open: two small native views in the bar's color sit right under each split page, and the backdrop leaves the page's top corners free.
 - Split panes no longer turn into a block of the site's color while a panel, the floating sidebar or top bar, or a drag puts the interface above the pages; and the bars get their color back after the interface reloads.
 - A menu opened from another menu's entry no longer closes right away (the first menu's focus loss arrived after the second one opened).
 

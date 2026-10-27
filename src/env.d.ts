@@ -11,7 +11,8 @@ export interface ViewBounds {
 
 /** Layout sent to the main process, which places one native view per loaded tab. */
 export interface ViewSyncPayload {
-  tabs: { id: string; url: string; bounds: ViewBounds | null }[];
+  /** `squareTop`: a split pane, whose page has square top corners under its bar. */
+  tabs: { id: string; url: string; bounds: ViewBounds | null; squareTop?: boolean }[];
   /** Hide the tab views (after screenshots) so HTML overlays can be drawn over the page area. */
   /** Stack the UI above the pages (overlay open): it then draws over them through transparent slots. */
   raised: boolean;

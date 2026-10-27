@@ -5,7 +5,7 @@
 // match. The tab views normally sit above the UI view; while an overlay is open (command bar, floating
 // sidebar, panels, divider drag) the UI asks to be "raised" above them and draws over the live pages
 // through its transparent slots (see stackUi in main.cjs).
-const { WebContentsView, app, dialog } = require("electron");
+const { View, WebContentsView, app, dialog } = require("electron");
 const path = require("node:path");
 const { dominantColor } = require("./page-color.cjs");
 
@@ -16,7 +16,7 @@ const VIEW_RADIUS = 10;
 
 /**
  * @typedef {{ x: number, y: number, width: number, height: number }} Bounds
- * @typedef {{ id: string, url: string, bounds: Bounds | null }} TabEntry
+ * @typedef {{ id: string, url: string, bounds: Bounds | null, squareTop?: boolean }} TabEntry
  * @typedef {{ tabs: TabEntry[], raised: boolean, peek: { url: string, bounds: Bounds | null } | null, activeTabId: string | null }} SyncPayload
  * @typedef {{
  *   onCreated?(id: string, contents: Electron.WebContents): void,
@@ -111,6 +111,16 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
   const waiters = new Map();
   /** Last color sent per tab, and the tabs shown on screen. */
   const colors = new Map();
+  /**
+   * Split panes: their page's top corners are square under the pane bar. A page view can only have
+   * one radius for its four corners, so two corner-sized native views in the bar's color sit right
+   * under the page's top corners and fill what the rounding cuts away. Being under the page, they
+   * never cover it, whether the UI is below or above the pages.
+   * @type {Map<string, View[]>}
+   */
+  const corners = new Map();
+  /** @type {Set<string>} */
+  const squareTop = new Set();
   const shown = new Set();
   const colorTimers = new Map();
 
@@ -140,6 +150,7 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
       if (!color) return;
       colors.set(id, color);
       toUi("tab:event", { tabId: id, type: "color", color });
+      placeCorners(id, bounds.get(id) ?? null);
     } catch {
       // The page went away meanwhile.
     }
@@ -205,6 +216,8 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
     bounds.delete(id);
     shown.delete(id);
     colors.delete(id);
+    squareTop.delete(id);
+    removeCorners(id);
     clearTimeout(colorTimers.get(id));
     colorTimers.delete(id);
     if (activeTabId === id) activeTabId = null;
@@ -213,6 +226,46 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
     if (!view.webContents.isDestroyed()) {
       if (id !== PEEK_ID) hooks.onDestroyed?.(id, view.webContents);
       view.webContents.close();
+    }
+  };
+
+  /**
+   * Removes a page's corner views.
+   * @param {string} id Tab id.
+   */
+  const removeCorners = (id) => {
+    const win = getWindow();
+    for (const corner of corners.get(id) ?? []) if (win && !win.isDestroyed()) win.contentView.removeChildView(corner);
+    corners.delete(id);
+  };
+
+  /**
+   * Places a split page's corner views under its top corners (created on first use), in the bar's
+   * color; hides them for pages that are not in a split or not on screen.
+   * @param {string} id Tab id.
+   * @param {Bounds | null} rect Page bounds.
+   */
+  const placeCorners = (id, rect) => {
+    const win = getWindow();
+    const view = views.get(id);
+    if (!win || win.isDestroyed() || !view) return;
+    if (!rect || !squareTop.has(id)) {
+      for (const corner of corners.get(id) ?? []) corner.setVisible(false);
+      return;
+    }
+    let pair = corners.get(id);
+    if (!pair) {
+      pair = [new View(), new View()];
+      corners.set(id, pair);
+      // Right under the page in the stacking order.
+      for (const corner of pair) win.contentView.addChildView(corner, win.contentView.children.indexOf(view));
+    }
+    const color = colors.get(id) ?? "#00000000";
+    pair[0].setBounds({ x: rect.x, y: rect.y, width: VIEW_RADIUS, height: VIEW_RADIUS });
+    pair[1].setBounds({ x: rect.x + rect.width - VIEW_RADIUS, y: rect.y, width: VIEW_RADIUS, height: VIEW_RADIUS });
+    for (const corner of pair) {
+      corner.setBackgroundColor(color);
+      corner.setVisible(true);
     }
   };
 
@@ -233,6 +286,7 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
       if (rect && id !== PEEK_ID && !colors.has(id)) scheduleColor(id);
       if (rect) shown.add(id);
       else shown.delete(id);
+      if (id !== PEEK_ID) placeCorners(id, rect);
     }
     bringPeekToFront();
   };
@@ -253,6 +307,8 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
         wanted.add(tab.id);
         if (!views.has(tab.id) && !createView(tab.id, tab.url)) continue;
         bounds.set(tab.id, toBounds(tab.bounds));
+        if (tab.squareTop === true) squareTop.add(tab.id);
+        else squareTop.delete(tab.id);
       }
       if (peek && typeof peek.url === "string") {
         wanted.add(PEEK_ID);
