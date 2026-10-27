@@ -34,6 +34,8 @@ export interface UiValue {
   openMenu(menu: MenuState): void;
   /** Opens the extensions panel under the puzzle button (its bottom-right corner). */
   openExtensions(anchor: { right: number; bottom: number }): void;
+  /** Opens the site panel under the sliders next to the address (their bottom-left corner). */
+  openSitePanel(anchor: { left: number; bottom: number }): void;
   showToast(message: string): void;
   runAction(action: ShortcutAction): void;
 }

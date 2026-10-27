@@ -8,15 +8,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 - Hideable top bar for a real full-screen view: the new lock button next to the sidebar toggle (or Ctrl+Shift+S) hides it and the pages take the full height. Moving the pointer to the top edge slides it down over the pages, like Zen Browser, and it hides again when the pointer leaves it. It still works as a title bar: dragging it moves the window (Windows runs the move, so snapping and restoring a maximized window work), and a double-click maximizes.
 
-- Shield against ads and trackers, like Brave's: Ghostery's adblocker engine with the EasyList / EasyPrivacy family of lists blocks requests and hides ad slots on every site. The site menu shows how many requests it blocked on the page and turns it off or on for the site (the page reloads).
-- Site menu: "Share URL", the shield, "Secure" (opens the site's certificate in the Windows certificate window, or macOS's), developer tools, and "More" with "Clear cache", "Clear cookies" and "All site settings".
+- Shield against ads and trackers, like Brave's: Ghostery's adblocker engine with the EasyList / EasyPrivacy family of lists blocks requests and hides ad slots on every site. The site panel shows how many requests it blocked on the page and turns it off or on for the site (the page reloads).
+- Site panel under the sliders next to the address, like Arc's: a wide "Share URL" button, the tracking protection (on/off for the site, with the number of requests blocked on the page), and a footer with "Secure" (opens the site's certificate in the Windows certificate window, or macOS's), developer tools and "…" ("Clear cache", "Clear cookies", "All site settings").
 - Yzo pages: `yzo://settings/sites/<site>` opens a site's settings in a tab (shield, connection and certificate, permissions, clearing cookies and cache), drawn by the interface instead of a web page.
 - Private browsing: the incognito button opens a private Yzo in its own process, like Zen. Its tabs use an in-memory session (no cookies, storage, cache or history on disk), it starts from a fresh state that is never saved, and it has no account, sync, extensions or Arc import. Private windows are always near-black (like Twitch's dark mode), whatever the space's colors. Each private instance gets a throwaway profile, deleted once it is closed and another private window opens.
 - Full screen button in the top bar, after the top bar lock: it puts the window in full screen, and its arrows point inward while full screen is on, to leave it.
 
 ### Changed
 
-- The site menu loses "Reload" (the reload button is next to it) and "Copy link" becomes "Share URL".
+- The site menu becomes the site panel: "Reload" leaves it (the reload button is next to it) and "Copy link" becomes "Share URL".
 - Top bar layout: full screen button and a divider after the top bar lock, private browsing next to reload, downloads after the extensions, a menu button after split view, and more room around the address. Downloads and the menu are placeholders for now.
 
 ### Fixed

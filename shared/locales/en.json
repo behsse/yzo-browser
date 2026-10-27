@@ -216,8 +216,10 @@
   "topbar.more": "More",
 
   "site.share": "Share URL",
-  "site.shieldOn": "Shield on · {count} blocked",
-  "site.shieldOff": "Shield off for this site",
+  "site.settingsHeading": "Settings",
+  "site.shieldTitle": "Tracking protection",
+  "site.shieldOnDetail": "On · {count} blocked",
+  "site.shieldOffDetail": "Off for this site",
   "site.secure": "Secure",
   "site.notSecure": "Not secure",
   "site.more": "More",

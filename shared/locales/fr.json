@@ -216,8 +216,10 @@
   "topbar.more": "Menu",
 
   "site.share": "Partager le lien",
-  "site.shieldOn": "Bouclier activé · {count} bloqués",
-  "site.shieldOff": "Bouclier désactivé sur ce site",
+  "site.settingsHeading": "Paramètres",
+  "site.shieldTitle": "Protection contre le pistage",
+  "site.shieldOnDetail": "Activée · {count} bloqués",
+  "site.shieldOffDetail": "Désactivée sur ce site",
   "site.secure": "Sécurisé",
   "site.notSecure": "Non sécurisé",
   "site.more": "Plus",
