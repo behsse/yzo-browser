@@ -8,7 +8,7 @@ import { isSplit, isTab } from "../state/tree";
 import type { ID } from "../state/types";
 import { InternalPage } from "./InternalPage";
 import { useSidebarDrag, setSidebarDrag } from "./dragState";
-import { Icon } from "./Icon";
+import { PaneBar, paneBarColors } from "./PaneBar";
 import { useViewHost } from "./ViewHost";
 
 interface PaneLayout {
@@ -44,9 +44,23 @@ function layoutPanes(ids: ID[], factors: number[], vertical: boolean, focusedId:
 }
 
 /**
+ * Top color of each loaded page, as the main process reads it (split pane bars take it).
+ * @returns Colors by tab id.
+ */
+function usePageColors(): Record<ID, string> {
+  const [colors, setColors] = useState<Record<ID, string>>({});
+  useEffect(() => {
+    return window.yzo?.onTabEvent((event) => {
+      if (event.type === "color") setColors((all) => ({ ...all, [event.tabId]: event.color }));
+    });
+  }, []);
+  return colors;
+}
+
+/**
  * Content area: lays out one slot per visible tab (the native page view is placed over it by the
- * main process) and provides the draggable split dividers. In a split, each pane has a small bar to
- * move it, open it on its own, stop the split or close it. A tab dragged from the sidebar splits the
+ * main process) and provides the draggable split dividers. In a split, each pane has its own bar in
+ * the site's color, like Arc (navigation, address, split actions; drag it to move the pane). A tab dragged from the sidebar splits the
  * page it is dropped on, on the side it is dropped (like Zen).
  * @returns Content element.
  */
@@ -101,6 +115,7 @@ export function WebArea() {
   const [dropTarget, setDropTarget] = useState<{ paneId: ID | null; side: DropSide | null; rect: Rect } | null>(null);
   const [reorder, setReorder] = useState<{ id: ID; to: number } | null>(null);
   const frames = useRef(new Map<ID, HTMLElement>());
+  const colors = usePageColors();
 
   // A tab dragged from the sidebar: the UI goes above the pages so they can show where it would land.
   useEffect(() => {
@@ -160,8 +175,8 @@ export function WebArea() {
     dispatch({ type: "splitWithTab", tabId: target.paneId, otherTabId: dragged, index, orientation, now: Date.now() });
   };
 
-  // The handle of a pane's bar moves it among the panes; the UI is raised so the pointer is seen over pages.
-  const startReorder = (id: ID) => (event: ReactPointerEvent<HTMLButtonElement>) => {
+  // Dragging a pane's bar moves it among the panes; the UI is raised so the pointer is seen over pages.
+  const startReorder = (id: ID) => (event: ReactPointerEvent<HTMLElement>) => {
     event.preventDefault();
     host.setDragging(true);
     let to = visible.indexOf(id);
@@ -196,25 +211,18 @@ export function WebArea() {
           else frames.current.delete(id);
         };
         return (
-          <div key={id} ref={frameRef} className={"web-pane-frame" + (reorder && reorder.to === index && reorder.id !== id ? " web-pane-reorder" : "")} style={pane.style}>
-            {split && (
-              <div className="pane-bar">
-                <div className="pane-bar-pill">
-                  <button title={t("split.move")} className="pane-grip" onPointerDown={startReorder(id)}>
-                    <Icon name="grip" size={15} />
-                  </button>
-                  <button title={t("split.detach")} onClick={() => dispatch({ type: "detachSplitPane", id, now: Date.now() })}>
-                    <Icon name="fullscreen" size={14} />
-                  </button>
-                  <button title={t("split.stop")} onClick={() => dispatch({ type: "unsplit", id: split.id })}>
-                    <Icon name={split.data.orientation === "vertical" ? "splitVertical" : "split"} size={14} />
-                  </button>
-                  <button title={t("split.closePane")} onClick={() => dispatch({ type: "closeItem", id, now: Date.now() })}>
-                    <Icon name="closeCircle" size={14} />
-                  </button>
-                </div>
-              </div>
-            )}
+          <div
+            key={id}
+            ref={frameRef}
+            className={
+              "web-pane-frame" +
+              (split ? " web-pane-frame-split" : "") +
+              (split && pane.focused ? " web-pane-frame-focused" : "") +
+              (reorder && reorder.to === index && reorder.id !== id ? " web-pane-reorder" : "")
+            }
+            style={{ ...pane.style, ...(split ? paneBarColors(colors[id]) : {}) }}
+          >
+            {split && <PaneBar id={id} split={split} onReorderStart={startReorder(id)} />}
             {isTab(item) && isInternalUrl(item.data.url) ? (
               <div className={className + " internal-pane"} onMouseDown={() => dispatch({ type: "activate", id, now: Date.now() })}>
                 <InternalPage url={item.data.url} navigate={(next) => dispatch({ type: "updateTab", id, url: next, now: Date.now() })} />

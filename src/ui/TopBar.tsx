@@ -7,7 +7,7 @@ import { shortcutLabel } from "../lib/shortcuts";
 import { tabCommand } from "../lib/tabs";
 import { displayHost } from "../lib/url";
 import { useStore } from "../state/store";
-import { isTab } from "../state/tree";
+import { isSplit, isTab } from "../state/tree";
 import { useSync } from "../sync/SyncProvider";
 import { ExtensionActionButton, useExtensionActions } from "./extensionActions";
 import { BrandMark, Icon } from "./Icon";
@@ -115,6 +115,8 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
   const focusedId = selection?.focusedTabId ?? null;
   const focusedTab = focusedId ? state.items[focusedId] : undefined;
   const url = isTab(focusedTab) ? focusedTab.data.url : "";
+  // In a split, each pane's bar has its own navigation and address (like Arc): the top bar drops them.
+  const inSplit = isSplit(state.items[selection?.itemId ?? ""]);
   const actions = useExtensionActions();
   const pinned = state.settings.pinnedExtensions ?? [];
   const pinnedActions = pinned.filter((id) => actions.some((action) => action.id === id));
@@ -246,16 +248,20 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
           <Icon name="topbar" />
         </button>
         <FullScreenButton />
-        <span className="topbar-divider" />
-        <button title={t("sidebar.back")} onClick={() => void tabCommand(focusedId, "back")}>
-          <Icon name="back" />
-        </button>
-        <button title={t("sidebar.forward")} onClick={() => void tabCommand(focusedId, "forward")}>
-          <Icon name="forward" />
-        </button>
-        <button title={t("sidebar.reload", { shortcut: shortcutLabel("reload") })} onClick={() => ui.runAction("reload")}>
-          <Icon name="reload" />
-        </button>
+        {!inSplit && (
+          <>
+            <span className="topbar-divider" />
+            <button title={t("sidebar.back")} onClick={() => void tabCommand(focusedId, "back")}>
+              <Icon name="back" />
+            </button>
+            <button title={t("sidebar.forward")} onClick={() => void tabCommand(focusedId, "forward")}>
+              <Icon name="forward" />
+            </button>
+            <button title={t("sidebar.reload", { shortcut: shortcutLabel("reload") })} onClick={() => ui.runAction("reload")}>
+              <Icon name="reload" />
+            </button>
+          </>
+        )}
         {/* Opens a private instance; lit in one, like the locks. */}
         <button className={IS_PRIVATE ? "topbar-locked" : ""} title={t("topbar.private")} onClick={() => window.yzo?.openPrivateWindow()}>
           <Icon name="incognito" />
@@ -263,25 +269,29 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
       </div>
 
       <div className="topbar-address">
-        {url && (
-          <button title={t("sidebar.copyLink", { shortcut: shortcutLabel("copyUrl") })} onClick={() => ui.runAction("copyUrl")}>
-            <Icon name="link" />
-          </button>
-        )}
-        <button className="topbar-host" title={url || t("sidebar.searchOrUrl")} onClick={() => ui.openCommandBar(url ? "current" : "new")}>
-          {url ? displayHost(url) : t("sidebar.searchOrUrl")}
-        </button>
-        {url && !isInternalUrl(url) && (
-          <button
-            title={t("topbar.siteMenu")}
-            aria-haspopup="dialog"
-            onClick={(event) => {
-              const rect = event.currentTarget.getBoundingClientRect();
-              ui.openSitePanel({ left: rect.left, bottom: rect.bottom });
-            }}
-          >
-            <Icon name="sliders" />
-          </button>
+        {!inSplit && (
+          <>
+            {url && (
+              <button title={t("sidebar.copyLink", { shortcut: shortcutLabel("copyUrl") })} onClick={() => ui.runAction("copyUrl")}>
+                <Icon name="link" />
+              </button>
+            )}
+            <button className="topbar-host" title={url || t("sidebar.searchOrUrl")} onClick={() => ui.openCommandBar(url ? "current" : "new")}>
+              {url ? displayHost(url) : t("sidebar.searchOrUrl")}
+            </button>
+            {url && !isInternalUrl(url) && (
+              <button
+                title={t("topbar.siteMenu")}
+                aria-haspopup="dialog"
+                onClick={(event) => {
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  ui.openSitePanel({ left: rect.left, bottom: rect.bottom });
+                }}
+              >
+                <Icon name="sliders" />
+              </button>
+            )}
+          </>
         )}
       </div>
 

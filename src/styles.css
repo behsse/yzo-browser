@@ -1022,7 +1022,8 @@ kbd {
   box-shadow: var(--shadow-card), 0 0 0 2px var(--accent);
 }
 
-/* Each pane sits in a frame; in a split the frame also holds the pane's control bar above it. */
+/* Each pane sits in a frame. In a split, the frame is a card in the site's color (read from the top of
+   the page) holding the pane's bar above the page, like Arc. */
 .web-pane-frame {
   position: absolute;
 }
@@ -1031,8 +1032,21 @@ kbd {
   inset: 0;
 }
 
+.web-pane-frame-split {
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--pane-color, var(--surface));
+  box-shadow: var(--shadow-card);
+  color: var(--pane-fg, var(--fg));
+}
+
+.web-pane-frame-focused {
+  box-shadow: var(--shadow-card), 0 0 0 2px var(--accent);
+}
+
 .web-pane-frame > .web-pane-split {
-  top: 26px;
+  top: 30px;
+  box-shadow: none;
 }
 
 .pane-bar {
@@ -1040,49 +1054,62 @@ kbd {
   top: 0;
   left: 0;
   right: 0;
-  display: flex;
-  justify-content: center;
-  height: 26px;
-}
-
-.pane-bar-pill {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  height: 22px;
-  padding: 0 4px;
-  border-radius: 11px;
-  background: var(--pill-bg);
-  color: var(--fg);
-  opacity: 0.7;
-  transition: opacity 0.12s;
-}
-
-.web-pane-frame:hover .pane-bar-pill,
-.pane-bar-pill:hover {
-  opacity: 1;
-}
-
-.pane-bar-pill button {
   display: grid;
-  place-items: center;
-  width: 24px;
-  height: 20px;
-  border-radius: 7px;
-  color: inherit;
-}
-
-.pane-bar-pill button:hover {
-  background: var(--row-hover);
-}
-
-.pane-grip {
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  height: 30px;
+  padding: 0 6px;
   cursor: grab;
 }
 
+.pane-bar button {
+  display: grid;
+  place-items: center;
+  min-width: 26px;
+  height: 24px;
+  border-radius: 7px;
+  color: inherit;
+  cursor: default;
+}
+
+.pane-bar button:hover:not(:disabled) {
+  background: var(--pane-hover, var(--row-hover));
+}
+
+.pane-bar button:disabled {
+  opacity: 0.35;
+}
+
+.pane-bar-side {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.pane-bar-end {
+  justify-content: flex-end;
+}
+
+.pane-bar-address {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pane-bar .pane-bar-host {
+  max-width: 260px;
+  padding: 0 14px;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Pane a dragged pane would take the place of. */
-.web-pane-reorder > .web-pane {
-  box-shadow: var(--shadow-card), 0 0 0 2px var(--accent);
+.web-pane-reorder {
+  box-shadow: var(--shadow-card), 0 0 0 2px var(--accent) !important;
 }
 
 /* Drop zones while a tab is dragged from the sidebar over the pages. */

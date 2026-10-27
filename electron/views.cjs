@@ -7,6 +7,7 @@
 // through its transparent slots (see stackUi in main.cjs).
 const { WebContentsView, app, dialog } = require("electron");
 const path = require("node:path");
+const { dominantColor } = require("./page-color.cjs");
 
 const PEEK_ID = "__peek__";
 const ID_PATTERN = /^[\w-]{1,64}$/;
@@ -38,6 +39,13 @@ function toBounds(value) {
   const rect = { x: Math.round(Number(x)), y: Math.round(Number(y)), width: Math.round(Number(width)), height: Math.round(Number(height)) };
   return rect.width > 0 && rect.height > 0 ? rect : null;
 }
+
+/** Rows of pixels read at the top of a page for its color. */
+const COLOR_STRIP_HEIGHT = 4;
+/** Wait after a page settles before reading its color (late styles, fades). */
+const COLOR_DELAY_MS = 350;
+/** How often the color of the shown pages is read again. */
+const COLOR_REFRESH_MS = 2000;
 
 /** Zoom steps, like Chrome's. */
 const ZOOM_FACTORS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5];
@@ -103,6 +111,10 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
   let activeTabId = null;
   /** @type {Map<string, ((contents: Electron.WebContents) => void)[]>} */
   const waiters = new Map();
+  /** Last color sent per tab, and the tabs shown on screen. */
+  const colors = new Map();
+  const shown = new Set();
+  const colorTimers = new Map();
 
   /**
    * Sends a message to the UI renderer if the window is alive.
@@ -110,6 +122,41 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
    * @param {unknown} payload Message payload.
    */
   const toUi = (channel, payload) => getUi()?.send(channel, payload);
+
+  /**
+   * Reads the color at the top of a shown page and tells the UI when it changed (split pane bars).
+   * @param {string} id Tab id.
+   */
+  const sampleColor = async (id) => {
+    const view = views.get(id);
+    if (!view || view.webContents.isDestroyed() || !shown.has(id)) return;
+    const { width } = view.getBounds();
+    if (width < 8) return;
+    try {
+      const image = await view.webContents.capturePage({ x: 0, y: 0, width: Math.min(width, 800), height: COLOR_STRIP_HEIGHT });
+      const color = image.isEmpty() ? null : dominantColor(image.toBitmap());
+      if (!color || colors.get(id) === color) return;
+      colors.set(id, color);
+      toUi("tab:event", { tabId: id, type: "color", color });
+    } catch {
+      // The page went away meanwhile.
+    }
+  };
+
+  /**
+   * Reads a page's color a moment from now (debounced).
+   * @param {string} id Tab id.
+   */
+  const scheduleColor = (id) => {
+    clearTimeout(colorTimers.get(id));
+    colorTimers.set(id, setTimeout(() => void sampleColor(id), COLOR_DELAY_MS));
+  };
+
+  // Pages change color without loading (banners closing, overlays, themes): shown pages are read again
+  // every few seconds; only changes reach the UI.
+  const colorRefresh = setInterval(() => {
+    for (const id of shown) void sampleColor(id);
+  }, COLOR_REFRESH_MS);
 
   /**
    * Creates a view for a tab (or Peek), forwards its page events to the UI and loads its URL.
@@ -135,6 +182,10 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
     contents.on("page-title-updated", (_e, title) => toUi("tab:event", { tabId: id, type: "title", title, url: contents.getURL() }));
     contents.on("page-favicon-updated", (_e, favicons) => toUi("tab:event", { tabId: id, type: "favicon", favicon: favicons[0] ?? null }));
     contents.on("focus", () => toUi("tab:event", { tabId: id, type: "focus" }));
+    if (id !== PEEK_ID) {
+      contents.on("did-stop-loading", () => scheduleColor(id));
+      contents.on("did-navigate-in-page", () => scheduleColor(id));
+    }
     win.contentView.addChildView(view);
     views.set(id, view);
     if (id !== PEEK_ID) {
@@ -156,6 +207,10 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
     if (!view) return;
     views.delete(id);
     bounds.delete(id);
+    shown.delete(id);
+    colors.delete(id);
+    clearTimeout(colorTimers.get(id));
+    colorTimers.delete(id);
     if (activeTabId === id) activeTabId = null;
     const win = getWindow();
     if (win && !win.isDestroyed()) win.contentView.removeChildView(view);
@@ -178,6 +233,10 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
       const rect = bounds.get(id) ?? null;
       if (rect) view.setBounds(rect);
       view.setVisible(Boolean(rect));
+      // A page coming on screen (or resized) gets its color read again.
+      if (rect && id !== PEEK_ID && (!shown.has(id) || !colors.has(id))) scheduleColor(id);
+      if (rect) shown.add(id);
+      else shown.delete(id);
     }
     bringPeekToFront();
   };
@@ -298,6 +357,7 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
 
     /** Closes every page; used when the window goes away. */
     destroyAll() {
+      clearInterval(colorRefresh);
       for (const id of [...views.keys()]) destroyView(id);
     },
   };

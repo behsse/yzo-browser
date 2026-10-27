@@ -47,6 +47,8 @@ export type TabEvent =
   | { tabId: string; type: "navigate" | "navigate-in-page"; url: string }
   | { tabId: string; type: "title"; title: string; url: string }
   | { tabId: string; type: "favicon"; favicon: string | null }
+  /** Background color at the top of the page, "#rrggbb" (split pane bars take it). */
+  | { tabId: string; type: "color"; color: string }
   | { tabId: string; type: "focus" }
   | { tabId: string; type: "attached"; webContentsId: number };
 
