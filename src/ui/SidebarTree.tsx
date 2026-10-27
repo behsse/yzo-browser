@@ -6,6 +6,7 @@ import { isFolder, isInToday, isSplit, isTab, rootContainerOf } from "../state/t
 import type { ID, SidebarItem, SplitData, TabData } from "../state/types";
 import { Favicon } from "./Favicon";
 import { Icon } from "./Icon";
+import { getSidebarDrag, setSidebarDrag } from "./dragState";
 import { useUi, type MenuEntry } from "./UiContext";
 
 export const DRAG_TYPE = "application/x-yzo-item";
@@ -14,9 +15,9 @@ type DropZone = "before" | "after" | "inside" | null;
 
 /**
  * Computes where a drop lands relative to a row: upper/lower half for leaves, and a middle band
- * that drops inside for folders.
+ * that drops inside for folders, or splits with a tab or a split view.
  * @param event Drag event over the row.
- * @param acceptsInside Whether the row is a folder.
+ * @param acceptsInside Whether the row takes drops in its middle.
  * @returns Drop zone.
  */
 function zoneFor(event: DragEvent<HTMLElement>, acceptsInside: boolean): DropZone {
@@ -28,7 +29,8 @@ function zoneFor(event: DragEvent<HTMLElement>, acceptsInside: boolean): DropZon
 
 /**
  * Shared drag & drop behavior of sidebar rows: drag the row's item, drop before/after it or inside
- * a folder. Invalid moves (cycles, splits into favorites…) are rejected by the reducer's canMove.
+ * a folder. A tab dropped in the middle of a tab or a split view joins it in a split, like Arc and
+ * Zen. Invalid moves (cycles, splits into favorites…) are rejected by the reducer.
  * @param item Row item.
  * @returns Props to spread on the row and the current drop indicator.
  */
@@ -36,6 +38,14 @@ function useRowDnd(item: SidebarItem) {
   const { state, dispatch } = useStore();
   const [zone, setZone] = useState<DropZone>(null);
   const folder = isFolder(item);
+  // Splitting takes a dragged tab and a target outside the favorites.
+  const splitsWith = (dragged: ID | null) =>
+    (isTab(item) || isSplit(item)) &&
+    dragged !== null &&
+    dragged !== item.id &&
+    isTab(state.items[dragged]) &&
+    rootContainerOf(state, item.id)?.data.role !== "favorites" &&
+    rootContainerOf(state, dragged)?.data.role !== "favorites";
 
   const target = (z: DropZone, dragged: ID): { parentId: ID; index?: number } | null => {
     if (z === "inside") return canMove(state, dragged, item.id) ? { parentId: item.id } : null;
@@ -52,20 +62,32 @@ function useRowDnd(item: SidebarItem) {
         event.stopPropagation();
         event.dataTransfer.setData(DRAG_TYPE, item.id);
         event.dataTransfer.effectAllowed = "move";
+        // Tabs can also be dropped onto the pages to split them.
+        if (isTab(item)) setSidebarDrag(item.id);
       },
+      onDragEnd: () => setSidebarDrag(null),
       onDragOver: (event: DragEvent<HTMLElement>) => {
         if (!event.dataTransfer.types.includes(DRAG_TYPE)) return;
         event.preventDefault();
         event.stopPropagation();
-        setZone(zoneFor(event, folder));
+        setZone(zoneFor(event, folder || splitsWith(getSidebarDrag())));
       },
       onDragLeave: () => setZone(null),
       onDrop: (event: DragEvent<HTMLElement>) => {
         event.preventDefault();
         event.stopPropagation();
         const dragged = event.dataTransfer.getData(DRAG_TYPE);
-        const destination = dragged && dragged !== item.id ? target(zoneFor(event, folder), dragged) : null;
+        const dropZone = zoneFor(event, folder || splitsWith(dragged));
         setZone(null);
+        setSidebarDrag(null);
+        if (dropZone === "inside" && !folder) {
+          if (splitsWith(dragged)) {
+            const tabId = isSplit(item) ? item.childrenIds[item.childrenIds.length - 1] : item.id;
+            dispatch({ type: "splitWithTab", tabId, otherTabId: dragged, now: Date.now() });
+          }
+          return;
+        }
+        const destination = dragged && dragged !== item.id ? target(dropZone, dragged) : null;
         if (destination) dispatch({ type: "moveItem", id: dragged, ...destination });
         if (destination && folder && isFolder(item) && item.data.collapsed) dispatch({ type: "toggleFolder", id: item.id });
       },

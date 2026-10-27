@@ -1022,6 +1022,90 @@ kbd {
   box-shadow: var(--shadow-card), 0 0 0 2px var(--accent);
 }
 
+/* Each pane sits in a frame; in a split the frame also holds the pane's control bar above it. */
+.web-pane-frame {
+  position: absolute;
+}
+
+.web-pane-frame > .web-pane {
+  inset: 0;
+}
+
+.web-pane-frame > .web-pane-split {
+  top: 26px;
+}
+
+.pane-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  height: 26px;
+}
+
+.pane-bar-pill {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 22px;
+  padding: 0 4px;
+  border-radius: 11px;
+  background: var(--pill-bg);
+  color: var(--fg);
+  opacity: 0.7;
+  transition: opacity 0.12s;
+}
+
+.web-pane-frame:hover .pane-bar-pill,
+.pane-bar-pill:hover {
+  opacity: 1;
+}
+
+.pane-bar-pill button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 20px;
+  border-radius: 7px;
+  color: inherit;
+}
+
+.pane-bar-pill button:hover {
+  background: var(--row-hover);
+}
+
+.pane-grip {
+  cursor: grab;
+}
+
+/* Pane a dragged pane would take the place of. */
+.web-pane-reorder > .web-pane {
+  box-shadow: var(--shadow-card), 0 0 0 2px var(--accent);
+}
+
+/* Drop zones while a tab is dragged from the sidebar over the pages. */
+.split-drop-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+}
+
+.split-drop-target {
+  position: absolute;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  pointer-events: none;
+  transition:
+    left 0.1s,
+    top 0.1s,
+    width 0.1s,
+    height 0.1s;
+}
+
 /* Yzo's own pages (yzo://…), drawn by the UI where a page view would be. */
 .internal-pane {
   background: var(--surface);

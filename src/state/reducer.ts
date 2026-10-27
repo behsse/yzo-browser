@@ -80,7 +80,16 @@ export type Action =
   | { type: "switchSpace"; id: ID }
   | { type: "switchSpaceIndex"; index: number }
   | { type: "addSplit"; tabId: ID; url: string; now: number }
-  | { type: "splitWithTab"; tabId: ID; otherTabId: ID; now: number }
+  /**
+   * Puts another tab in a split with this one (drag and drop in the sidebar or onto a page). `index`
+   * is the other tab's place among the panes (end by default); `orientation` applies when the split
+   * is created.
+   */
+  | { type: "splitWithTab"; tabId: ID; otherTabId: ID; now: number; index?: number; orientation?: SplitOrientation }
+  /** Moves a pane of a split to another place (dragging its handle). */
+  | { type: "moveSplitPane"; id: ID; index: number }
+  /** Takes one pane out of its split, as a tab right after it, and shows it alone. */
+  | { type: "detachSplitPane"; id: ID; now: number }
   | { type: "setSplitOrientation"; id: ID; orientation: SplitOrientation }
   | { type: "setSplitFactors"; id: ID; factors: number[] }
   | { type: "unsplit"; id: ID }
@@ -620,6 +629,11 @@ export function reducer(state: AppState, action: Action): AppState {
       } else {
         const other = draft.items[action.otherTabId];
         if (!isTab(other) || action.otherTabId === action.tabId) return state;
+        // Favorites stay favorites; a pane of the same split is reordered instead.
+        if (rootContainerOf(draft, action.otherTabId)?.data.role === "favorites") return state;
+        if (other.parentId && other.parentId === tab.parentId && isSplit(draft.items[other.parentId])) {
+          return reducer(state, { type: "moveSplitPane", id: action.otherTabId, index: action.index ?? draft.items[other.parentId].childrenIds.length });
+        }
         const oldParent = other.parentId;
         detach(draft, action.otherTabId);
         if (oldParent && isSplit(draft.items[oldParent])) collapseSplitIfNeeded(draft, oldParent);
@@ -631,7 +645,7 @@ export function reducer(state: AppState, action: Action): AppState {
         const parentId = tab.parentId!;
         const index = draft.items[parentId].childrenIds.indexOf(action.tabId);
         const created = makeItem(
-          { kind: "split", orientation: "horizontal", widthFactors: [], focusedChildId: null, lastActiveAt: action.now },
+          { kind: "split", orientation: action.type === "splitWithTab" ? (action.orientation ?? "horizontal") : "horizontal", widthFactors: [], focusedChildId: null, lastActiveAt: action.now },
           action.now,
         );
         draft.items[created.id] = created;
@@ -644,9 +658,42 @@ export function reducer(state: AppState, action: Action): AppState {
         if (action.type === "addSplit") deleteSubtree(draft, otherId);
         return action.type === "addSplit" ? draft : state;
       }
-      attach(draft, otherId, split.id);
+      const at = action.type === "splitWithTab" && action.index !== undefined ? Math.max(0, Math.min(action.index, split.childrenIds.length)) : undefined;
+      attach(draft, otherId, split.id, at);
       split.data.widthFactors = normalizeFactors([], split.childrenIds.length);
       activateItem(draft, otherId, action.now);
+      return draft;
+    }
+
+    case "moveSplitPane": {
+      const pane = draft.items[action.id];
+      const split = pane?.parentId ? draft.items[pane.parentId] : undefined;
+      if (!isSplit(split)) return state;
+      const from = split.childrenIds.indexOf(action.id);
+      const to = Math.max(0, Math.min(action.index, split.childrenIds.length - 1));
+      if (from === to) return state;
+      // The pane keeps its own width: factors move with it.
+      const factors = normalizeFactors(split.data.widthFactors, split.childrenIds.length);
+      const [factor] = factors.splice(from, 1);
+      factors.splice(to, 0, factor);
+      split.childrenIds.splice(from, 1);
+      split.childrenIds.splice(to, 0, action.id);
+      split.data.widthFactors = factors;
+      return draft;
+    }
+
+    case "detachSplitPane": {
+      const pane = draft.items[action.id];
+      const splitId = pane?.parentId;
+      const split = splitId ? draft.items[splitId] : undefined;
+      if (!isTab(pane) || !isSplit(split) || !split.parentId) return state;
+      const parentId = split.parentId;
+      detach(draft, action.id);
+      attach(draft, action.id, parentId, draft.items[parentId].childrenIds.indexOf(splitId!) + 1);
+      collapseSplitIfNeeded(draft, splitId!);
+      const rest = draft.items[splitId!];
+      if (isSplit(rest)) rest.data.widthFactors = normalizeFactors([], rest.childrenIds.length);
+      activateItem(draft, action.id, action.now);
       return draft;
     }
 

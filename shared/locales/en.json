@@ -336,5 +336,10 @@
   "mainMenu.savePage": "Save page as…",
   "mainMenu.zoom": "Zoom",
   "mainMenu.help": "Help and feedback",
-  "mainMenu.quit": "Quit"
+  "mainMenu.quit": "Quit",
+
+  "split.move": "Move this pane",
+  "split.detach": "Open on its own",
+  "split.stop": "Stop split view",
+  "split.closePane": "Close this pane"
 }

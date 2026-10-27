@@ -3,6 +3,7 @@ import { isArchivable, THRESHOLD_MS } from "./autoArchive";
 import { dedupKey, matchScore } from "./commandBar";
 import { DOWNLOADS_URL, EXTENSIONS_URL, extensionDetailsUrl, isInternalUrl, parseInternalUrl, settingsUrl, siteSettingsUrl } from "./internalPages";
 import { downloadProgress, groupByDay } from "./downloads";
+import { dropPlacement, dropPreview, dropSide } from "./splitDrop";
 import { cursorOnTopEdge, floatingSidebarDecision, floatingTopBarDecision } from "./floatingSidebar";
 import { matchShortcut, shortcutLabel } from "./shortcuts";
 import { hexToRgb, relativeLuminance, resolveAppearance, rgbToHex } from "./theme";
@@ -98,6 +99,29 @@ describe("downloads", () => {
     const groups = groupByDay([at("2026-10-27T15:00:00", "a"), at("2026-10-27T09:00:00", "b"), at("2026-10-25T12:00:00", "c")], "en-US");
     expect(groups.map((g) => g.entries.map((e) => e.id))).toEqual([["a", "b"], ["c"]]);
     expect(groups[0].day).toBe("October 27, 2026");
+  });
+});
+
+describe("split drop", () => {
+  const rect = { left: 0, top: 0, width: 400, height: 200 };
+
+  it("picks the nearest side of a single page, and only sides along a split", () => {
+    expect(dropSide(20, 100, rect)).toBe("left");
+    expect(dropSide(390, 100, rect)).toBe("right");
+    expect(dropSide(200, 10, rect)).toBe("top");
+    expect(dropSide(200, 190, rect)).toBe("bottom");
+    expect(dropSide(200, 10, rect, "horizontal")).toBe("right");
+    expect(dropSide(20, 150, rect, "vertical")).toBe("bottom");
+  });
+
+  it("places the dropped tab before or after the pane, with the side's orientation", () => {
+    expect(dropPlacement("left", 1)).toEqual({ index: 1, orientation: "horizontal" });
+    expect(dropPlacement("bottom", 1)).toEqual({ index: 2, orientation: "vertical" });
+  });
+
+  it("previews the half of the page on the drop side", () => {
+    expect(dropPreview("right", rect)).toEqual({ left: 200, top: 0, width: 200, height: 200 });
+    expect(dropPreview("top", rect)).toEqual({ left: 0, top: 0, width: 400, height: 100 });
   });
 });
 

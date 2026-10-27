@@ -176,6 +176,49 @@ describe("split view", () => {
     expect(isSplit(split) && split.data.widthFactors).toEqual([0.75, 0.25]);
   });
 
+  it("splits a tab dropped on another one, at the drop side and orientation", () => {
+    let [s, a] = openTab(createInitialState(T0), "https://a.com");
+    let b: ID;
+    [s, b] = openTab(s, "https://b.com");
+    s = reducer(s, { type: "splitWithTab", tabId: a, otherTabId: b, index: 0, orientation: "vertical", now: T0 });
+    const split = s.items[space(s).todayId].childrenIds.map((id) => s.items[id]).find(isSplit);
+    expect(split?.childrenIds).toEqual([b, a]);
+    expect(split?.data.orientation).toBe("vertical");
+  });
+
+  it("keeps favorites out of splits", () => {
+    const [s, a] = openTab(createInitialState(T0), "https://a.com");
+    const favorite = s.items[s.favoritesId].childrenIds[0];
+    expect(reducer(s, { type: "splitWithTab", tabId: a, otherTabId: favorite, now: T0 })).toBe(s);
+  });
+
+  it("reorders panes with their widths, also when a pane is dropped on its own split", () => {
+    let [s, a] = openTab(createInitialState(T0), "https://a.com");
+    s = reducer(s, { type: "addSplit", tabId: a, url: "https://b.com", now: T0 });
+    s = reducer(s, { type: "addSplit", tabId: a, url: "https://c.com", now: T0 });
+    const splitId = s.items[space(s).todayId].childrenIds[0];
+    const [, b, c] = s.items[splitId].childrenIds;
+    s = reducer(s, { type: "setSplitFactors", id: splitId, factors: [2, 1, 1] });
+    s = reducer(s, { type: "moveSplitPane", id: a, index: 2 });
+    let split = s.items[splitId];
+    expect(split.childrenIds).toEqual([b, c, a]);
+    expect(isSplit(split) && split.data.widthFactors).toEqual([0.25, 0.25, 0.5]);
+    s = reducer(s, { type: "splitWithTab", tabId: b, otherTabId: a, index: 0, now: T0 });
+    split = s.items[splitId];
+    expect(split.childrenIds).toEqual([a, b, c]);
+  });
+
+  it("detaches a pane next to its split and collapses a split left with one pane", () => {
+    let [s, a] = openTab(createInitialState(T0), "https://a.com");
+    s = reducer(s, { type: "addSplit", tabId: a, url: "https://b.com", now: T0 });
+    const splitId = s.items[space(s).todayId].childrenIds[0];
+    const b = s.items[splitId].childrenIds[1];
+    s = reducer(s, { type: "detachSplitPane", id: b, now: T0 });
+    expect(s.items[splitId]).toBeUndefined();
+    expect(s.items[space(s).todayId].childrenIds).toEqual([a, b]);
+    expect(s.window.selection[space(s).id].itemId).toBe(b);
+  });
+
   it("unsplits in place", () => {
     let [s, a] = openTab(createInitialState(T0), "https://a.com");
     s = reducer(s, { type: "addSplit", tabId: a, url: "https://b.com", now: T0 });

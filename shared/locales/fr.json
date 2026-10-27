@@ -336,5 +336,10 @@
   "mainMenu.savePage": "Enregistrer sous…",
   "mainMenu.zoom": "Zoom",
   "mainMenu.help": "Aide et signalements",
-  "mainMenu.quit": "Quitter"
+  "mainMenu.quit": "Quitter",
+
+  "split.move": "Déplacer ce panneau",
+  "split.detach": "Ouvrir seul",
+  "split.stop": "Arrêter la vue scindée",
+  "split.closePane": "Fermer ce panneau"
 }

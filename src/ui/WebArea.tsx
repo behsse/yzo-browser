@@ -1,11 +1,14 @@
-import { useRef, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { t } from "../lib/i18n";
 import { isInternalUrl } from "../lib/internalPages";
+import { dropPlacement, dropPreview, dropSide, type DropSide, type Rect } from "../lib/splitDrop";
 import { shortcutLabel } from "../lib/shortcuts";
 import { useStore } from "../state/store";
 import { isSplit, isTab } from "../state/tree";
 import type { ID } from "../state/types";
 import { InternalPage } from "./InternalPage";
+import { useSidebarDrag, setSidebarDrag } from "./dragState";
+import { Icon } from "./Icon";
 import { useViewHost } from "./ViewHost";
 
 interface PaneLayout {
@@ -42,7 +45,9 @@ function layoutPanes(ids: ID[], factors: number[], vertical: boolean, focusedId:
 
 /**
  * Content area: lays out one slot per visible tab (the native page view is placed over it by the
- * main process) and provides the draggable split dividers.
+ * main process) and provides the draggable split dividers. In a split, each pane has a small bar to
+ * move it, open it on its own, stop the split or close it. A tab dragged from the sidebar splits the
+ * page it is dropped on, on the side it is dropped (like Zen).
  * @returns Content element.
  */
 export function WebArea() {
@@ -90,20 +95,135 @@ export function WebArea() {
     window.addEventListener("pointerup", up);
   };
 
+  const split = isSplit(content) ? content : null;
+  const draggedTab = useSidebarDrag();
+  const tabDragged = draggedTab !== null && isTab(state.items[draggedTab]);
+  const [dropTarget, setDropTarget] = useState<{ paneId: ID | null; side: DropSide | null; rect: Rect } | null>(null);
+  const [reorder, setReorder] = useState<{ id: ID; to: number } | null>(null);
+  const frames = useRef(new Map<ID, HTMLElement>());
+
+  // A tab dragged from the sidebar: the UI goes above the pages so they can show where it would land.
+  useEffect(() => {
+    if (!tabDragged) return setDropTarget(null);
+    host.setDragging(true);
+    return () => host.setDragging(false);
+  }, [tabDragged]);
+
+  /**
+   * Rectangle of a pane, relative to the page area.
+   * @param id Pane tab id.
+   * @returns Rectangle, or null when the pane is not on screen.
+   */
+  const paneRect = (id: ID): Rect | null => {
+    const frame = frames.current.get(id)?.getBoundingClientRect();
+    const area = areaRef.current?.getBoundingClientRect();
+    return frame && area ? { left: frame.left - area.left, top: frame.top - area.top, width: frame.width, height: frame.height } : null;
+  };
+
+  /**
+   * Pane under the pointer, if any.
+   * @param x Pointer x in the window.
+   * @param y Pointer y in the window.
+   * @returns Pane id and its index, or null.
+   */
+  const paneAt = (x: number, y: number): { id: ID; index: number } | null => {
+    for (const [index, id] of visible.entries()) {
+      const r = frames.current.get(id)?.getBoundingClientRect();
+      if (r && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return { id, index };
+    }
+    return null;
+  };
+
+  const onDropOver = (event: ReactDragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const area = areaRef.current?.getBoundingClientRect();
+    if (!area || !draggedTab) return;
+    // Nothing shown: the tab simply opens.
+    if (!visible.length) return setDropTarget({ paneId: null, side: null, rect: { left: 0, top: 0, width: area.width, height: area.height } });
+    const pane = paneAt(event.clientX, event.clientY);
+    const rect = pane && paneRect(pane.id);
+    // Dropping the page shown alone onto itself does nothing.
+    if (!pane || !rect || (!split && pane.id === draggedTab)) return setDropTarget(null);
+    const side = dropSide(event.clientX - area.left, event.clientY - area.top, rect, split?.data.orientation);
+    setDropTarget({ paneId: pane.id, side, rect: dropPreview(side, rect) });
+  };
+
+  const onDrop = (event: ReactDragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const target = dropTarget;
+    const dragged = draggedTab;
+    setDropTarget(null);
+    setSidebarDrag(null);
+    if (!target || !dragged) return;
+    if (!target.paneId || !target.side) return dispatch({ type: "activate", id: dragged, now: Date.now() });
+    const { index, orientation } = dropPlacement(target.side, visible.indexOf(target.paneId));
+    dispatch({ type: "splitWithTab", tabId: target.paneId, otherTabId: dragged, index, orientation, now: Date.now() });
+  };
+
+  // The handle of a pane's bar moves it among the panes; the UI is raised so the pointer is seen over pages.
+  const startReorder = (id: ID) => (event: ReactPointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    host.setDragging(true);
+    let to = visible.indexOf(id);
+    setReorder({ id, to });
+    const move = (e: PointerEvent) => {
+      if (e.buttons === 0) return up();
+      const pane = paneAt(e.clientX, e.clientY);
+      if (pane && pane.index !== to) {
+        to = pane.index;
+        setReorder({ id, to });
+      }
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      host.setDragging(false);
+      setReorder(null);
+      dispatch({ type: "moveSplitPane", id, index: to });
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+
   return (
     <main className="web-area" ref={areaRef}>
-      {visible.map((id) => {
+      {visible.map((id, index) => {
         const pane = layout.get(id)!;
         const item = state.items[id];
-        const className = "web-pane" + (pane.focused ? " web-pane-focused" : "");
-        if (isTab(item) && isInternalUrl(item.data.url)) {
-          return (
-            <div key={id} className={className + " internal-pane"} style={pane.style} onMouseDown={() => dispatch({ type: "activate", id, now: Date.now() })}>
-              <InternalPage url={item.data.url} navigate={(next) => dispatch({ type: "updateTab", id, url: next, now: Date.now() })} />
-            </div>
-          );
-        }
-        return <div key={id} ref={host.slotRef(id)} className={className} style={pane.style} />;
+        const className = "web-pane" + (pane.focused ? " web-pane-focused" : "") + (split ? " web-pane-split" : "");
+        const frameRef = (element: HTMLElement | null) => {
+          if (element) frames.current.set(id, element);
+          else frames.current.delete(id);
+        };
+        return (
+          <div key={id} ref={frameRef} className={"web-pane-frame" + (reorder && reorder.to === index && reorder.id !== id ? " web-pane-reorder" : "")} style={pane.style}>
+            {split && (
+              <div className="pane-bar">
+                <div className="pane-bar-pill">
+                  <button title={t("split.move")} className="pane-grip" onPointerDown={startReorder(id)}>
+                    <Icon name="grip" size={15} />
+                  </button>
+                  <button title={t("split.detach")} onClick={() => dispatch({ type: "detachSplitPane", id, now: Date.now() })}>
+                    <Icon name="fullscreen" size={14} />
+                  </button>
+                  <button title={t("split.stop")} onClick={() => dispatch({ type: "unsplit", id: split.id })}>
+                    <Icon name={split.data.orientation === "vertical" ? "splitVertical" : "split"} size={14} />
+                  </button>
+                  <button title={t("split.closePane")} onClick={() => dispatch({ type: "closeItem", id, now: Date.now() })}>
+                    <Icon name="closeCircle" size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
+            {isTab(item) && isInternalUrl(item.data.url) ? (
+              <div className={className + " internal-pane"} onMouseDown={() => dispatch({ type: "activate", id, now: Date.now() })}>
+                <InternalPage url={item.data.url} navigate={(next) => dispatch({ type: "updateTab", id, url: next, now: Date.now() })} />
+              </div>
+            ) : (
+              <div ref={host.slotRef(id)} className={className} />
+            )}
+          </div>
+        );
       })}
 
       {visible.slice(0, -1).map((_, i) => {
@@ -117,6 +237,17 @@ export function WebArea() {
           />
         );
       })}
+
+      {tabDragged && (
+        <div className="split-drop-layer" onDragOver={onDropOver} onDragLeave={() => setDropTarget(null)} onDrop={onDrop}>
+          {dropTarget && (
+            <div
+              className="split-drop-target"
+              style={{ left: dropTarget.rect.left, top: dropTarget.rect.top, width: dropTarget.rect.width, height: dropTarget.rect.height }}
+            />
+          )}
+        </div>
+      )}
 
       {!visible.length && (
         <div className="empty-state">
