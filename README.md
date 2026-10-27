@@ -89,6 +89,8 @@ Development mode (Vite + Electron, hot reload of the UI):
 pnpm dev
 ```
 
+Development runs use their own profile (`%APPDATA%\Yzo Dev` on Windows, `Yzo Dev` next to the installed Yzo's on macOS and Linux), so they never share tabs, extensions, settings or the account with an installed Yzo. Pass `--user-data-dir` to use another folder.
+
 Production build:
 
 ```bash

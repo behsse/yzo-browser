@@ -4,6 +4,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ## [Unreleased]
 
+### Changed
+
+- Development runs (`pnpm dev`, `pnpm start`) use their own profile, `Yzo Dev`, instead of the installed Yzo's: tabs, extensions, settings and the account are no longer shared between them.
+
 ## [0.9.0] - 2026-10-27
 
 ### Added

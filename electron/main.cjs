@@ -18,6 +18,13 @@ const { createSiteInfo } = require("./site-info.cjs");
 const { setupDownloads } = require("./downloads.cjs");
 const { t } = require("./i18n.cjs");
 
+// Development runs keep their own profile (%APPDATA%\Yzo Dev), apart from the installed Yzo's
+// (%APPDATA%\Yzo): both would otherwise share tabs, extensions, settings and the account. An explicit
+// --user-data-dir (private instances, tests) wins. Must run before anything reads the profile path.
+if (!app.isPackaged && !process.argv.some((arg) => arg.startsWith("--user-data-dir"))) {
+  app.setPath("userData", path.join(app.getPath("appData"), "Yzo Dev"));
+}
+
 /** Private instance (electron/private-mode.cjs): nothing it browses or changes is kept. */
 const PRIVATE = isPrivateInstance();
 /**
