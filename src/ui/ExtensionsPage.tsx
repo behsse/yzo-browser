@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { InstalledExtension } from "../env";
 import { t } from "../lib/i18n";
 import { EXTENSIONS_URL, extensionDetailsUrl } from "../lib/internalPages";
+import { IS_PRIVATE } from "../lib/privateMode";
 import { useStore } from "../state/store";
 import { Icon } from "./Icon";
 import { useUi } from "./UiContext";
@@ -89,10 +90,17 @@ export function ExtensionsPage({ detailsId, navigate }: { detailsId?: string; na
 
   const details = detailsId ? list?.find((ext) => ext.id === detailsId) : undefined;
 
+  const allowPrivate = async (extension: InstalledExtension, allowed: boolean) => {
+    await window.yzo?.setExtensionPrivateAllowed(extension.id, allowed);
+    reload();
+  };
+
+  // A private window shows the extensions but their choices are made from a normal one.
   const toggle = (extension: InstalledExtension) => (
     <input
       type="checkbox"
       className="switch"
+      disabled={IS_PRIVATE}
       checked={extension.enabled}
       title={t("extensionsPage.toggle", { name: extension.name })}
       aria-label={t("extensionsPage.toggle", { name: extension.name })}
@@ -159,6 +167,11 @@ export function ExtensionsPage({ detailsId, navigate }: { detailsId?: string; na
                     <span className="ext-row-value">{t("extensionsPage.noPermissions")}</span>
                   )}
                 </div>
+                {/* Not built yet: kept here so the row is not forgotten. */}
+                <div className="ext-row ext-row-soon" title={t("extensionsPage.soon")}>
+                  <span>{t("extensionsPage.siteSettings")}</span>
+                  <span className="ext-soon">{t("extensionsPage.soon")}</span>
+                </div>
                 {details.enabled && (
                   <label className="ext-row">
                     <span>{t("extensionsPage.pin")}</span>
@@ -170,6 +183,19 @@ export function ExtensionsPage({ detailsId, navigate }: { detailsId?: string; na
                     />
                   </label>
                 )}
+                <label className="ext-row">
+                  <span className="ext-row-stack-inline">
+                    <span>{t("extensionsPage.allowPrivate")}</span>
+                    <span className="ext-row-value">{t("extensionsPage.allowPrivateWarning")}</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    className="switch"
+                    disabled={IS_PRIVATE}
+                    checked={details.privateAllowed}
+                    onChange={(event) => void allowPrivate(details, event.target.checked)}
+                  />
+                </label>
                 {details.optionsUrl && (
                   <button className="ext-row ext-row-link" onClick={() => openTab(details.optionsUrl!)}>
                     <span>{t("extensionsPage.options")}</span>
@@ -186,7 +212,7 @@ export function ExtensionsPage({ detailsId, navigate }: { detailsId?: string; na
                   <span>{t("extensionsPage.source")}</span>
                   <span className="ext-row-value">{details.storeUrl ? t("extensionsPage.sourceStore") : t("extensionsPage.sourceUnpacked")}</span>
                 </div>
-                <button className="ext-row ext-row-link" onClick={() => void remove(details)}>
+                <button className="ext-row ext-row-link" disabled={IS_PRIVATE} onClick={() => void remove(details)}>
                   <span>{t("extensionsPage.removeExtension")}</span>
                   <Icon name="chevron" />
                 </button>
@@ -200,6 +226,7 @@ export function ExtensionsPage({ detailsId, navigate }: { detailsId?: string; na
               <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("extensionsPage.search")} />
             </label>
             <h2 className="ext-heading">{t("extensionsPage.all")}</h2>
+            {IS_PRIVATE && <p className="ext-empty">{t("extensionsPage.privateReadOnly")}</p>}
             {list && !list.length && <p className="ext-empty">{t("extensionsPage.empty")}</p>}
             {list && list.length > 0 && !shown.length && <p className="ext-empty">{t("extensionsPage.noMatch", { query: query.trim() })}</p>}
             <div className="ext-grid">
@@ -216,7 +243,7 @@ export function ExtensionsPage({ detailsId, navigate }: { detailsId?: string; na
                     <button className="ext-pill" onClick={() => navigate(extensionDetailsUrl(extension.id))}>
                       {t("extensionsPage.details")}
                     </button>
-                    <button className="ext-pill" onClick={() => void remove(extension)}>
+                    <button className="ext-pill" disabled={IS_PRIVATE} onClick={() => void remove(extension)}>
                       {t("extensionsPage.remove")}
                     </button>
                     <span className="ext-spacer" />

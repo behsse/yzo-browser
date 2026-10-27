@@ -13,13 +13,19 @@ const { resolveFavicon } = require("./favicon.cjs");
 const { startNativeWindowDrag } = require("./window-drag.cjs");
 const { isPrivateInstance, launchPrivateInstance, claimPrivateProfile, mainProfilePath } = require("./private-mode.cjs");
 const { setupShield } = require("./shield.cjs");
+const { hasPrivateExtensions } = require("./extension-store.cjs");
 const { createSiteInfo } = require("./site-info.cjs");
 const { t } = require("./i18n.cjs");
 
 /** Private instance (electron/private-mode.cjs): nothing it browses or changes is kept. */
 const PRIVATE = isPrivateInstance();
-// Without the "persist:" prefix the session lives in memory only.
-const PARTITION = PRIVATE ? "yzo-private" : "persist:yzo";
+/**
+ * Private windows that run extensions (allowed by the user) need an on-disk session: Electron cannot
+ * load extensions in an in-memory one. It lives in the throwaway profile and is wiped when the
+ * window closes (below); the others stay in memory only (no "persist:" prefix).
+ */
+const PRIVATE_EXTENSIONS = PRIVATE && hasPrivateExtensions(mainProfilePath());
+const PARTITION = PRIVATE ? (PRIVATE_EXTENSIONS ? "persist:yzo-private" : "yzo-private") : "persist:yzo";
 const STATE_FILE = () => path.join(app.getPath("userData"), "yzo-state.json");
 const MAX_STATE_BYTES = 10 * 1024 * 1024;
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
@@ -352,9 +358,10 @@ function createWindow() {
   // Tabs are native views managed here; the UI is not allowed to embed <webview> guests.
   ui.webContents.on("will-attach-webview", (event) => event.preventDefault());
 
-  // The UI reads "?private" to show the private look and leave out account and import.
-  const query = PRIVATE ? { private: "1" } : {};
-  if (DEV_URL) ui.webContents.loadURL(`${DEV_URL}${PRIVATE ? "?private=1" : ""}`);
+  // The UI reads "?private" to show the private look and leave out account and import, and "partition"
+  // to reach the extensions of the tabs' session.
+  const query = PRIVATE ? { private: "1", partition: PARTITION } : {};
+  if (DEV_URL) ui.webContents.loadURL(`${DEV_URL}${PRIVATE ? `?${new URLSearchParams(query)}` : ""}`);
   else ui.webContents.loadFile(path.join(__dirname, "..", "dist", "index.html"), { query });
 }
 
@@ -448,6 +455,11 @@ ipcMain.handle("extensions:list", (event) => (isTrustedSender(event) ? (extensio
 ipcMain.handle("extensions:setEnabled", (event, id, enabled) => {
   if (!isTrustedSender(event) || typeof id !== "string" || !/^[a-p]{32}$/.test(id) || typeof enabled !== "boolean") return false;
   return extensionController?.setEnabled(id, enabled) ?? false;
+});
+
+ipcMain.handle("extensions:setPrivateAllowed", (event, id, allowed) => {
+  if (!isTrustedSender(event) || typeof id !== "string" || !/^[a-p]{32}$/.test(id) || typeof allowed !== "boolean") return false;
+  return extensionController?.setPrivateAllowed(id, allowed) ?? false;
 });
 
 ipcMain.handle("extensions:uninstall", (event, id) => {
@@ -580,15 +592,34 @@ app.whenReady().then(async () => {
   // A private instance uses the normal profile's engine and site choices, but writes neither.
   shield = setupShield({ session: tabsSession, dataPath: PRIVATE ? mainProfilePath() : app.getPath("userData"), readOnly: PRIVATE });
   if (PRIVATE) {
-    // No account, sync, extensions or updates: they would keep data or run outside the private session.
+    // No account, sync or updates. Only the extensions the user allowed in private windows run, in the
+    // in-memory session.
     claimPrivateProfile();
+    try {
+      extensionController = await setupExtensions({
+        session: tabsSession,
+        getWindow: () => mainWindow,
+        getUi: uiContents,
+        getViews: () => viewManager,
+        profile: mainProfilePath(),
+        privateMode: true,
+      });
+    } catch (error) {
+      console.error("Chrome extensions unavailable:", error);
+    }
     createWindow();
     return;
   }
   account = createAccount({ userDataPath: app.getPath("userData"), defaultServerUrl: DEFAULT_SYNC_URL });
   // Extensions load before the first tab exists so every tab is registered with them.
   try {
-    extensionController = await setupExtensions({ session: tabsSession, getWindow: () => mainWindow, getUi: uiContents, getViews: () => viewManager });
+    extensionController = await setupExtensions({
+      session: tabsSession,
+      getWindow: () => mainWindow,
+      getUi: uiContents,
+      getViews: () => viewManager,
+      profile: app.getPath("userData"),
+    });
   } catch (error) {
     console.error("Chrome extensions unavailable:", error);
   }
@@ -597,3 +628,15 @@ app.whenReady().then(async () => {
 });
 
 app.on("window-all-closed", () => app.quit());
+
+// A private window with extensions browsed in an on-disk session: wipe it before quitting.
+let privateSessionWiped = false;
+app.on("before-quit", (event) => {
+  if (!PRIVATE_EXTENSIONS || privateSessionWiped) return;
+  event.preventDefault();
+  const tabs = session.fromPartition(PARTITION);
+  Promise.allSettled([tabs.clearStorageData(), tabs.clearCache()]).finally(() => {
+    privateSessionWiped = true;
+    app.quit();
+  });
+});

@@ -1,22 +1,25 @@
 // Installed extensions on disk (userData/Extensions/<id>/<version>/, written by electron-chrome-web-store)
-// and which ones the user turned off. Yzo loads them itself instead of letting the library load them
-// all, so a turned-off extension never runs.
+// and the user's choices for them (turned off, allowed in private windows). Yzo loads them itself
+// instead of letting the library load them all, so a turned-off extension never runs. Every function
+// takes the normal profile's folder: private instances read the same installs.
 
 const { app } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs/promises");
+const { readFileSync } = require("node:fs");
 
-const DISABLED_FILE = "extensions-disabled.json";
+const SETTINGS_FILE = "extension-settings.json";
 /** Largest icon read for the extensions page. */
 const ICON_MAX_SIZE = 128;
 const ID_PATTERN = /^[a-p]{32}$/;
 
 /**
  * Folder holding the Chrome Web Store installs.
+ * @param {string} profile Normal profile folder.
  * @returns {string} Absolute path.
  */
-function extensionsPath() {
-  return path.join(app.getPath("userData"), "Extensions");
+function extensionsPath(profile) {
+  return path.join(profile, "Extensions");
 }
 
 /**
@@ -37,19 +40,20 @@ function compareVersions(a, b) {
 
 /**
  * Finds the newest installed version of each extension.
+ * @param {string} profile Normal profile folder.
  * @returns {Promise<Map<string, { path: string, manifest: chrome.runtime.Manifest }>>} By extension id.
  */
-async function discoverInstalled() {
+async function discoverInstalled(profile) {
   const found = new Map();
   let ids = [];
   try {
-    ids = await fs.readdir(extensionsPath(), { withFileTypes: true });
+    ids = await fs.readdir(extensionsPath(profile), { withFileTypes: true });
   } catch {
     return found;
   }
   for (const idEntry of ids) {
     if (!idEntry.isDirectory() || !ID_PATTERN.test(idEntry.name)) continue;
-    const idDir = path.join(extensionsPath(), idEntry.name);
+    const idDir = path.join(extensionsPath(profile), idEntry.name);
     const versions = await fs.readdir(idDir, { withFileTypes: true }).catch(() => []);
     for (const versionEntry of versions) {
       if (!versionEntry.isDirectory()) continue;
@@ -129,25 +133,47 @@ async function folderSize(dir) {
 }
 
 /**
- * Reads the ids of the extensions the user turned off.
- * @returns {Promise<Set<string>>} Extension ids.
+ * Reads the user's choices for the installed extensions.
+ * @param {string} profile Normal profile folder.
+ * @returns {Promise<{ disabled: Set<string>, privateAllowed: Set<string> }>} Extension ids turned off,
+ *   and allowed in private windows.
  */
-async function readDisabled() {
+async function readSettings(profile) {
+  let parsed = null;
   try {
-    const parsed = JSON.parse(await fs.readFile(path.join(app.getPath("userData"), DISABLED_FILE), "utf8"));
-    return new Set((Array.isArray(parsed?.disabled) ? parsed.disabled : []).filter((id) => ID_PATTERN.test(id)));
+    parsed = JSON.parse(await fs.readFile(path.join(profile, SETTINGS_FILE), "utf8"));
   } catch {
-    return new Set();
+    // No choices yet.
+  }
+  const ids = (value) => new Set((Array.isArray(value) ? value : []).filter((id) => ID_PATTERN.test(id)));
+  return { disabled: ids(parsed?.disabled), privateAllowed: ids(parsed?.privateAllowed) };
+}
+
+/**
+ * Whether any turned-on extension is allowed in private windows. Read at startup, before the tabs'
+ * session is chosen.
+ * @param {string} profile Normal profile folder.
+ * @returns {boolean} True when a private window will run extensions.
+ */
+function hasPrivateExtensions(profile) {
+  try {
+    const parsed = JSON.parse(readFileSync(path.join(profile, SETTINGS_FILE), "utf8"));
+    const disabled = new Set(Array.isArray(parsed?.disabled) ? parsed.disabled : []);
+    return (Array.isArray(parsed?.privateAllowed) ? parsed.privateAllowed : []).some((id) => ID_PATTERN.test(id) && !disabled.has(id));
+  } catch {
+    return false;
   }
 }
 
 /**
- * Saves the ids of the extensions the user turned off.
- * @param {Set<string>} disabled Extension ids.
+ * Saves the user's choices for the installed extensions.
+ * @param {string} profile Normal profile folder.
+ * @param {{ disabled: Set<string>, privateAllowed: Set<string> }} settings Choices.
  * @returns {Promise<void>}
  */
-async function writeDisabled(disabled) {
-  await fs.writeFile(path.join(app.getPath("userData"), DISABLED_FILE), JSON.stringify({ disabled: [...disabled] }));
+async function writeSettings(profile, settings) {
+  const json = JSON.stringify({ disabled: [...settings.disabled], privateAllowed: [...settings.privateAllowed] });
+  await fs.writeFile(path.join(profile, SETTINGS_FILE), json);
 }
 
 /**
@@ -163,4 +189,4 @@ async function loadInstalled(session, dir) {
   }
 }
 
-module.exports = { discoverInstalled, localize, readIcon, folderSize, readDisabled, writeDisabled, loadInstalled, extensionsPath };
+module.exports = { discoverInstalled, localize, readIcon, folderSize, readSettings, writeSettings, hasPrivateExtensions, loadInstalled };

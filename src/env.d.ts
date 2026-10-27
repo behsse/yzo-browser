@@ -27,8 +27,10 @@ export interface InstalledExtension {
   version: string;
   /** Largest icon up to 128px, as a data: URL. */
   icon: string | null;
-  /** Loaded and running; off extensions stay installed but never run. */
+  /** Turned on; off extensions stay installed but never run. */
   enabled: boolean;
+  /** Runs in private windows too (from the next one opened). */
+  privateAllowed: boolean;
   /** Extension options page, if it declares one (only while it is on). */
   optionsUrl: string | null;
   /** Its permission warnings in plain words, like Chrome's. */
@@ -133,6 +135,8 @@ export interface YzoBridge {
   uninstallExtension(id: string): Promise<boolean>;
   /** Turns an installed extension on or off (kept across restarts). */
   setExtensionEnabled(id: string, enabled: boolean): Promise<boolean>;
+  /** Lets an extension run in private windows, from the next one opened. */
+  setExtensionPrivateAllowed(id: string, allowed: boolean): Promise<boolean>;
   onMaximized(callback: (maximized: boolean) => void): () => void;
   /** Fires when the window enters or leaves full screen. */
   onFullScreen(callback: (fullScreen: boolean) => void): () => void;

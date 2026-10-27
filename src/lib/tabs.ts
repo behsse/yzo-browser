@@ -1,8 +1,11 @@
 import type { TabCommand } from "../env";
 import type { ID } from "../state/types";
 
-/** Session partition of the tab pages (see electron/main.cjs). Extensions are loaded there. */
-export const PARTITION = "persist:yzo";
+/**
+ * Session partition of the tab pages (see electron/main.cjs). Extensions are loaded there. A private
+ * window passes its own in the address.
+ */
+export const PARTITION = new URLSearchParams(window.location.search).get("partition") ?? "persist:yzo";
 
 /** Id reserved by the main process for the Peek view (see electron/views.cjs). */
 export const PEEK_ID = "__peek__";

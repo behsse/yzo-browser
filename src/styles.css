@@ -1367,6 +1367,30 @@ ul.ext-row-value {
   padding-left: 20px;
 }
 
+.ext-row-stack-inline {
+  display: grid;
+  gap: 4px;
+}
+
+.ext-row-soon {
+  opacity: 0.55;
+}
+
+.ext-soon {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--surface-border);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.ext-row:disabled,
+.ext-pill:disabled,
+.switch:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 .ext-row-link:hover {
   background: var(--surface-border);
 }

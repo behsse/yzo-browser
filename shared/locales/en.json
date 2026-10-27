@@ -281,5 +281,10 @@
   "extensionsPage.sourceUnpacked": "Unpacked extension",
   "extensionsPage.removeExtension": "Remove extension",
   "extensionsPage.megabytes": "{size} MB",
-  "extensionsPage.kilobytes": "{size} KB"
+  "extensionsPage.kilobytes": "{size} KB",
+  "extensionsPage.allowPrivate": "Allow in private browsing",
+  "extensionsPage.allowPrivateWarning": "Warning: Yzo cannot prevent extensions from recording your browsing history. Applies to the next private windows.",
+  "extensionsPage.siteSettings": "Site settings",
+  "extensionsPage.soon": "Coming soon",
+  "extensionsPage.privateReadOnly": "Extension settings are changed from a normal window."
 }

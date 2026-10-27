@@ -6,7 +6,7 @@ const { randomUUID } = require("node:crypto");
 const { ElectronChromeExtensions } = require("electron-chrome-extensions");
 const { installChromeWebStore, installExtension, uninstallExtension } = require("electron-chrome-web-store");
 const { t } = require("./i18n.cjs");
-const { discoverInstalled, localize, readIcon, folderSize, readDisabled, writeDisabled, loadInstalled } = require("./extension-store.cjs");
+const { discoverInstalled, localize, readIcon, folderSize, readSettings, writeSettings, loadInstalled } = require("./extension-store.cjs");
 
 const WEB_STORE_DETAIL_URL = "https://chromewebstore.google.com/detail/";
 
@@ -84,15 +84,19 @@ function describePermissions(manifest) {
  * @param {() => Electron.WebContents | null} options.getUi Returns the UI renderer's contents.
  * @param {() => ReturnType<import("./views.cjs").createViewManager> | null} options.getViews Returns
  *   the view manager of that window.
+ * @param {string} options.profile Normal profile folder (installs and choices live there).
+ * @param {boolean} [options.privateMode] Private instance: only the extensions allowed in private
+ *   windows run, nothing can be installed, and the choices are read-only.
  * @returns {Promise<{
  *   extensions: ElectronChromeExtensions,
  *   list(): Promise<object[]>,
  *   setEnabled(id: string, enabled: boolean): Promise<boolean>,
+ *   setPrivateAllowed(id: string, allowed: boolean): Promise<boolean>,
  *   uninstall(id: string): Promise<boolean>,
  *   contextMenuItems(contents: Electron.WebContents, params: Electron.ContextMenuParams): Electron.MenuItem[],
  * }>} Extension controller.
  */
-async function setupExtensions({ session, getWindow, getUi, getViews }) {
+async function setupExtensions({ session, getWindow, getUi, getViews, profile, privateMode = false }) {
   /**
    * Asks the UI to create a tab and waits for its page to exist.
    * @param {string | undefined} url Tab URL.
@@ -147,10 +151,12 @@ async function setupExtensions({ session, getWindow, getUi, getViews }) {
   // the session of the page that shows them: the UI's default session.
   ElectronChromeExtensions.handleCRXProtocol(electronSession.defaultSession);
 
-  const disabled = await readDisabled();
+  const settings = await readSettings(profile);
+  const saveSettings = () => writeSettings(profile, settings).catch((error) => console.error("Extension choices not saved:", error));
 
-  // Yzo loads the installs itself (below) so that turned-off extensions never run.
-  await installChromeWebStore({
+  // Yzo loads the installs itself (below) so that turned-off extensions never run. A private window
+  // installs nothing: the Web Store support is left out there.
+  if (!privateMode) await installChromeWebStore({
     session,
     loadExtensions: false,
     async beforeInstall({ localizedName, manifest }) {
@@ -170,8 +176,8 @@ async function setupExtensions({ session, getWindow, getUi, getViews }) {
     },
   });
 
-  for (const [id, install] of await discoverInstalled()) {
-    if (disabled.has(id) || session.extensions.getExtension(id)) continue;
+  for (const [id, install] of await discoverInstalled(profile)) {
+    if (settings.disabled.has(id) || (privateMode && !settings.privateAllowed.has(id)) || session.extensions.getExtension(id)) continue;
     await loadInstalled(session, install.path).catch((error) => console.error(`Extension ${id} not loaded:`, error));
   }
 
@@ -182,7 +188,7 @@ async function setupExtensions({ session, getWindow, getUi, getViews }) {
      * @returns {Promise<object[]>} InstalledExtension entries (src/env.d.ts).
      */
     async list() {
-      const installed = await discoverInstalled();
+      const installed = await discoverInstalled(profile);
       // Extensions loaded from elsewhere (none today) are listed too.
       for (const ext of session.extensions.getAllExtensions()) {
         if (!installed.has(ext.id)) installed.set(ext.id, { path: ext.path, manifest: ext.manifest });
@@ -197,7 +203,8 @@ async function setupExtensions({ session, getWindow, getUi, getViews }) {
           description: await localize(dir, manifest, manifest.description),
           version: manifest.version ?? "",
           icon: await readIcon(dir, manifest),
-          enabled: Boolean(loaded),
+          enabled: !settings.disabled.has(id),
+          privateAllowed: settings.privateAllowed.has(id),
           optionsUrl: loaded && optionsPage ? `${loaded.url}${optionsPage.replace(/^\//, "")}` : null,
           permissions: describePermissions(manifest),
           size: await folderSize(dir),
@@ -213,11 +220,11 @@ async function setupExtensions({ session, getWindow, getUi, getViews }) {
      * @returns {Promise<boolean>} False when it is not installed or failed to load.
      */
     async setEnabled(id, enabled) {
-      const install = (await discoverInstalled()).get(id);
-      if (!install) return false;
-      if (enabled) disabled.delete(id);
-      else disabled.add(id);
-      await writeDisabled(disabled).catch((error) => console.error("Extension state not saved:", error));
+      const install = (await discoverInstalled(profile)).get(id);
+      if (privateMode || !install) return false;
+      if (enabled) settings.disabled.delete(id);
+      else settings.disabled.add(id);
+      await saveSettings();
       try {
         if (!enabled && session.extensions.getExtension(id)) session.extensions.removeExtension(id);
         if (enabled && !session.extensions.getExtension(id)) await loadInstalled(session, install.path);
@@ -226,6 +233,20 @@ async function setupExtensions({ session, getWindow, getUi, getViews }) {
         console.error(`Extension ${id} could not be turned ${enabled ? "on" : "off"}:`, error);
         return false;
       }
+    },
+    /**
+     * Lets an extension run in private windows, from the next one opened (like Chrome's "Allow in
+     * Incognito"). Their sessions are in memory, so what it stores there is forgotten too.
+     * @param {string} id Extension id.
+     * @param {boolean} allowed New state.
+     * @returns {Promise<boolean>} False in a private window or when it is not installed.
+     */
+    async setPrivateAllowed(id, allowed) {
+      if (privateMode || !(await discoverInstalled(profile)).has(id)) return false;
+      if (allowed) settings.privateAllowed.add(id);
+      else settings.privateAllowed.delete(id);
+      await saveSettings();
+      return true;
     },
     /**
      * Installs an extension from the Chrome Web Store without the permission dialog (used by the
@@ -237,7 +258,9 @@ async function setupExtensions({ session, getWindow, getUi, getViews }) {
       await installExtension(id, { session });
     },
     async uninstall(id) {
-      if (disabled.delete(id)) await writeDisabled(disabled).catch(() => {});
+      if (privateMode) return false;
+      const forgotten = [settings.disabled.delete(id), settings.privateAllowed.delete(id)].some(Boolean);
+      if (forgotten) await saveSettings();
       try {
         await uninstallExtension(id, { session });
         return true;

@@ -281,5 +281,10 @@
   "extensionsPage.sourceUnpacked": "Extension non empaquetée",
   "extensionsPage.removeExtension": "Supprimer l'extension",
   "extensionsPage.megabytes": "{size} Mo",
-  "extensionsPage.kilobytes": "{size} Ko"
+  "extensionsPage.kilobytes": "{size} Ko",
+  "extensionsPage.allowPrivate": "Autoriser en navigation privée",
+  "extensionsPage.allowPrivateWarning": "Attention : Yzo ne peut pas empêcher les extensions d'enregistrer votre historique de navigation. S'applique aux prochaines fenêtres privées.",
+  "extensionsPage.siteSettings": "Paramètres des sites",
+  "extensionsPage.soon": "Bientôt",
+  "extensionsPage.privateReadOnly": "Les réglages des extensions se changent depuis une fenêtre normale."
 }
