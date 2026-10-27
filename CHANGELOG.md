@@ -22,6 +22,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ### Changed
 
+- Thin, rounded scrollbars on web pages, like Arc's: no track, a thumb that is dark on light pages and light on dark ones (Yzo reads the page's background on each load). They are added as a user style sheet, so a site that styles its own scrollbars (::-webkit-scrollbar, scrollbar-color, scrollbar-width) keeps them.
 - Pinned extension icons in the top bar are smaller (15 px).
 - Extension permissions (install prompt and details) are listed like Chrome's warnings: access to sites first ("all sites" covers the browsing history), then the sensitive APIs; harmless ones (storage, alarms, context menus…) are no longer listed.
 - The site menu becomes the site panel: "Reload" leaves it (the reload button is next to it) and "Copy link" becomes "Share URL".

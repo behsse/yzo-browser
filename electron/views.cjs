@@ -8,6 +8,7 @@
 const { WebContentsView, app, dialog } = require("electron");
 const path = require("node:path");
 const { dominantColor } = require("./page-color.cjs");
+const { styleScrollbars } = require("./scrollbars.cjs");
 
 const PEEK_ID = "__peek__";
 const ID_PATTERN = /^[\w-]{1,64}$/;
@@ -171,6 +172,7 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
     view.setVisible(false);
     const contents = view.webContents;
     setupContents(contents);
+    styleScrollbars(contents);
     contents.on("did-navigate", (_e, navigatedUrl) => toUi("tab:event", { tabId: id, type: "navigate", url: navigatedUrl }));
     contents.on("did-navigate-in-page", (_e, navigatedUrl, isMainFrame) => {
       if (isMainFrame) toUi("tab:event", { tabId: id, type: "navigate-in-page", url: navigatedUrl });
