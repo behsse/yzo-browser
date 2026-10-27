@@ -46,6 +46,11 @@ const USER_AGENT = app.userAgentFallback
   .replace(/Chrome\/[\d.]+/, `Chrome/${process.versions.chrome.split(".")[0]}.0.0.0`);
 app.userAgentFallback = USER_AGENT;
 
+// Chromium's overlay scrollbars, like Arc's: drawn over the page (no column, no track), thin and rounded,
+// shown while scrolling, dark on light pages and light on dark ones. A site that styles its own
+// scrollbars keeps them.
+app.commandLine.appendSwitch("enable-features", "OverlayScrollbar");
+
 /** @type {BaseWindow | null} */
 let mainWindow = null;
 /**
