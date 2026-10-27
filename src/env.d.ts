@@ -31,8 +31,10 @@ export interface InstalledExtension {
   enabled: boolean;
   /** Extension options page, if it declares one (only while it is on). */
   optionsUrl: string | null;
-  /** Its permissions in plain words. */
+  /** Its permission warnings in plain words, like Chrome's. */
   permissions: string[];
+  /** Size of its files, in bytes. */
+  size: number;
   /** Its Chrome Web Store page, for store installs. */
   storeUrl: string | null;
 }

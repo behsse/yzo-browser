@@ -1262,8 +1262,7 @@ kbd {
   object-fit: contain;
 }
 
-.ext-card-footer,
-.ext-actions {
+.ext-card-footer {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1287,31 +1286,13 @@ kbd {
   background: var(--surface-border);
 }
 
-.ext-pill-danger {
-  color: var(--danger);
-}
 
-.ext-back {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  align-self: flex-start;
-  height: 30px;
-  padding: 0 10px 0 6px;
-  border-radius: 8px;
-  color: inherit;
-  font-size: 13px;
-}
 
-.ext-back:hover {
-  background: var(--surface-border);
-}
 
+/* Details: one column of rows split by lines, like Chrome's and Arc's. */
 .ext-details {
-  display: grid;
-  gap: 16px;
-  max-width: 720px;
-  padding: 18px;
+  align-self: center;
+  width: min(680px, 100%);
   border-radius: 12px;
   background: var(--surface-2);
 }
@@ -1320,49 +1301,85 @@ kbd {
   display: flex;
   align-items: center;
   gap: 14px;
+  padding: 14px 20px;
 }
 
 .ext-details-header .ext-icon {
-  width: 44px;
-  height: 44px;
+  width: 26px;
+  height: 26px;
 }
 
 .ext-details-header h2 {
-  flex: 1;
   margin: 0;
-  font-size: 18px;
+  font-size: 15px;
+  font-weight: 600;
 }
 
-.ext-state {
-  font-size: 12px;
-  opacity: 0.6;
-}
-
-.ext-details dl {
+.ext-icon-button {
   display: grid;
-  grid-template-columns: 130px 1fr;
-  gap: 10px 16px;
-  margin: 0;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-left: -6px;
+  border-radius: 50%;
+  color: inherit;
+}
+
+.ext-icon-button:hover {
+  background: var(--surface-border);
+}
+
+.ext-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--surface-border);
+  color: inherit;
   font-size: 13px;
+  font-weight: 500;
+  text-align: left;
 }
 
-.ext-details dt {
-  opacity: 0.6;
+.ext-row-state {
+  border-top: 0;
+  color: color-mix(in srgb, var(--accent) 65%, white);
 }
 
-.ext-details dd {
+.ext-row-stack {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+}
+
+.ext-row-value {
   margin: 0;
-  overflow-wrap: anywhere;
+  font-weight: 400;
+  line-height: 1.5;
+  opacity: 0.8;
 }
 
-.ext-details ul {
-  margin: 0;
-  padding-left: 18px;
+ul.ext-row-value {
+  padding-left: 20px;
 }
 
-.ext-mono {
-  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
-  font-size: 12px;
+.ext-row-link:hover {
+  background: var(--surface-border);
+}
+
+.ext-row-link:last-child {
+  border-radius: 0 0 12px 12px;
+}
+
+.ext-row svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  opacity: 0.7;
 }
 
 /* "Manage extensions" at the bottom of the extensions panel. */

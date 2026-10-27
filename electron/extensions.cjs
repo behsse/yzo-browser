@@ -6,43 +6,72 @@ const { randomUUID } = require("node:crypto");
 const { ElectronChromeExtensions } = require("electron-chrome-extensions");
 const { installChromeWebStore, installExtension, uninstallExtension } = require("electron-chrome-web-store");
 const { t } = require("./i18n.cjs");
-const { discoverInstalled, localize, readIcon, readDisabled, writeDisabled, loadInstalled } = require("./extension-store.cjs");
+const { discoverInstalled, localize, readIcon, folderSize, readDisabled, writeDisabled, loadInstalled } = require("./extension-store.cjs");
 
 const WEB_STORE_DETAIL_URL = "https://chromewebstore.google.com/detail/";
 
-/** Permissions shown in plain words in the install confirmation (others are listed as-is). */
+/**
+ * Permissions that come with a warning, like Chrome's (install prompt and extension details). The
+ * others (storage, alarms, contextMenus…) give no access to the user's data and are not listed.
+ */
 const LABELLED_PERMISSIONS = new Set([
+  "<all_urls>",
   "tabs",
   "history",
   "bookmarks",
-  "cookies",
   "downloads",
   "clipboardRead",
   "clipboardWrite",
   "notifications",
-  "webRequest",
   "declarativeNetRequest",
-  "storage",
-  "scripting",
-  "<all_urls>",
+  "privacy",
+  "geolocation",
+  "management",
+  "nativeMessaging",
+  "topSites",
+  "desktopCapture",
+  "debugger",
+  "contentSettings",
 ]);
 
+/** Permissions that share another one's warning, as in Chrome. */
+const PERMISSION_ALIASES = { proxy: "<all_urls>", webNavigation: "tabs", tabCapture: "desktopCapture", pageCapture: "desktopCapture" };
+
+/** Host patterns that mean every site. */
+const ALL_SITES_PATTERN = /^(<all_urls>|\*:\/\/\*\/\*|https?:\/\/\*\/\*)$/;
+
 /**
- * Lists an extension manifest's permissions in readable form for the install prompt.
+ * Site a host pattern covers, as shown to the user ("*://*.example.com/*" gives "example.com").
+ * @param {string} pattern Match pattern.
+ * @returns {string} Host.
+ */
+function patternHost(pattern) {
+  const host = /^[^:]+:\/\/([^/]+)/.exec(pattern)?.[1] ?? pattern;
+  return host.replace(/^\*\./, "");
+}
+
+/**
+ * Lists the warnings of an extension's permissions in plain words, like Chrome: access to sites
+ * (permissions, host permissions and content scripts) first, then the sensitive APIs.
  * @param {chrome.runtime.Manifest} manifest Extension manifest.
- * @returns {string[]} One line per permission.
+ * @returns {string[]} One line per warning.
  */
 function describePermissions(manifest) {
-  const raw = [
+  const hosts = [
     ...(manifest.permissions ?? []),
     ...(/** @type {string[]} */ (manifest.host_permissions ?? [])),
-  ].filter((p) => typeof p === "string");
-  const allSites = raw.some((p) => p === "<all_urls>" || p === "*://*/*" || p === "http://*/*" || p === "https://*/*");
-  const lines = new Set(allSites ? [t("permission.<all_urls>")] : []);
-  for (const permission of raw) {
-    if (/^(<all_urls>|\*:\/\/\*\/\*|https?:\/\/\*\/\*)$/.test(permission)) continue;
-    if (LABELLED_PERMISSIONS.has(permission)) lines.add(t("permission." + permission));
-    else lines.add(permission.includes("/") ? t("permission.host", { host: permission }) : permission);
+    ...(manifest.content_scripts ?? []).flatMap((script) => script.matches ?? []),
+  ].filter((p) => typeof p === "string" && (p.includes("://") || p === "<all_urls>"));
+  const apis = (manifest.permissions ?? []).filter((p) => typeof p === "string" && !p.includes("://"));
+  const lines = new Set();
+  const allSites = hosts.some((p) => ALL_SITES_PATTERN.test(p)) || apis.includes("proxy");
+  if (allSites) lines.add(t("permission.<all_urls>"));
+  else for (const host of new Set(hosts.map(patternHost))) lines.add(t("permission.host", { host }));
+  for (const permission of apis) {
+    const label = PERMISSION_ALIASES[permission] ?? permission;
+    // Access to every site already covers the browsing history.
+    if (label === "<all_urls>" || (allSites && label === "tabs")) continue;
+    if (LABELLED_PERMISSIONS.has(label)) lines.add(t("permission." + label));
   }
   return [...lines];
 }
@@ -171,6 +200,7 @@ async function setupExtensions({ session, getWindow, getUi, getViews }) {
           enabled: Boolean(loaded),
           optionsUrl: loaded && optionsPage ? `${loaded.url}${optionsPage.replace(/^\//, "")}` : null,
           permissions: describePermissions(manifest),
+          size: await folderSize(dir),
           storeUrl: manifest.key || manifest.update_url ? WEB_STORE_DETAIL_URL + id : null,
         });
       }

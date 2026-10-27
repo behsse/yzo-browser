@@ -114,6 +114,21 @@ async function readIcon(dir, manifest) {
 }
 
 /**
+ * Total size of an extension's files on disk.
+ * @param {string} dir Extension folder.
+ * @returns {Promise<number>} Bytes.
+ */
+async function folderSize(dir) {
+  let total = 0;
+  for (const entry of await fs.readdir(dir, { withFileTypes: true }).catch(() => [])) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) total += await folderSize(full);
+    else if (entry.isFile()) total += (await fs.stat(full).catch(() => ({ size: 0 }))).size;
+  }
+  return total;
+}
+
+/**
  * Reads the ids of the extensions the user turned off.
  * @returns {Promise<Set<string>>} Extension ids.
  */
@@ -148,4 +163,4 @@ async function loadInstalled(session, dir) {
   }
 }
 
-module.exports = { discoverInstalled, localize, readIcon, readDisabled, writeDisabled, loadInstalled, extensionsPath };
+module.exports = { discoverInstalled, localize, readIcon, folderSize, readDisabled, writeDisabled, loadInstalled, extensionsPath };

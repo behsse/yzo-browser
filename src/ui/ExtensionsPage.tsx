@@ -26,6 +26,16 @@ function useInstalledExtensions(): [InstalledExtension[] | null, () => void] {
 }
 
 /**
+ * Size in Ko / Mo (KB / MB), like Chrome's extension details.
+ * @param bytes Size in bytes.
+ * @returns Readable size.
+ */
+function formatSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return t("extensionsPage.kilobytes", { size: Math.max(1, Math.round(bytes / 1024)) });
+  return t("extensionsPage.megabytes", { size: (bytes / (1024 * 1024)).toLocaleString(undefined, { maximumFractionDigits: 1 }) });
+}
+
+/**
  * Extension icon, or a puzzle piece when it has none.
  * @param props.extension Extension.
  * @returns Icon element.
@@ -47,8 +57,9 @@ function ExtensionIcon({ extension }: { extension: InstalledExtension }) {
  * @returns Page content.
  */
 export function ExtensionsPage({ detailsId, navigate }: { detailsId?: string; navigate: (url: string) => void }) {
-  const { dispatch } = useStore();
+  const { state, dispatch } = useStore();
   const ui = useUi();
+  const pinned = state.settings.pinnedExtensions ?? [];
   const [list, reload] = useInstalledExtensions();
   const [query, setQuery] = useState("");
 
@@ -58,6 +69,10 @@ export function ExtensionsPage({ detailsId, navigate }: { detailsId?: string; na
     await window.yzo?.setExtensionEnabled(extension.id, enabled);
     reload();
   };
+
+  // Same list as the pin in the extensions panel.
+  const togglePin = (id: string, pin: boolean) =>
+    dispatch({ type: "updateSettings", settings: { pinnedExtensions: pin ? [...pinned.filter((p) => p !== id), id] : pinned.filter((p) => p !== id) } });
 
   const remove = async (extension: InstalledExtension) => {
     if (!window.confirm(t("extensionsPage.confirmRemove", { name: extension.name }))) return;
@@ -106,53 +121,75 @@ export function ExtensionsPage({ detailsId, navigate }: { detailsId?: string; na
       <main className="ext-main">
         {detailsId ? (
           <>
-            <button className="ext-back" onClick={() => navigate(EXTENSIONS_URL)}>
-              <Icon name="back" /> {t("extensions.title")}
-            </button>
             {list && !details && <p className="ext-empty">{t("extensionsPage.notFound")}</p>}
             {details && (
               <section className="ext-details">
                 <header className="ext-details-header">
+                  <button className="ext-icon-button" title={t("extensions.title")} onClick={() => navigate(EXTENSIONS_URL)}>
+                    <Icon name="back" />
+                  </button>
                   <ExtensionIcon extension={details} />
                   <h2>{details.name}</h2>
-                  <span className="ext-state">{details.enabled ? t("extensionsPage.enabled") : t("extensionsPage.disabled")}</span>
-                  {toggle(details)}
                 </header>
-                <dl>
-                  <dt>{t("extensionsPage.description")}</dt>
-                  <dd>{details.description || "—"}</dd>
-                  <dt>{t("extensionsPage.version")}</dt>
-                  <dd>{details.version}</dd>
-                  <dt>{t("extensionsPage.id")}</dt>
-                  <dd className="ext-mono">{details.id}</dd>
-                  <dt>{t("extensionsPage.permissions")}</dt>
-                  <dd>
-                    {details.permissions.length ? (
-                      <ul>
-                        {details.permissions.map((permission) => (
-                          <li key={permission}>{permission}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      t("extensionsPage.noPermissions")
-                    )}
-                  </dd>
-                </dl>
-                <div className="ext-actions">
-                  {details.optionsUrl && (
-                    <button className="ext-pill" onClick={() => openTab(details.optionsUrl!)}>
-                      {t("extensionsPage.options")}
-                    </button>
-                  )}
-                  {details.storeUrl && (
-                    <button className="ext-pill" onClick={() => openTab(details.storeUrl!)}>
-                      {t("extensionsPage.viewInStore")}
-                    </button>
-                  )}
-                  <button className="ext-pill ext-pill-danger" onClick={() => void remove(details)}>
-                    {t("extensionsPage.remove")}
-                  </button>
+                <label className="ext-row ext-row-state">
+                  <span>{details.enabled ? t("extensionsPage.enabled") : t("extensionsPage.disabled")}</span>
+                  {toggle(details)}
+                </label>
+                <div className="ext-row ext-row-stack">
+                  <span>{t("extensionsPage.description")}</span>
+                  <span className="ext-row-value">{details.description || "—"}</span>
                 </div>
+                <div className="ext-row ext-row-stack">
+                  <span>{t("extensionsPage.version")}</span>
+                  <span className="ext-row-value">{details.version}</span>
+                </div>
+                <div className="ext-row ext-row-stack">
+                  <span>{t("extensionsPage.size")}</span>
+                  <span className="ext-row-value">{formatSize(details.size)}</span>
+                </div>
+                <div className="ext-row ext-row-stack">
+                  <span>{t("extensionsPage.permissions")}</span>
+                  {details.permissions.length ? (
+                    <ul className="ext-row-value">
+                      {details.permissions.map((permission) => (
+                        <li key={permission}>{permission}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <span className="ext-row-value">{t("extensionsPage.noPermissions")}</span>
+                  )}
+                </div>
+                {details.enabled && (
+                  <label className="ext-row">
+                    <span>{t("extensionsPage.pin")}</span>
+                    <input
+                      type="checkbox"
+                      className="switch"
+                      checked={pinned.includes(details.id)}
+                      onChange={(event) => togglePin(details.id, event.target.checked)}
+                    />
+                  </label>
+                )}
+                {details.optionsUrl && (
+                  <button className="ext-row ext-row-link" onClick={() => openTab(details.optionsUrl!)}>
+                    <span>{t("extensionsPage.options")}</span>
+                    <Icon name="external" />
+                  </button>
+                )}
+                {details.storeUrl && (
+                  <button className="ext-row ext-row-link" onClick={() => openTab(details.storeUrl!)}>
+                    <span>{t("extensionsPage.viewInStore")}</span>
+                    <Icon name="external" />
+                  </button>
+                )}
+                <div className="ext-row ext-row-stack">
+                  <span>{t("extensionsPage.source")}</span>
+                  <span className="ext-row-value">{details.storeUrl ? t("extensionsPage.sourceStore") : t("extensionsPage.sourceUnpacked")}</span>
+                </div>
+                <button className="ext-row ext-row-link" onClick={() => void remove(details)}>
+                  <span>{t("extensionsPage.removeExtension")}</span>
+                  <Icon name="chevron" />
+                </button>
               </section>
             )}
           </>
