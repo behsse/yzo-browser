@@ -4,6 +4,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-02
+
 ### Added
 
 - New windows (`Ctrl+N`, or New Window in the logo's menu and the "…" menu). Windows share spaces, pinned tabs and favorites, kept in sync live; each has its own today tabs, selected tab, space and sidebar layout. A new window opens with no today tab, on the command bar. Closing a window while others stay open archives its today tabs; quitting keeps the oldest window's tabs for the next launch. A pinned tab or favorite lives in one window at a time: its page moves (without reloading) to the window that shows it, and one already on screen in another window shows "Show here" and "Go to window" instead. The account sync runs in one window only.
