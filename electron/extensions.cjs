@@ -170,6 +170,15 @@ async function setupExtensions({ session, getWindow, getUi, getViews, profile, p
     },
   });
 
+  // An extension's popup is its own window: the UI keeps the floating top bar and sidebar open while
+  // it is shown, or they would slide away under it and its blur would close it.
+  extensions.on("browser-action-popup-created", (popup) => {
+    const popupWindow = popup.browserWindow;
+    if (!popupWindow || popupWindow.isDestroyed()) return;
+    getUi()?.send("extension:popup", true);
+    popupWindow.once("closed", () => getUi()?.send("extension:popup", false));
+  });
+
   // `browser` = `chrome` in extension pages and workers (see extension-browser.preload.cjs).
   const browserPreload = path.join(__dirname, "extension-browser.preload.cjs");
   session.registerPreloadScript({ id: "yzo-browser-namespace", type: "frame", filePath: browserPreload });

@@ -52,6 +52,8 @@ contextBridge.exposeInMainWorld("yzo", {
   onTabCreate: (callback) => subscribe("tab:create", callback),
   onTabActivate: (callback) => subscribe("tab:activate", callback),
   onTabClose: (callback) => subscribe("tab:close", callback),
+  // An extension popup (its own window) opened or closed.
+  onExtensionPopup: (callback) => subscribe("extension:popup", callback),
   listExtensions: () => ipcRenderer.invoke("extensions:list"),
   // Yzo account and sync. Keys and the session token stay in the main process.
   account: {

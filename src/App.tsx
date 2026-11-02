@@ -59,6 +59,9 @@ export function App() {
   const [menu, setMenu] = useState<MenuState | null>(null);
   /** A menu shown by the popup layer above the pages (no freeze needed). */
   const [nativeMenuOpen, setNativeMenuOpen] = useState(false);
+  /** An extension's popup, a window of its own above the pages. */
+  const [extensionPopupOpen, setExtensionPopupOpen] = useState(false);
+  useEffect(() => window.yzo?.onExtensionPopup(setExtensionPopupOpen), []);
   const [toast, setToast] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [topRevealed, setTopRevealed] = useState(false);
@@ -328,7 +331,7 @@ export function App() {
   }, []);
   // A menu or dialog opened from the floating sidebar (extensions, space editor…) can extend past it:
   // the sidebar stays open until it closes, then the cursor position decides again.
-  const holdFloating = nativeMenuOpen || Boolean(menu || commandBar || peekUrl || archiveOpen || accountOpen || spaceEditor || extensionsAnchor || sitePanelAnchor || downloadsAnchor);
+  const holdFloating = nativeMenuOpen || extensionPopupOpen || Boolean(menu || commandBar || peekUrl || archiveOpen || accountOpen || spaceEditor || extensionsAnchor || sitePanelAnchor || downloadsAnchor);
   const holdFloatingRef = useRef(holdFloating);
   holdFloatingRef.current = holdFloating;
   const scheduleHide = useCallback(() => {

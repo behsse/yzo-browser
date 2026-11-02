@@ -139,6 +139,8 @@ export interface YzoBridge {
   onTabCreate(callback: (request: { id: string; url: string; active: boolean }) => void): () => void;
   onTabActivate(callback: (request: { id: string }) => void): () => void;
   onTabClose(callback: (request: { id: string }) => void): () => void;
+  /** An extension's popup window opened (true) or closed (false). */
+  onExtensionPopup(callback: (open: boolean) => void): () => void;
   listExtensions(): Promise<InstalledExtension[]>;
   uninstallExtension(id: string): Promise<boolean>;
   /** Turns an installed extension on or off (kept across restarts). */
