@@ -3,6 +3,7 @@ import { cursorOnTopEdge, floatingSidebarDecision, floatingTopBarDecision } from
 import { t } from "./lib/i18n";
 import { matchShortcut, type ShortcutAction } from "./lib/shortcuts";
 import { displayTheme, IS_NEW_WINDOW } from "./lib/privateMode";
+import { useUpdateState } from "./lib/updates";
 import { resolveAppearance, sidebarBackground } from "./lib/theme";
 import { PEEK_ID, tabCommand } from "./lib/tabs";
 import { useStore } from "./state/store";
@@ -77,6 +78,19 @@ export function App() {
     window.clearTimeout(toastTimer.current);
     toastTimer.current = window.setTimeout(() => setToast(null), TOAST_MS);
   }, []);
+
+  // Tells the user when a new version starts downloading and when it is ready (the top bar pill then
+  // shows the progress, and the restart button).
+  const update = useUpdateState();
+  const lastUpdateStatus = useRef(update?.status);
+  useEffect(() => {
+    const previous = lastUpdateStatus.current;
+    lastUpdateStatus.current = update?.status;
+    if (!update || previous === undefined || previous === update.status) return;
+    if (update.status === "available") showToast(t("updates.available", { version: update.version }));
+    else if (update.status === "downloading" && previous !== "downloading" && previous !== "available") showToast(t("updates.found", { version: update.version }));
+    else if (update.status === "ready") showToast(t("updates.ready", { version: update.version }));
+  }, [update, showToast]);
 
   const runAction = useCallback(
     (action: ShortcutAction) => {

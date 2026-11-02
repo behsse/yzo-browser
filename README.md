@@ -31,7 +31,7 @@ Stack: Electron 43 in its [castLabs ECS](https://github.com/castlabs/electron-re
 | Chrome extensions | Install from the Chrome Web Store ("Add to Chrome" button, with a permission confirmation), automatic updates. The puzzle button opens the extensions panel: click an extension to open its popup, hover it and click the pin to show it in the top bar, right-click for options and removal, "+" to add more. Popups, badges, context menus and the tabs API (`chrome.tabs`) are supported. |
 | Account and sync | Yzo account (sign in from the menu behind the logo): spaces, favorites, pinned tabs, folders and settings synced across computers, **end-to-end encrypted** (the server sees neither the password nor the data). Recovery key at sign-up, session kept in the system keychain. See [docs/sync.md](docs/sync.md). |
 | Protected video (DRM) | Widevine through castLabs ECS: Spotify, Deezer, Prime Video, Disney+… Netflix and the strictest services also require production VMP signing (see "Distribution"). |
-| Updates | Installed builds check GitHub Releases at startup and update in the background (`electron-updater`). |
+| Updates | Installed builds check GitHub Releases at startup and every 4 hours (`electron-updater`). An indicator next to the Yzo logo shows a new version: a ring that fills in violet while it downloads, then a full violet circle with a check that restarts Yzo on it when clicked. With "Update automatically" off (Settings > About, kept in `userData/update-settings.json`), a found version shows as the download arrow with a violet dot, and clicking it starts the download. Settings > About shows the same steps, and toasts tell when a version is found and when it is ready. Otherwise a downloaded update installs when Yzo quits. |
 | Import from Arc | Yzo menu (logo) > "Import from Arc…": Arc's spaces (name, emoji), their pinned and today tabs, folders and split views, the favorites, and the extensions (installed from the Chrome Web Store) are added after a confirmation. Existing spaces are kept and Arc's files are only read. Windows (Arc from the Microsoft Store) and macOS. |
 | Persistence | JSON state written atomically to the `userData` folder, with a `.bak` copy. |
 
@@ -162,6 +162,7 @@ electron/favicon.cjs     Finds the icon of a site without opening it (tabs never
 electron/extensions.cjs  Chrome extensions: Web Store, chrome.* APIs (tabs, actions, menus)
 electron/account.cjs     Yzo account: server connection, session encrypted by the system keychain
 electron/crypto.cjs      End-to-end encryption (scrypt, HKDF, AES-256-GCM, recovery key)
+electron/updater.cjs     Updates of installed builds (electron-updater): checks, download progress, restart
 electron/i18n.cjs        Translations for native menus and dialogs
 electron/preload.cjs     Narrow window.yzo bridge (state, window, shortcuts, Peek)
 src/sync/                Record projection, merging, sync loop (SyncProvider)

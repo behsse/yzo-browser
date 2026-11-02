@@ -16,6 +16,7 @@ const { setupShield } = require("./shield.cjs");
 const { hasPrivateExtensions } = require("./extension-store.cjs");
 const { createSiteInfo } = require("./site-info.cjs");
 const { setupDownloads } = require("./downloads.cjs");
+const { createUpdater } = require("./updater.cjs");
 const { t } = require("./i18n.cjs");
 
 // Development runs keep their own profile (%APPDATA%\Yzo Dev), apart from the installed Yzo's
@@ -744,35 +745,20 @@ async function prepareWidevine() {
   }
 }
 
-/**
- * Checks GitHub releases for a newer Yzo in packaged builds and installs it on quit
- * (electron-updater; feed configured by electron-builder's "publish" setting).
- */
-function checkForUpdates() {
-  if (!app.isPackaged) return;
-  const { autoUpdater } = require("electron-updater");
-  autoUpdater.checkForUpdatesAndNotify().catch((error) => console.error("Update check failed:", error.message));
-}
-
-/**
- * Manual update check from the Yzo menu. A found update downloads in the background and installs
- * on quit, like the startup check.
- * @returns {Promise<{ status: "dev" | "upToDate" | "available" | "error", version?: string }>} Outcome.
- */
-async function checkForUpdatesNow() {
-  if (!app.isPackaged) return { status: "dev" };
-  try {
-    const { autoUpdater } = require("electron-updater");
-    const result = await autoUpdater.checkForUpdatesAndNotify();
-    if (result?.isUpdateAvailable) return { status: "available", version: result.updateInfo.version };
-    return { status: "upToDate", version: app.getVersion() };
-  } catch (error) {
-    console.error("Update check failed:", error.message);
-    return { status: "error" };
-  }
-}
-
-ipcMain.handle("app:checkForUpdates", (event) => (isTrustedSender(event) ? checkForUpdatesNow() : null));
+// Updates (electron/updater.cjs): every window shows where the download is and offers to restart.
+// A private instance never updates (the normal one does).
+const updater = createUpdater({
+  onChange: (state) => sendToAllUis("updates:state", state),
+  profile: PRIVATE ? mainProfilePath() : app.getPath("userData"),
+  readOnly: PRIVATE,
+});
+ipcMain.handle("updates:state", (event) => (isTrustedSender(event) ? updater.state() : null));
+ipcMain.handle("updates:check", (event) => (isTrustedSender(event) && !PRIVATE ? updater.check() : null));
+ipcMain.handle("updates:download", (event) => (isTrustedSender(event) && !PRIVATE ? updater.download() : null));
+ipcMain.handle("updates:install", (event) => isTrustedSender(event) && !PRIVATE && updater.install());
+ipcMain.handle("updates:setAutoDownload", (event, enabled) =>
+  isTrustedSender(event) && !PRIVATE && typeof enabled === "boolean" ? updater.setAutoDownload(enabled) : null,
+);
 ipcMain.handle("app:version", (event) => (isTrustedSender(event) ? app.getVersion() : ""));
 
 // Site menu: shield state and blocked count, connection security, certificate, clearing site data.
@@ -879,7 +865,7 @@ app.whenReady().then(async () => {
     console.error("Chrome extensions unavailable:", error);
   }
   createWindow();
-  checkForUpdates();
+  updater.start();
 });
 
 app.on("window-all-closed", () => app.quit());

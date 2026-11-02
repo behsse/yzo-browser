@@ -1,8 +1,8 @@
-import { useEffect, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { t } from "../lib/i18n";
 import { EXTENSIONS_URL, isInternalUrl, settingsUrl } from "../lib/internalPages";
 import { IS_PRIVATE } from "../lib/privateMode";
-import { checkForUpdatesWithToasts } from "../lib/updates";
+import { checkForUpdatesWithToasts, useUpdateState } from "../lib/updates";
 import { shortcutLabel } from "../lib/shortcuts";
 import { tabCommand } from "../lib/tabs";
 import { displayHost } from "../lib/url";
@@ -10,7 +10,7 @@ import { useStore } from "../state/store";
 import { isSplit, isTab } from "../state/tree";
 import { useSync } from "../sync/SyncProvider";
 import { ExtensionActionButton, useExtensionActions } from "./extensionActions";
-import { BrandMark, Icon } from "./Icon";
+import { BrandMark, Icon, ICON_PATHS } from "./Icon";
 import { useUi, type MenuEntry } from "./UiContext";
 import { useDownloads } from "./useDownloads";
 import { useViewHost } from "./ViewHost";
@@ -39,6 +39,86 @@ function WindowControls() {
       </button>
     </div>
   );
+}
+
+/** The download arrow of the indicator, drawn at half size in the middle of its 24×24 box. */
+function UpdateArrow() {
+  return (
+    <g transform="translate(6 6) scale(0.5)" strokeWidth={4}>
+      <path d={ICON_PATHS.download} />
+    </g>
+  );
+}
+
+/**
+ * Update indicator next to the Yzo logo, shown only when there is a new version:
+ * - available (automatic updates off): the download arrow with a violet dot; click to download it;
+ * - downloading: the arrow in a ring that fills in violet from 0 to 100 %;
+ * - ready: a full violet circle with the arrow and a small check; click to restart on the new version.
+ * @returns Indicator, or null.
+ */
+function UpdateIndicator() {
+  const update = useUpdateState();
+  if (!update) return null;
+  const { status, version, percent } = update;
+  const svg = (children: ReactNode) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {children}
+    </svg>
+  );
+  if (status === "available") {
+    return (
+      <button className="update-indicator" title={t("updates.available", { version })} onClick={() => void window.yzo?.updates.download()}>
+        {svg(
+          <>
+            <path d={ICON_PATHS.download} />
+            <circle className="update-dot" cx="19.5" cy="4.5" r="3.5" />
+          </>,
+        )}
+      </button>
+    );
+  }
+  if (status === "downloading") {
+    return (
+      <span
+        className="update-indicator update-indicator-progress"
+        role="progressbar"
+        aria-valuenow={percent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        title={t("updates.downloading", { version, percent })}
+      >
+        {svg(
+          <>
+            <circle className="update-track" cx="12" cy="12" r="10" />
+            <circle className="update-bar" cx="12" cy="12" r="10" pathLength={100} strokeDasharray={`${percent} 100`} transform="rotate(-90 12 12)" />
+            <UpdateArrow />
+          </>,
+        )}
+      </span>
+    );
+  }
+  if (status === "ready") {
+    return (
+      <button
+        className="update-indicator update-indicator-ready"
+        title={`${t("updates.ready", { version })}. ${t("updates.installOnQuit")}`}
+        onClick={() => void window.yzo?.updates.install()}
+      >
+        {svg(
+          <>
+            <circle className="update-fill" cx="11" cy="11" r="10" />
+            <g transform="translate(5 5) scale(0.5)" strokeWidth={4.4} stroke="#fff">
+              <path d={ICON_PATHS.download} />
+            </g>
+            <circle className="update-badge" cx="19" cy="19" r="4.5" />
+            <path className="update-check" d="M17 19l1.4 1.4 2.6-2.8" />
+          </>,
+        )}
+      </button>
+    );
+  }
+  return null;
 }
 
 /**
@@ -110,6 +190,7 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
   const { state, dispatch } = useStore();
   const ui = useUi();
   const sync = useSync();
+  const update = useUpdateState();
   const host = useViewHost();
   const selection = state.window.selection[state.window.focusedSpaceId];
   const focusedId = selection?.focusedTabId ?? null;
@@ -139,7 +220,13 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
         ui.showToast(t("arcImport.done", { spaces: result.data.spaces.length, extensions: result.extensions ?? 0 }));
       },
     };
-    const checkUpdates: MenuEntry = { icon: "sync", label: t("appMenu.checkUpdates"), onSelect: () => void checkForUpdatesWithToasts(ui.showToast) };
+    // A found update can be downloaded from here, and a downloaded one restarts Yzo on it.
+    const checkUpdates: MenuEntry =
+      update?.status === "ready"
+        ? { icon: "sync", label: t("updates.restart"), onSelect: () => void window.yzo?.updates.install() }
+        : update?.status === "available"
+          ? { icon: "download", label: t("updates.download", { version: update.version }), onSelect: () => void window.yzo?.updates.download() }
+          : { icon: "sync", label: t("appMenu.checkUpdates"), onSelect: () => void checkForUpdatesWithToasts(ui.showToast) };
     const settings: MenuEntry = {
       icon: "settings",
       label: t("appMenu.settings"),
@@ -231,6 +318,7 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
         <button className="brand-mark" title={t("appMenu.title")} aria-haspopup="menu" onClick={(event) => openAppMenu(event.currentTarget)}>
           <BrandMark />
         </button>
+        <UpdateIndicator />
         <button
           className={state.window.sidebarMode === "hidden" ? "" : "topbar-locked"}
           title={t("sidebar.toggleSidebar", { shortcut: shortcutLabel("toggleSidebar") })}

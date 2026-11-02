@@ -146,8 +146,7 @@ export interface YzoBridge {
   downloads: DownloadsBridge;
   /** Yzo's version (package.json). */
   appVersion(): Promise<string>;
-  /** Manual update check; "dev" outside packaged builds. */
-  checkForUpdates(): Promise<{ status: "dev" | "upToDate" | "available" | "error"; version?: string } | null>;
+  updates: UpdatesBridge;
   syncViews(payload: ViewSyncPayload): void;
   /** Tabs shown in this window whose page another window has on screen. */
   onViewsElsewhere(callback: (tabIds: string[]) => void): () => void;
@@ -178,6 +177,34 @@ export interface YzoBridge {
   onShortcut(callback: (action: ShortcutAction) => void): () => void;
   onPeek(callback: (payload: { url: string }) => void): () => void;
   onOpenTab(callback: (payload: { url: string; background: boolean }) => void): () => void;
+}
+
+/**
+ * Where the update of an installed Yzo stands (electron/updater.cjs). "dev" outside installed builds;
+ * `version` is the update's while downloading or ready, Yzo's own otherwise.
+ */
+export interface UpdateState {
+  /** "available": found, waiting for the user to download it (automatic updates off). */
+  status: "dev" | "idle" | "checking" | "upToDate" | "available" | "downloading" | "ready" | "error";
+  version: string;
+  /** Download progress, 0 to 100. */
+  percent: number;
+  /** Whether a found update downloads by itself (Settings > About). */
+  autoDownload: boolean;
+}
+
+/** Updates of installed builds: checked at startup and every few hours. */
+export interface UpdatesBridge {
+  state(): Promise<UpdateState | null>;
+  /** Looks for an update now; resolves with the state once the check is done (null in a private window). */
+  check(): Promise<UpdateState | null>;
+  /** Downloads the available update (automatic updates off). */
+  download(): Promise<UpdateState | null>;
+  /** Restarts Yzo on the downloaded update; false when none is ready. */
+  install(): Promise<boolean>;
+  /** Turns automatic updates on or off (kept across restarts). */
+  setAutoDownload(enabled: boolean): Promise<UpdateState | null>;
+  onState(callback: (state: UpdateState) => void): () => void;
 }
 
 /** One download (electron/downloads.cjs). */

@@ -4,6 +4,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ## [Unreleased]
 
+### Added
+
+- Updates you can see: an indicator next to the Yzo logo shows a new version, as a ring filling in violet while it downloads, then as a full violet circle with a check that restarts Yzo on it when clicked. Settings > About shows where the update stands (checking, progress bar, ready, failed) with the matching button, the Yzo menu offers "Restart to update" once it is ready, and toasts tell when a new version is found and when it is ready. Yzo also checks every 4 hours, not only at startup. The update still installs on quit if you do not restart.
+- "Update automatically" switch in Settings > About (on by default). Off, a found version is not downloaded: the indicator shows the download arrow with a violet dot, and clicking it (or "Download Yzo X" in the Yzo menu or the settings) starts the download.
+
 ### Changed
 
 - Releases publish themselves: once the Windows, macOS and Linux builds have all uploaded to the draft release, the workflow publishes it with `release-notes-<version>.md` as its text. A release published by hand too early missed the Windows and macOS files, so installed Yzo could not find the update.

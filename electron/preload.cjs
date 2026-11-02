@@ -29,7 +29,14 @@ contextBridge.exposeInMainWorld("yzo", {
   isMaximized: () => ipcRenderer.invoke("window:isMaximized"),
   isFullScreen: () => ipcRenderer.invoke("window:isFullScreen"),
   cursorPosition: () => ipcRenderer.invoke("window:cursor"),
-  checkForUpdates: () => ipcRenderer.invoke("app:checkForUpdates"),
+  updates: {
+    state: () => ipcRenderer.invoke("updates:state"),
+    check: () => ipcRenderer.invoke("updates:check"),
+    download: () => ipcRenderer.invoke("updates:download"),
+    install: () => ipcRenderer.invoke("updates:install"),
+    setAutoDownload: (enabled) => ipcRenderer.invoke("updates:setAutoDownload", enabled),
+    onState: (callback) => subscribe("updates:state", callback),
+  },
   appVersion: () => ipcRenderer.invoke("app:version"),
   openPrivateWindow: () => ipcRenderer.send("app:openPrivate"),
   downloads: {

@@ -4,7 +4,7 @@ import { THRESHOLDS } from "../lib/autoArchive";
 import { t } from "../lib/i18n";
 import { EXTENSIONS_URL, SETTINGS_SECTIONS, settingsUrl, type SettingsSection } from "../lib/internalPages";
 import { IS_PRIVATE } from "../lib/privateMode";
-import { checkForUpdatesWithToasts } from "../lib/updates";
+import { checkForUpdatesWithToasts, updateMessage, useUpdateState } from "../lib/updates";
 import { useStore } from "../state/store";
 import type { AutoArchiveThreshold, SearchEngine } from "../state/types";
 import { useSync } from "../sync/SyncProvider";
@@ -132,15 +132,19 @@ function DownloadsSection() {
 }
 
 /**
- * About section: version and update check.
+ * About section: version, where the update stands (checking, download progress, ready) and the button
+ * that fits: check for updates, or restart on the downloaded one.
  * @returns Section content.
  */
 function AboutSection() {
   const ui = useUi();
+  const update = useUpdateState();
   const [version, setVersion] = useState("");
   useEffect(() => {
     void window.yzo?.appVersion().then(setVersion);
   }, []);
+  const status = update?.status;
+  const message = update && status !== "idle" ? updateMessage(update) : null;
   return (
     <div className="settings-card">
       <div className="ext-row ext-row-first">
@@ -148,10 +152,46 @@ function AboutSection() {
           <span>Yzo</span>
           <span className="ext-row-value">{t("settings.version", { version })}</span>
         </span>
-        <button className="ext-pill" onClick={() => void checkForUpdatesWithToasts(ui.showToast)}>
-          {t("appMenu.checkUpdates")}
-        </button>
+        {status === "ready" ? (
+          <button className="ext-pill primary" onClick={() => void window.yzo?.updates.install()}>
+            {t("updates.restart")}
+          </button>
+        ) : status === "available" ? (
+          <button className="ext-pill primary" onClick={() => void window.yzo?.updates.download()}>
+            {t("updates.download", { version: update!.version })}
+          </button>
+        ) : (
+          <button className="ext-pill" disabled={status === "checking" || status === "downloading"} onClick={() => void checkForUpdatesWithToasts(ui.showToast)}>
+            {t("appMenu.checkUpdates")}
+          </button>
+        )}
       </div>
+      {message && (
+        <div className="ext-row update-status">
+          <span className={status === "error" ? "danger" : "ext-row-value"}>
+            {message}
+            {status === "ready" && `. ${t("updates.installOnQuit")}`}
+          </span>
+          {status === "downloading" && (
+            <div className="update-progress" role="progressbar" aria-valuenow={update!.percent} aria-valuemin={0} aria-valuemax={100}>
+              <div style={{ width: `${update!.percent}%` }} />
+            </div>
+          )}
+        </div>
+      )}
+      <label className="ext-row">
+        <span className="ext-row-stack-inline">
+          <span>{t("updates.autoDownload")}</span>
+          <span className="ext-row-value">{t("updates.autoDownloadHint")}</span>
+        </span>
+        <input
+          type="checkbox"
+          className="switch"
+          disabled={!update || IS_PRIVATE}
+          checked={update?.autoDownload ?? true}
+          onChange={(event) => void window.yzo?.updates.setAutoDownload(event.target.checked)}
+        />
+      </label>
     </div>
   );
 }

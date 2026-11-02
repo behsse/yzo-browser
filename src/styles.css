@@ -205,6 +205,56 @@ kbd {
   height: 18px;
 }
 
+/* Update indicator next to the Yzo logo: a ring filling in violet while the update downloads, then a
+   full violet circle with a check, which restarts on the new version. */
+.topbar .update-indicator {
+  -webkit-app-region: no-drag;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 26px;
+  border-radius: var(--radius-small);
+  color: var(--fg);
+}
+
+.topbar .update-indicator svg {
+  width: 22px;
+  height: 22px;
+  overflow: visible;
+}
+
+.update-indicator .update-dot,
+.update-indicator .update-fill {
+  fill: var(--accent);
+  stroke: none;
+}
+
+.update-indicator .update-track {
+  stroke: color-mix(in srgb, var(--fg) 18%, transparent);
+}
+
+.update-indicator .update-bar {
+  stroke: var(--accent);
+  stroke-width: 2.4;
+  transition: stroke-dasharray 0.4s ease-out;
+}
+
+.update-indicator .update-badge {
+  fill: #fff;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+
+.update-indicator .update-check {
+  stroke: var(--accent);
+  stroke-width: 1.8;
+}
+
+.topbar .update-indicator-ready:hover {
+  background-color: transparent;
+  filter: brightness(1.12);
+}
+
 /* The sidebar and top bar lock buttons are highlighted while their bar is locked (anchored). */
 .topbar .topbar-locked {
   color: var(--fg);
@@ -1515,6 +1565,36 @@ ul.ext-row-value {
 }
 
 .ext-row:disabled,
+.ext-pill.primary {
+  border-color: transparent;
+}
+
+.ext-pill.primary:hover {
+  background: var(--accent);
+  filter: brightness(1.1);
+}
+
+/* Settings > About: where the update stands, with the download's progress. */
+.update-status {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.update-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-border);
+  overflow: hidden;
+}
+
+.update-progress > div {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+  transition: width 0.3s ease-out;
+}
+
 .ext-pill:disabled,
 .switch:disabled {
   opacity: 0.45;
