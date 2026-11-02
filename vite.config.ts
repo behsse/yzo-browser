@@ -6,5 +6,7 @@ export default defineConfig({
   base: "./",
   plugins: [react()],
   build: { outDir: "dist", emptyOutDir: true },
-  test: { environment: "node", include: ["src/**/*.test.ts"] },
+  // CI runners (Windows above all) can take seconds on a first call, such as loading the ICU locale data
+  // behind toLocaleDateString: the default 5 s timeout made the release build fail at random.
+  test: { environment: "node", include: ["src/**/*.test.ts"], testTimeout: process.env.CI ? 30_000 : 5_000 },
 });
