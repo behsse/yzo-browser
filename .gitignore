@@ -15,3 +15,6 @@ electron/preload.generated.cjs
 
 # electron-builder output
 release/
+
+# Local Claude Code rules and settings
+.claude/
