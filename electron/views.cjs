@@ -123,6 +123,14 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
   const squareTop = new Set();
   const shown = new Set();
   const colorTimers = new Map();
+  /**
+   * Page in HTML full screen (a video's full-screen button): it covers the whole window, above the
+   * UI, with square corners, and the window goes full screen like in other browsers.
+   * @type {string | null}
+   */
+  let fullScreenId = null;
+  /** Whether the window was already full screen before the page asked for it (then it stays so). */
+  let windowWasFullScreen = false;
 
   /**
    * Sends a message to the UI renderer if the window is alive.
@@ -193,6 +201,10 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
       contents.on("did-stop-loading", () => scheduleColor(id));
       contents.on("did-navigate-in-page", () => scheduleColor(id));
     }
+    contents.on("enter-html-full-screen", () => enterFullScreen(id));
+    contents.on("leave-html-full-screen", () => {
+      if (fullScreenId === id) leaveFullScreen();
+    });
     win.contentView.addChildView(view);
     views.set(id, view);
     if (id !== PEEK_ID) {
@@ -221,6 +233,7 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
     clearTimeout(colorTimers.get(id));
     colorTimers.delete(id);
     if (activeTabId === id) activeTabId = null;
+    if (fullScreenId === id) leaveFullScreen();
     const win = getWindow();
     if (win && !win.isDestroyed()) win.contentView.removeChildView(view);
     if (!view.webContents.isDestroyed()) {
@@ -276,8 +289,63 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
     if (peek && win && !win.isDestroyed()) win.contentView.addChildView(peek);
   };
 
+  /**
+   * Puts a page in full screen: the window goes full screen and the page covers all of it.
+   * @param {string} id Tab id or PEEK_ID.
+   */
+  const enterFullScreen = (id) => {
+    const win = getWindow();
+    const view = views.get(id);
+    if (!win || win.isDestroyed() || !view) return;
+    if (fullScreenId === null) windowWasFullScreen = win.isFullScreen();
+    fullScreenId = id;
+    view.setBorderRadius(0);
+    if (!win.isFullScreen()) win.setFullScreen(true);
+    apply();
+  };
+
+  /** Gives the full-screen page back its slot and the window its previous state. */
+  const leaveFullScreen = () => {
+    const id = fullScreenId;
+    if (id === null) return;
+    fullScreenId = null;
+    const view = views.get(id);
+    if (view) view.setBorderRadius(VIEW_RADIUS);
+    const win = getWindow();
+    if (win && !win.isDestroyed() && !windowWasFullScreen && win.isFullScreen()) win.setFullScreen(false);
+    // Asks the page to leave too when the exit did not come from it (tab switched, window left full screen).
+    const contents = view?.webContents;
+    if (contents && !contents.isDestroyed()) {
+      contents.executeJavaScript("document.fullscreenElement && document.exitFullscreen()", true).catch(() => {});
+    }
+    // The page was moved above everything: put the UI back where the layout wants it.
+    hooks.onRaise?.(raised);
+    apply();
+  };
+
+  /**
+   * Bounds of the full-screen page: the whole window content.
+   * @returns {Bounds | null} Bounds, or null when the window is gone.
+   */
+  const fullScreenBounds = () => {
+    const win = getWindow();
+    if (!win || win.isDestroyed()) return null;
+    const { width, height } = win.getContentBounds();
+    return { x: 0, y: 0, width, height };
+  };
+
   /** Applies the stored bounds to every view; a view without bounds (not on screen) is hidden. */
   const apply = () => {
+    const win = getWindow();
+    const fullScreenView = fullScreenId === null ? null : views.get(fullScreenId);
+    if (fullScreenView && win && !win.isDestroyed()) {
+      const rect = fullScreenBounds();
+      if (rect) fullScreenView.setBounds(rect);
+      fullScreenView.setVisible(true);
+      // Above every other view (other pages, the UI, Peek, menus) while it lasts.
+      win.contentView.addChildView(fullScreenView);
+      return;
+    }
     for (const [id, view] of views) {
       const rect = bounds.get(id) ?? null;
       if (rect) view.setBounds(rect);
@@ -316,6 +384,8 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
         bounds.set(PEEK_ID, toBounds(peek.bounds));
       }
       for (const id of [...views.keys()]) if (!wanted.has(id)) destroyView(id);
+      // A full-screen page taken off screen (tab switched) leaves full screen, like in Chrome.
+      if (fullScreenId !== null && !bounds.get(fullScreenId)) leaveFullScreen();
 
       // Restack before apply(), which then puts Peek back on top of the UI.
       if (Boolean(wantRaised) !== raised) {
@@ -405,6 +475,16 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
         default:
           return undefined;
       }
+    },
+
+    /** Fits the full-screen page to the window again (after a resize). */
+    relayout() {
+      if (fullScreenId !== null) apply();
+    },
+
+    /** Takes the page out of full screen when the window leaves it (F11, Escape handled by Windows). */
+    exitFullScreen() {
+      leaveFullScreen();
     },
 
     /** Sends the colors already read to the UI again (after it reloaded and lost them). */

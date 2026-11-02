@@ -328,14 +328,20 @@ function createWindow() {
   };
   win.contentView.addChildView(ui);
   fitUi();
-  win.on("resize", fitUi);
+  win.on("resize", () => {
+    fitUi();
+    viewManager?.relayout();
+  });
   ui.webContents.once("did-finish-load", () => win.show());
   // A reloaded UI lost the pages' colors; the views keep them.
   ui.webContents.on("did-finish-load", () => viewManager?.resendColors());
   win.on("maximize", () => ui.webContents.send("window:maximized", true));
   win.on("unmaximize", () => ui.webContents.send("window:maximized", false));
   win.on("enter-full-screen", () => ui.webContents.send("window:fullscreen", true));
-  win.on("leave-full-screen", () => ui.webContents.send("window:fullscreen", false));
+  win.on("leave-full-screen", () => {
+    ui.webContents.send("window:fullscreen", false);
+    viewManager?.exitFullScreen();
+  });
   // Lets the UI keep a revealed top bar open while the user drags the window by it.
   win.on("move", () => ui.webContents.send("window:moved"));
   win.on("closed", () => {
