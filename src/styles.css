@@ -1058,6 +1058,12 @@ kbd {
   box-shadow: var(--shadow-card), 0 0 0 2px var(--accent);
 }
 
+/* The floating sidebar covers the left pane's edges: its focus ring would frame the sidebar instead. */
+.app-sidebar-revealed .web-pane-focused,
+.app-sidebar-revealed .web-pane-frame-focused {
+  box-shadow: var(--shadow-card);
+}
+
 .web-pane-frame > .web-pane-split {
   top: 30px;
   box-shadow: none;

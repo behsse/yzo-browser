@@ -423,7 +423,7 @@ export function App() {
   return (
     <ViewHostProvider overlayOpen={overlayOpen} peekUrl={peekUrl}>
       <UiContext.Provider value={ui}>
-        <div className={`app app-${resolveAppearance(theme)}${hidden ? " app-sidebar-hidden" : ""}${topHidden ? " app-topbar-hidden" : ""}`}>
+        <div className={`app app-${resolveAppearance(theme)}${hidden ? " app-sidebar-hidden" : ""}${hidden && revealed ? " app-sidebar-revealed" : ""}${topHidden ? " app-topbar-hidden" : ""}`}>
           {/* The space gradient, with a hole over each page: the UI view is transparent there, so the
               live pages show through when the UI is stacked above them. */}
           <div className="app-backdrop" style={{ background: sidebarBackground(theme) }} />
