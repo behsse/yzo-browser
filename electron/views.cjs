@@ -376,10 +376,14 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
       if (!Array.isArray(tabs) || tabs.length > MAX_TABS) return;
 
       const wanted = new Set();
+      let created = false;
       for (const tab of tabs) {
         if (!tab || typeof tab.id !== "string" || !ID_PATTERN.test(tab.id) || typeof tab.url !== "string") continue;
         wanted.add(tab.id);
-        if (!views.has(tab.id) && !createView(tab.id, tab.url)) continue;
+        if (!views.has(tab.id)) {
+          if (!createView(tab.id, tab.url)) continue;
+          created = true;
+        }
         bounds.set(tab.id, toBounds(tab.bounds));
         if (tab.squareTop === true) squareTop.add(tab.id);
         else squareTop.delete(tab.id);
@@ -401,7 +405,10 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
       apply();
 
       const nextActive = typeof active === "string" && views.has(active) ? active : null;
-      if (nextActive && nextActive !== activeTabId) hooks.onActivated?.(nextActive, views.get(nextActive).webContents);
+      // Extensions make every new tab the active one (electron-chrome-extensions): after a background
+      // tab or a split pane loads, the selected tab is told again, or extension popups read the wrong
+      // tab ("No website" in uBlock Origin Lite).
+      if (nextActive && (nextActive !== activeTabId || created)) hooks.onActivated?.(nextActive, views.get(nextActive).webContents);
       activeTabId = nextActive;
     },
 

@@ -3,6 +3,7 @@
 // Yzo itself).
 const { dialog, session: electronSession } = require("electron");
 const { randomUUID } = require("node:crypto");
+const path = require("node:path");
 const { ElectronChromeExtensions } = require("electron-chrome-extensions");
 const { installChromeWebStore, installExtension, uninstallExtension } = require("electron-chrome-web-store");
 const { t } = require("./i18n.cjs");
@@ -89,6 +90,8 @@ function describePermissions(manifest) {
  *   windows run, nothing can be installed, and the choices are read-only.
  * @returns {Promise<{
  *   extensions: ElectronChromeExtensions,
+ *   addTab(contents: Electron.WebContents, win: Electron.BaseWindow): void,
+ *   selectTab(contents: Electron.WebContents): void,
  *   list(): Promise<object[]>,
  *   setEnabled(id: string, enabled: boolean): Promise<boolean>,
  *   setPrivateAllowed(id: string, allowed: boolean): Promise<boolean>,
@@ -122,6 +125,26 @@ async function setupExtensions({ session, getWindow, getUi, getViews, profile, p
     if (id) getUi()?.send(channel, { id });
   };
 
+  /**
+   * Set while Yzo itself tells the extensions about its tabs. The library then makes the tab active
+   * and calls selectTab back; only a selection asked by an extension (chrome.tabs.update) must reach
+   * the UI, or every page that loads (background tab, split pane) would take the selection.
+   */
+  let fromYzo = false;
+
+  /**
+   * Runs a call into the extension library without echoing tab selections back to the UI.
+   * @param {() => void} call Library call.
+   */
+  const quietly = (call) => {
+    fromYzo = true;
+    try {
+      call();
+    } finally {
+      fromYzo = false;
+    }
+  };
+
   const extensions = new ElectronChromeExtensions({
     license: "GPL-3.0",
     session,
@@ -132,7 +155,7 @@ async function setupExtensions({ session, getWindow, getUi, getViews, profile, p
       return [contents, win];
     },
     selectTab(contents) {
-      toUiForTab("tab:activate", contents);
+      if (!fromYzo) toUiForTab("tab:activate", contents);
     },
     removeTab(contents) {
       toUiForTab("tab:close", contents);
@@ -146,6 +169,11 @@ async function setupExtensions({ session, getWindow, getUi, getViews, profile, p
       return win;
     },
   });
+
+  // `browser` = `chrome` in extension pages and workers (see extension-browser.preload.cjs).
+  const browserPreload = path.join(__dirname, "extension-browser.preload.cjs");
+  session.registerPreloadScript({ id: "yzo-browser-namespace", type: "frame", filePath: browserPreload });
+  session.registerPreloadScript({ id: "yzo-browser-namespace-worker", type: "service-worker", filePath: browserPreload });
 
   // Extension icons in the UI (<browser-action-list>) load through the crx:// protocol, served in
   // the session of the page that shows them: the UI's default session.
@@ -183,6 +211,21 @@ async function setupExtensions({ session, getWindow, getUi, getViews, profile, p
 
   return {
     extensions,
+    /**
+     * Exposes a new tab page to extensions as a Chrome tab of the window.
+     * @param {Electron.WebContents} contents Tab page.
+     * @param {Electron.BaseWindow} win Browser window.
+     */
+    addTab(contents, win) {
+      quietly(() => extensions.addTab(contents, /** @type {Electron.BrowserWindow} */ (win)));
+    },
+    /**
+     * Tells extensions which tab is the selected one (chrome.tabs.query({ active: true })).
+     * @param {Electron.WebContents} contents Selected tab page.
+     */
+    selectTab(contents) {
+      quietly(() => extensions.selectTab(contents));
+    },
     /**
      * Every installed extension, turned on or off, with what the extensions page shows.
      * @returns {Promise<object[]>} InstalledExtension entries (src/env.d.ts).

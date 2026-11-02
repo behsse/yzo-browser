@@ -12,6 +12,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 - Full-screen videos now fill the whole screen like in other browsers: the window goes full screen and the page covers the sidebar and the top bar, with square corners and no black bands. Escape, F11 or switching tabs leaves full screen.
 - The selected pane of a split no longer jumps back and forth while its pages load (at startup): a pane is now selected when it is clicked or tapped, not whenever its page takes focus.
+- uBlock Origin Lite works again: in extension pages and service workers, `browser` is now the same object as `chrome`. Chromium's own `browser` namespace lacked the APIs Yzo adds (permissions, commands…), so extensions that prefer it crashed at startup and their popup showed "No website".
+- Extensions see the selected tab again: a tab loading in the background (or a split pane) no longer becomes the extensions' active tab, so popups such as uBlock Origin Lite's show the current site instead of "No website", and loading pages no longer steal the selection.
 
 ## [0.9.0] - 2026-10-27
 

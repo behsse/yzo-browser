@@ -360,9 +360,9 @@ function createWindow() {
     setupContents: setupPageContents,
     // Every tab page is exposed to extensions as a Chrome tab of this window.
     hooks: {
-      onCreated: (_id, contents) => extensionController?.extensions.addTab(contents, win),
+      onCreated: (_id, contents) => extensionController?.addTab(contents, win),
       onDestroyed: (_id, contents) => extensionController?.extensions.removeTab(contents),
-      onActivated: (_id, contents) => extensionController?.extensions.selectTab(contents),
+      onActivated: (_id, contents) => extensionController?.selectTab(contents),
       onRaise: stackUi,
     },
   });
