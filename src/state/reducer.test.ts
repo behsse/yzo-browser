@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildSuggestions } from "../lib/commandBar";
 import { THRESHOLD_MS } from "../lib/autoArchive";
 import { parseState, serializeState } from "./persistence";
-import { createInitialState, MAX_SPLIT_PANES, reducer, type Action } from "./reducer";
+import { createInitialState, MAX_SPLIT_PANES, newWindowState, reducer, type Action } from "./reducer";
 import { isSplit, isTab } from "./tree";
 import type { AppState, ID } from "./types";
 
@@ -335,6 +335,111 @@ describe("history and command bar", () => {
   it("offers a direct URL first for address-like input", () => {
     const suggestions = buildSuggestions("arc.net", createInitialState(T0));
     expect(suggestions[0]).toMatchObject({ kind: "url", url: "https://arc.net" });
+  });
+});
+
+describe("several windows", () => {
+  /**
+   * Simulates what another window saved, as received through the main process.
+   * @param state That window's state.
+   * @returns The state parsed back, like the store does.
+   */
+  const received = (state: AppState) => parseState(serializeState(state))!;
+
+  /**
+   * Opens a second window on a state, like the store does.
+   * @param state State of the open windows.
+   * @returns The new window's state.
+   */
+  const openWindow = (state: AppState) => reducer(state, { type: "hydrate", state: newWindowState(received(state), T0) });
+
+  /**
+   * Takes what another window saved into this one.
+   * @param here This window's state.
+   * @param there The other window's state.
+   * @returns Merged state.
+   */
+  const take = (here: AppState, there: AppState) => reducer(here, { type: "applyShared", state: received(there), now: T0 });
+
+  const todayTabs = (s: AppState, spaceId = s.window.focusedSpaceId) => s.items[s.spaces[spaceId].todayId].childrenIds;
+
+  it("opens a new window with the same spaces, pinned tabs and favorites but no today tab", () => {
+    let [first, a] = openTab(createInitialState(T0), "https://a.com");
+    let p: ID;
+    [first, p] = openTab(first, "https://pinned.com");
+    first = reducer(first, { type: "togglePin", id: p });
+    const second = openWindow(first);
+    expect(second.spaceOrder).toEqual(first.spaceOrder);
+    expect(second.items[space(second).pinnedId].childrenIds).toEqual([p]);
+    expect(second.items[second.favoritesId].childrenIds).toEqual(first.items[first.favoritesId].childrenIds);
+    expect(todayTabs(second)).toEqual([]);
+    expect(second.items[a]).toBeUndefined();
+    expect(second.window.selection).toEqual({});
+    expect(space(second).todayId).not.toBe(space(first).todayId);
+  });
+
+  it("keeps each window's today tabs apart and shares pinned tabs", () => {
+    let [first, a] = openTab(createInitialState(T0), "https://a.com");
+    first = reducer(first, { type: "setSidebarMode", mode: "hidden" });
+    let [second, b] = openTab(openWindow(first), "https://b.com");
+    second = reducer(second, { type: "togglePin", id: b });
+    first = take(first, second);
+    expect(todayTabs(first)).toEqual([a]);
+    expect(first.items[space(first).pinnedId].childrenIds).toEqual([b]);
+    expect(first.window.selection[first.window.focusedSpaceId].focusedTabId).toBe(a);
+    expect(first.window.sidebarMode).toBe("hidden");
+    expect(first.loadedTabIds).toEqual([a]);
+    // And back: the second window does not get the first one's today tab.
+    second = take(second, first);
+    expect(second.items[a]).toBeUndefined();
+    expect(todayTabs(second)).toEqual([]);
+  });
+
+  it("shares a tab unpinned into today with no other window", () => {
+    let [first, p] = openTab(createInitialState(T0), "https://pinned.com");
+    first = reducer(first, { type: "togglePin", id: p });
+    let second = openWindow(first);
+    second = reducer(second, { type: "togglePin", id: p });
+    first = take(first, second);
+    expect(first.items[p]).toBeUndefined();
+    expect(first.items[space(first).pinnedId].childrenIds).toEqual([]);
+  });
+
+  it("gives a space created in another window an empty today here", () => {
+    let first = createInitialState(T0);
+    let second = openWindow(first);
+    second = reducer(second, { type: "createSpace", name: "B", icon: "🅱", theme: space(second).theme, now: T0 });
+    const created = second.window.focusedSpaceId;
+    first = take(first, second);
+    expect(first.spaces[created]).toBeDefined();
+    expect(first.items[first.spaces[created].todayId]).toMatchObject({ data: { role: "today", spaceId: created } });
+    expect(first.spaces[created].todayId).not.toBe(second.spaces[created].todayId);
+  });
+
+  it("archives this window's today tabs of a space deleted in another window", () => {
+    let first = createInitialState(T0);
+    first = reducer(first, { type: "createSpace", name: "B", icon: "🅱", theme: space(first).theme, now: T0 });
+    const doomed = first.window.focusedSpaceId;
+    let second = openWindow(first);
+    second = reducer(second, { type: "deleteSpace", id: doomed, now: T0 });
+    first = openTab(first, "https://a.com")[0];
+    first = take(first, second);
+    expect(first.spaces[doomed]).toBeUndefined();
+    expect(first.window.focusedSpaceId).toBe(first.spaceOrder[0]);
+    expect(first.window.selection[doomed]).toBeUndefined();
+    expect(first.archive[0]).toMatchObject({ url: "https://a.com", reason: "spaceDeleted" });
+  });
+
+  it("archives a closing window's today tabs and leaves its pinned tabs", () => {
+    let [s, a] = openTab(createInitialState(T0), "https://a.com");
+    let p: ID;
+    [s, p] = openTab(s, "https://pinned.com");
+    s = reducer(s, { type: "togglePin", id: p });
+    s = reducer(s, { type: "archiveWindowTabs", now: T0 + 1 });
+    expect(s.items[a]).toBeUndefined();
+    expect(s.items[p]).toBeDefined();
+    expect(s.archive[0]).toMatchObject({ url: "https://a.com" });
+    expect(s.window.selection[s.window.focusedSpaceId]).toEqual({ itemId: null, focusedTabId: null });
   });
 });
 

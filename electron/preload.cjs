@@ -16,7 +16,14 @@ function subscribe(channel, callback) {
 contextBridge.exposeInMainWorld("yzo", {
   loadState: () => ipcRenderer.invoke("state:load"),
   saveState: (json) => ipcRenderer.invoke("state:save", json),
+  // Windows share the sidebar: the state another window saved, to take in.
+  onSharedState: (callback) => subscribe("state:shared", callback),
+  newWindow: () => ipcRenderer.send("app:newWindow"),
+  isSyncLeader: () => ipcRenderer.invoke("sync:isLeader"),
+  onSyncLeader: (callback) => subscribe("sync:leader", callback),
   windowControl: (action) => ipcRenderer.send("window:control", action),
+  onWindowClosing: (callback) => subscribe("window:closing", callback),
+  closeReady: () => ipcRenderer.send("window:closeReady"),
   windowDrag: () => ipcRenderer.send("window:drag"),
   onWindowMoved: (callback) => subscribe("window:moved", callback),
   isMaximized: () => ipcRenderer.invoke("window:isMaximized"),
@@ -46,6 +53,10 @@ contextBridge.exposeInMainWorld("yzo", {
   resolveFavicon: (url) => ipcRenderer.invoke("favicon:resolve", url),
   showMenu: (entries, x, y) => ipcRenderer.invoke("menu:popup", entries, x, y),
   syncViews: (payload) => ipcRenderer.send("views:sync", payload),
+  // Tabs shown here whose page another window has on screen; bring it here or go to that window.
+  onViewsElsewhere: (callback) => subscribe("views:elsewhere", callback),
+  claimView: (tabId) => ipcRenderer.send("views:claim", tabId),
+  showViewOwner: (tabId) => ipcRenderer.send("views:showOwner", tabId),
   tabCommand: (tabId, command, arg) => ipcRenderer.invoke("tab:command", tabId, command, arg),
   onTabEvent: (callback) => subscribe("tab:event", callback),
   // Tab requests coming from extensions (chrome.tabs.create / update / remove).
@@ -58,6 +69,7 @@ contextBridge.exposeInMainWorld("yzo", {
   // Yzo account and sync. Keys and the session token stay in the main process.
   account: {
     status: () => ipcRenderer.invoke("account:status"),
+    onChanged: (callback) => subscribe("account:changed", callback),
     signUp: (serverUrl, email, password) => ipcRenderer.invoke("account:signUp", serverUrl, email, password),
     signIn: (serverUrl, email, password) => ipcRenderer.invoke("account:signIn", serverUrl, email, password),
     signOut: () => ipcRenderer.invoke("account:signOut"),

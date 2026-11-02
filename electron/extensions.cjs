@@ -7,6 +7,7 @@ const path = require("node:path");
 const { ElectronChromeExtensions } = require("electron-chrome-extensions");
 const { installChromeWebStore, installExtension, uninstallExtension } = require("electron-chrome-web-store");
 const { t } = require("./i18n.cjs");
+const { tabIdOf, waitForTab, windowOf } = require("./views.cjs");
 const { discoverInstalled, localize, readIcon, folderSize, readSettings, writeSettings, loadInstalled } = require("./extension-store.cjs");
 
 const WEB_STORE_DETAIL_URL = "https://chromewebstore.google.com/detail/";
@@ -81,10 +82,10 @@ function describePermissions(manifest) {
  * Enables Chrome extensions for the tabs' session.
  * @param {object} options Wiring provided by the main process.
  * @param {Electron.Session} options.session Session shared by all tabs.
- * @param {() => Electron.BaseWindow | null} options.getWindow Returns the browser window.
- * @param {() => Electron.WebContents | null} options.getUi Returns the UI renderer's contents.
- * @param {() => ReturnType<import("./views.cjs").createViewManager> | null} options.getViews Returns
- *   the view manager of that window.
+ * @param {() => Electron.BaseWindow | null} options.getWindow Returns the window the user used last.
+ * @param {() => Electron.WebContents | null} options.getUi Returns that window's UI renderer.
+ * @param {(win: Electron.BaseWindow | null) => Electron.WebContents | null} options.getUiOf Returns the UI
+ *   renderer of a window.
  * @param {string} options.profile Normal profile folder (installs and choices live there).
  * @param {boolean} [options.privateMode] Private instance: only the extensions allowed in private
  *   windows run, nothing can be installed, and the choices are read-only.
@@ -92,6 +93,8 @@ function describePermissions(manifest) {
  *   extensions: ElectronChromeExtensions,
  *   addTab(contents: Electron.WebContents, win: Electron.BaseWindow): void,
  *   selectTab(contents: Electron.WebContents): void,
+ *   removeTab(contents: Electron.WebContents): void,
+ *   moveTab(contents: Electron.WebContents, win: Electron.BaseWindow): void,
  *   list(): Promise<object[]>,
  *   setEnabled(id: string, enabled: boolean): Promise<boolean>,
  *   setPrivateAllowed(id: string, allowed: boolean): Promise<boolean>,
@@ -99,7 +102,7 @@ function describePermissions(manifest) {
  *   contextMenuItems(contents: Electron.WebContents, params: Electron.ContextMenuParams): Electron.MenuItem[],
  * }>} Extension controller.
  */
-async function setupExtensions({ session, getWindow, getUi, getViews, profile, privateMode = false }) {
+async function setupExtensions({ session, getWindow, getUi, getUiOf, profile, privateMode = false }) {
   /**
    * Asks the UI to create a tab and waits for its page to exist.
    * @param {string | undefined} url Tab URL.
@@ -108,21 +111,20 @@ async function setupExtensions({ session, getWindow, getUi, getViews, profile, p
    */
   const createTab = async (url, active) => {
     const ui = getUi();
-    const views = getViews();
-    if (!ui || !views) return null;
+    if (!ui) return null;
     const id = randomUUID();
     ui.send("tab:create", { id, url: url || "about:blank", active });
-    return views.waitForView(id);
+    return waitForTab(id);
   };
 
   /**
-   * Sends a tab command to the UI by page contents.
+   * Sends a tab command to the UI of the window the page is in.
    * @param {string} channel IPC channel ("tab:activate" or "tab:close").
    * @param {Electron.WebContents} contents Tab page.
    */
   const toUiForTab = (channel, contents) => {
-    const id = getViews()?.idOf(contents);
-    if (id) getUi()?.send(channel, { id });
+    const id = tabIdOf(contents);
+    if (id) (getUiOf(windowOf(contents)) ?? getUi())?.send(channel, { id });
   };
 
   /**
@@ -150,7 +152,7 @@ async function setupExtensions({ session, getWindow, getUi, getViews, profile, p
     session,
     async createTab(details) {
       const contents = await createTab(details.url, details.active !== false);
-      const win = getWindow();
+      const win = (contents && windowOf(contents)) ?? getWindow();
       if (!contents || !win) throw new Error("Yzo could not create the tab");
       return [contents, win];
     },
@@ -158,9 +160,9 @@ async function setupExtensions({ session, getWindow, getUi, getViews, profile, p
       if (!fromYzo) toUiForTab("tab:activate", contents);
     },
     removeTab(contents) {
-      toUiForTab("tab:close", contents);
+      if (!fromYzo) toUiForTab("tab:close", contents);
     },
-    // Yzo has a single window: extension windows open as tabs in it.
+    // Extension windows open as tabs in the window used last.
     async createWindow(details) {
       const urls = Array.isArray(details.url) ? details.url : [details.url];
       for (const url of urls) await createTab(url, true);
@@ -175,8 +177,11 @@ async function setupExtensions({ session, getWindow, getUi, getViews, profile, p
   extensions.on("browser-action-popup-created", (popup) => {
     const popupWindow = popup.browserWindow;
     if (!popupWindow || popupWindow.isDestroyed()) return;
-    getUi()?.send("extension:popup", true);
-    popupWindow.once("closed", () => getUi()?.send("extension:popup", false));
+    const ui = getUiOf(popup.parent ?? null) ?? getUi();
+    ui?.send("extension:popup", true);
+    popupWindow.once("closed", () => {
+      if (!ui?.isDestroyed()) ui?.send("extension:popup", false);
+    });
   });
 
   // `browser` = `chrome` in extension pages and workers (see extension-browser.preload.cjs).
@@ -234,6 +239,24 @@ async function setupExtensions({ session, getWindow, getUi, getViews, profile, p
      */
     selectTab(contents) {
       quietly(() => extensions.selectTab(contents));
+    },
+    /**
+     * Tells extensions a tab's page is gone (closed, or unloaded), without closing the tab in the UI.
+     * @param {Electron.WebContents} contents Tab page.
+     */
+    removeTab(contents) {
+      quietly(() => extensions.removeTab(contents));
+    },
+    /**
+     * Tells extensions a tab's page moved to another window.
+     * @param {Electron.WebContents} contents Tab page.
+     * @param {Electron.BaseWindow} win Window it is in now.
+     */
+    moveTab(contents, win) {
+      quietly(() => {
+        extensions.removeTab(contents);
+        extensions.addTab(contents, /** @type {Electron.BrowserWindow} */ (win));
+      });
     },
     /**
      * Every installed extension, turned on or off, with what the extensions page shows.

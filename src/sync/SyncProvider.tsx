@@ -106,23 +106,33 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void refreshStatus();
+    // Signing in or out in another window.
+    return window.yzo?.account.onChanged(() => void refreshStatus());
   }, [refreshStatus]);
 
-  const signedIn = Boolean(status?.signedIn);
+  // Windows share the sidebar and its sync bookkeeping: only one of them (the oldest) syncs on its
+  // own, or two windows would pull and push the same changes. "Sync now" works in any window.
+  const [leader, setLeader] = useState(!window.yzo);
+  useEffect(() => {
+    void window.yzo?.isSyncLeader().then(setLeader);
+    return window.yzo?.onSyncLeader(setLeader);
+  }, []);
+
+  const autoSync = Boolean(status?.signedIn) && leader;
   const email = status?.email ?? null;
 
   // Bookkeeping belongs to one account: start fresh when another account signs in.
   useEffect(() => {
-    if (signedIn && state.sync.email !== email) dispatch({ type: "resetSync", email });
-  }, [signedIn, email, state.sync.email, dispatch]);
+    if (autoSync && state.sync.email !== email) dispatch({ type: "resetSync", email });
+  }, [autoSync, email, state.sync.email, dispatch]);
 
   // Periodic sync while signed in (and right away).
   useEffect(() => {
-    if (!signedIn || stateRef.current.sync.email !== email) return;
+    if (!autoSync || stateRef.current.sync.email !== email) return;
     void cycle();
     const timer = window.setInterval(() => void cycle(), SYNC_INTERVAL_MS);
     return () => window.clearInterval(timer);
-  }, [signedIn, email, state.sync.email, cycle]);
+  }, [autoSync, email, state.sync.email, cycle]);
 
   // Debounced sync after a change to synced data (not after tab switches or page navigation).
   const fingerprint = useMemo(() => hashString([...projectRecords(state).values()].join("\n")), [state]);
@@ -130,10 +140,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (fingerprint === lastFingerprint.current) return;
     lastFingerprint.current = fingerprint;
-    if (!signedIn) return;
+    if (!autoSync) return;
     const timer = window.setTimeout(() => void cycle(), CHANGE_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
-  }, [fingerprint, signedIn, cycle]);
+  }, [fingerprint, autoSync, cycle]);
 
   const value = useMemo<SyncValue>(
     () => ({

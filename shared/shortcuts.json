@@ -20,6 +20,7 @@
   { "action": "openArchive", "key": "y", "ctrl": true },
   { "action": "devTools", "key": "i", "ctrl": true, "shift": true },
   { "action": "devTools", "key": "F12" },
+  { "action": "newWindow", "key": "n", "ctrl": true },
   { "action": "privateWindow", "key": "n", "ctrl": true, "shift": true },
   { "action": "downloads", "key": "j", "ctrl": true },
   { "action": "print", "key": "p", "ctrl": true },

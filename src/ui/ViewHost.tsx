@@ -22,6 +22,8 @@ interface ViewHostValue {
   webContentsIdOf(id: ID | null): number | undefined;
   /** Keeps the pages on their slots every frame for a while (slots moving with a CSS transition). */
   followAnimation(ms: number): void;
+  /** Tabs shown here whose page another window has on screen: their slot shows a placeholder. */
+  elsewhere: ReadonlySet<ID>;
 }
 
 const ViewHostContext = createContext<ViewHostValue | null>(null);
@@ -69,16 +71,17 @@ export function ViewHostProvider({ overlayOpen, peekUrl, children }: { overlayOp
   const frame = useRef(0);
   const [dragging, setDragging] = useState(false);
   const [webContentsIds, setWebContentsIds] = useState<Record<ID, number>>({});
+  const [elsewhere, setElsewhere] = useState<ReadonlySet<ID>>(() => new Set());
   const raised = overlayOpen || dragging;
 
-  const latest = useRef({ state, raised, peekUrl });
-  latest.current = { state, raised, peekUrl };
+  const latest = useRef({ state, raised, peekUrl, elsewhere });
+  latest.current = { state, raised, peekUrl, elsewhere };
   const lastMask = useRef("");
 
   const sendSync = useCallback(() => {
     frame.current = 0;
     if (!window.yzo) return;
-    const { state: s, raised: isRaised, peekUrl: peek } = latest.current;
+    const { state: s, raised: isRaised, peekUrl: peek, elsewhere: away } = latest.current;
     const ids = new Set([...s.loadedTabIds, ...slots.current.keys()]);
     const tabs: ViewSyncPayload["tabs"] = [];
     for (const id of ids) {
@@ -88,8 +91,9 @@ export function ViewHostProvider({ overlayOpen, peekUrl, children }: { overlayOp
       const slot = slots.current.get(id);
       tabs.push({ id, url: item.data.url, bounds: boundsOf(slot), squareTop: Boolean(slot?.classList.contains("web-pane-split")) });
     }
+    // No hole where a placeholder stands in for a page that is in another window.
     const mask = pageHolesMask(
-      tabs.flatMap((tab) => (tab.bounds ? [{ ...tab.bounds, squareTop: tab.squareTop }] : [])),
+      tabs.flatMap((tab) => (tab.bounds && !away.has(tab.id) ? [{ ...tab.bounds, squareTop: tab.squareTop }] : [])),
       window.innerWidth,
       window.innerHeight,
     );
@@ -126,6 +130,8 @@ export function ViewHostProvider({ overlayOpen, peekUrl, children }: { overlayOp
       if (event.type === "attached") setWebContentsIds((ids) => ({ ...ids, [event.tabId]: event.webContentsId }));
     });
   }, []);
+
+  useEffect(() => window.yzo?.onViewsElsewhere((ids) => setElsewhere(new Set(ids))), []);
 
   // Keyboard focus follows the selected tab, like clicking into a page.
   const focusedTabId = state.window.selection[state.window.focusedSpaceId]?.focusedTabId ?? null;
@@ -194,8 +200,8 @@ export function ViewHostProvider({ overlayOpen, peekUrl, children }: { overlayOp
   );
 
   const value = useMemo<ViewHostValue>(
-    () => ({ slotRef, peekRef, raised, setDragging, webContentsIdOf, followAnimation }),
-    [slotRef, peekRef, raised, webContentsIdOf, followAnimation],
+    () => ({ slotRef, peekRef, raised, setDragging, webContentsIdOf, followAnimation, elsewhere }),
+    [slotRef, peekRef, raised, webContentsIdOf, followAnimation, elsewhere],
   );
   return <ViewHostContext.Provider value={value}>{children}</ViewHostContext.Provider>;
 }

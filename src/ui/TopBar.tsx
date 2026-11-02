@@ -150,8 +150,7 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
       y: rect.bottom + 4,
       entries: [
         { icon: "tab", label: t("appMenu.newTab"), hint: shortcutLabel("newTab"), onSelect: () => ui.runAction("newTab") },
-        // Multi-window is not built yet: shown so the menu matches Arc, but disabled.
-        { icon: "restore", label: t("appMenu.newWindow"), hint: "Ctrl+N", disabled: true, onSelect: () => {} },
+        { icon: "restore", label: t("appMenu.newWindow"), hint: shortcutLabel("newWindow"), onSelect: () => ui.runAction("newWindow") },
         "separator",
         // A private instance keeps nothing: no import into it, no account.
         settings,
@@ -183,8 +182,7 @@ export function TopBar({ floating = false }: { floating?: boolean }) {
         // A private window has no account.
         ...(IS_PRIVATE ? [] : [account, "separator" as const]),
         { icon: "tab", label: t("appMenu.newTab"), hint: shortcutLabel("newTab"), onSelect: () => ui.runAction("newTab") },
-        // Multi-window is not built yet: shown like in the logo's menu, but disabled.
-        { icon: "restore", label: t("appMenu.newWindow"), hint: "Ctrl+N", disabled: true, onSelect: () => {} },
+        { icon: "restore", label: t("appMenu.newWindow"), hint: shortcutLabel("newWindow"), onSelect: () => ui.runAction("newWindow") },
         { icon: "incognito", label: t("mainMenu.newPrivateWindow"), hint: shortcutLabel("privateWindow"), onSelect: () => ui.runAction("privateWindow") },
         "separator",
         { icon: "download", label: t("downloads.title"), hint: shortcutLabel("downloads"), onSelect: () => ui.runAction("downloads") },

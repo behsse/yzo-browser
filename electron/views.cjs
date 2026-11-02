@@ -1,4 +1,7 @@
 // Tab views: one WebContentsView per loaded tab (plus one for Peek), driven by the UI renderer.
+// Every window has its own manager. The windows share the sidebar, but a tab's page lives in one
+// window at a time: it moves to the window that wants it on screen, and a window that shows a tab
+// whose page another window has on screen gets a placeholder (views:elsewhere) instead.
 //
 // The renderer owns layout. It sends the list of loaded tabs with the on-screen rectangle of each
 // visible one (views:sync); this module creates, positions, shows and destroys native views to
@@ -23,6 +26,7 @@ const POINTER_DOWN_EVENTS = new Set(["mouseDown", "touchStart", "gestureTapDown"
  * @typedef {{
  *   onCreated?(id: string, contents: Electron.WebContents): void,
  *   onDestroyed?(id: string, contents: Electron.WebContents): void,
+ *   onMoved?(id: string, contents: Electron.WebContents): void,
  *   onActivated?(id: string, contents: Electron.WebContents): void,
  *   onRaise?(raised: boolean): void,
  * }} ViewHooks
@@ -82,6 +86,105 @@ async function savePage(contents, win) {
 }
 
 /**
+ * Windows share the sidebar, so the same tab can be wanted by several of them; its page lives in one
+ * window at a time. These registries span every window's manager: who owns each tab's page, which tab a
+ * page belongs to, and who waits for a page to exist.
+ * @type {Map<string, ManagerInternals>}
+ */
+const owners = new Map();
+/** @type {Map<number, string>} webContents id → tab id. */
+const tabIdByContents = new Map();
+/** @type {Map<string, ((contents: Electron.WebContents) => void)[]>} */
+const tabWaiters = new Map();
+/**
+ * Where each page sends its events: the manager that owns it now (it changes when a page moves to
+ * another window).
+ * @type {WeakMap<Electron.WebContents, { owner: ManagerInternals }>}
+ */
+const routes = new WeakMap();
+/** @type {Set<ManagerInternals>} */
+const managers = new Set();
+/** Set while managers re-run their layout after another window changed what it shows. */
+let resyncing = false;
+
+/**
+ * @typedef {{
+ *   toUi(channel: string, payload: unknown): void,
+ *   scheduleColor(id: string): void,
+ *   enterFullScreen(id: string): void,
+ *   leaveFullScreenOf(id: string): void,
+ *   isShown(id: string): boolean,
+ *   release(id: string): { view: WebContentsView, color: string | undefined } | null,
+ *   viewOf(id: string): WebContentsView | undefined,
+ *   resync(): void,
+ *   shownKey(): string,
+ *   window(): Electron.BaseWindow | null,
+ * }} ManagerInternals
+ */
+
+/**
+ * Window a page (tab or Peek) is in now.
+ * @param {Electron.WebContents} contents Page contents.
+ * @returns {Electron.BaseWindow | null} Window, or null for unknown contents.
+ */
+function windowOf(contents) {
+  return routes.get(contents)?.owner.window() ?? null;
+}
+
+/**
+ * Window that has a tab's page.
+ * @param {string} id Tab id.
+ * @returns {Electron.BaseWindow | null} Window, or null when the tab has no page.
+ */
+function windowOfTab(id) {
+  return owners.get(id)?.window() ?? null;
+}
+
+/**
+ * Finds the tab a page belongs to, in any window.
+ * @param {Electron.WebContents} contents Page contents.
+ * @returns {string | null} Tab id, or null for unknown contents (Peek, popups).
+ */
+function tabIdOf(contents) {
+  return tabIdByContents.get(contents.id) ?? null;
+}
+
+/**
+ * Resolves with a tab's page once it exists in any window (the UI creates tabs asynchronously).
+ * @param {string} id Tab id.
+ * @param {number} [timeoutMs] Give up after this delay.
+ * @returns {Promise<Electron.WebContents | null>} Contents, or null on timeout.
+ */
+function waitForTab(id, timeoutMs = 5000) {
+  const existing = owners.get(id)?.viewOf(id);
+  if (existing) return Promise.resolve(existing.webContents);
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(null), timeoutMs);
+    const list = tabWaiters.get(id) ?? [];
+    list.push((contents) => {
+      clearTimeout(timer);
+      resolve(contents);
+    });
+    tabWaiters.set(id, list);
+  });
+}
+
+/**
+ * Lets the other windows lay out again after one changed which pages it owns or shows: a page one
+ * window let go of can now come to another that wants it on screen.
+ * @param {ManagerInternals} changed Manager whose pages changed.
+ */
+function resyncOthers(changed) {
+  if (resyncing) return;
+  resyncing = true;
+  try {
+    for (const manager of managers) if (manager !== changed) manager.resync();
+  } finally {
+    resyncing = false;
+  }
+}
+
+/**
  * Creates the view manager for one browser window.
  * @param {object} options Wiring provided by the main process.
  * @param {() => Electron.BaseWindow | null} options.getWindow Returns the owning window.
@@ -93,10 +196,12 @@ async function savePage(contents, win) {
  * @param {ViewHooks} [options.hooks] Lifecycle callbacks (used to expose tabs to extensions).
  * @returns {{
  *   sync(payload: unknown): void,
+ *   claim(id: unknown): void,
  *   bringPeekToFront(): void,
  *   command(id: unknown, command: unknown, arg: unknown): unknown,
- *   waitForView(id: string, timeoutMs?: number): Promise<Electron.WebContents | null>,
- *   idOf(contents: Electron.WebContents): string | null,
+ *   relayout(): void,
+ *   exitFullScreen(): void,
+ *   resendColors(): void,
  *   destroyAll(): void,
  * }}
  */
@@ -109,8 +214,10 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
   let raised = false;
   /** @type {string | null} */
   let activeTabId = null;
-  /** @type {Map<string, ((contents: Electron.WebContents) => void)[]>} */
-  const waiters = new Map();
+  /** Last layout sent by this window's UI, replayed when another window frees a page it wants. */
+  let lastPayload = null;
+  /** Tabs this window shows in a pane while another window has their page (sent to the UI). */
+  let elsewhereKey = "";
   /** Last color sent per tab, and the tabs shown on screen. */
   const colors = new Map();
   /**
@@ -192,32 +299,37 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
     view.setVisible(false);
     const contents = view.webContents;
     setupContents(contents);
-    contents.on("did-navigate", (_e, navigatedUrl) => toUi("tab:event", { tabId: id, type: "navigate", url: navigatedUrl }));
+    // Events go to the window that owns the page now (see adopt).
+    const route = { owner: internals };
+    routes.set(contents, route);
+    const send = (payload) => route.owner.toUi("tab:event", { tabId: id, ...payload });
+    contents.on("did-navigate", (_e, navigatedUrl) => send({ type: "navigate", url: navigatedUrl }));
     contents.on("did-navigate-in-page", (_e, navigatedUrl, isMainFrame) => {
-      if (isMainFrame) toUi("tab:event", { tabId: id, type: "navigate-in-page", url: navigatedUrl });
+      if (isMainFrame) send({ type: "navigate-in-page", url: navigatedUrl });
     });
-    contents.on("page-title-updated", (_e, title) => toUi("tab:event", { tabId: id, type: "title", title, url: contents.getURL() }));
-    contents.on("page-favicon-updated", (_e, favicons) => toUi("tab:event", { tabId: id, type: "favicon", favicon: favicons[0] ?? null }));
+    contents.on("page-title-updated", (_e, title) => send({ type: "title", title, url: contents.getURL() }));
+    contents.on("page-favicon-updated", (_e, favicons) => send({ type: "favicon", favicon: favicons[0] ?? null }));
     // A pane becomes the selected one when the user clicks or taps it, not when it takes focus: pages
     // loading side by side grab focus in turn, which made the selection jump between them.
     contents.on("input-event", (_e, input) => {
-      if (POINTER_DOWN_EVENTS.has(input.type)) toUi("tab:event", { tabId: id, type: "focus" });
+      if (POINTER_DOWN_EVENTS.has(input.type)) send({ type: "focus" });
     });
     if (id !== PEEK_ID) {
-      contents.on("did-stop-loading", () => scheduleColor(id));
-      contents.on("did-navigate-in-page", () => scheduleColor(id));
+      contents.on("did-stop-loading", () => route.owner.scheduleColor(id));
+      contents.on("did-navigate-in-page", () => route.owner.scheduleColor(id));
     }
-    contents.on("enter-html-full-screen", () => enterFullScreen(id));
-    contents.on("leave-html-full-screen", () => {
-      if (fullScreenId === id) leaveFullScreen();
-    });
+    contents.on("enter-html-full-screen", () => route.owner.enterFullScreen(id));
+    contents.on("leave-html-full-screen", () => route.owner.leaveFullScreenOf(id));
     win.contentView.addChildView(view);
     views.set(id, view);
     if (id !== PEEK_ID) {
+      owners.set(id, internals);
+      tabIdByContents.set(contents.id, id);
+      contents.once("destroyed", () => tabIdByContents.delete(contents.id));
       toUi("tab:event", { tabId: id, type: "attached", webContentsId: contents.id });
       hooks.onCreated?.(id, contents);
-      for (const resolve of waiters.get(id) ?? []) resolve(contents);
-      waiters.delete(id);
+      for (const resolve of tabWaiters.get(id) ?? []) resolve(contents);
+      tabWaiters.delete(id);
     }
     contents.loadURL(isNavigableUrl(url) ? url : "about:blank").catch(() => {});
     return view;
@@ -228,8 +340,22 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
    * @param {string} id Tab id or PEEK_ID.
    */
   const destroyView = (id) => {
-    const view = views.get(id);
+    const view = detachView(id);
     if (!view) return;
+    if (!view.webContents.isDestroyed()) {
+      if (id !== PEEK_ID) hooks.onDestroyed?.(id, view.webContents);
+      view.webContents.close();
+    }
+  };
+
+  /**
+   * Takes a view out of this window and forgets it here, without closing its page.
+   * @param {string} id Tab id or PEEK_ID.
+   * @returns {WebContentsView | null} The view, or null when this window does not have it.
+   */
+  const detachView = (id) => {
+    const view = views.get(id);
+    if (!view) return null;
     views.delete(id);
     bounds.delete(id);
     shown.delete(id);
@@ -240,12 +366,34 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
     colorTimers.delete(id);
     if (activeTabId === id) activeTabId = null;
     if (fullScreenId === id) leaveFullScreen();
+    if (owners.get(id) === internals) owners.delete(id);
     const win = getWindow();
     if (win && !win.isDestroyed()) win.contentView.removeChildView(view);
-    if (!view.webContents.isDestroyed()) {
-      if (id !== PEEK_ID) hooks.onDestroyed?.(id, view.webContents);
-      view.webContents.close();
+    return view;
+  };
+
+  /**
+   * Takes over a page released by another window: the live page moves here as is (no reload).
+   * @param {string} id Tab id.
+   * @param {{ view: WebContentsView, color: string | undefined }} moved What the other window released.
+   */
+  const adopt = (id, { view, color }) => {
+    const win = getWindow();
+    if (!win || win.isDestroyed()) return;
+    view.setVisible(false);
+    win.contentView.addChildView(view);
+    views.set(id, view);
+    owners.set(id, internals);
+    const contents = view.webContents;
+    const route = routes.get(contents);
+    if (route) route.owner = internals;
+    view.setBorderRadius(VIEW_RADIUS);
+    toUi("tab:event", { tabId: id, type: "attached", webContentsId: contents.id });
+    if (color) {
+      colors.set(id, color);
+      toUi("tab:event", { tabId: id, type: "color", color });
     }
+    hooks.onMoved?.(id, contents);
   };
 
   /**
@@ -365,7 +513,38 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
     bringPeekToFront();
   };
 
-  return {
+  /** @type {ManagerInternals} */
+  const internals = {
+    toUi,
+    scheduleColor,
+    enterFullScreen,
+    leaveFullScreenOf: (id) => {
+      if (fullScreenId === id) leaveFullScreen();
+    },
+    isShown: (id) => views.has(id) && Boolean(bounds.get(id)),
+    release: (id) => {
+      if (id === PEEK_ID) return null;
+      const color = colors.get(id);
+      const view = detachView(id);
+      return view ? { view, color } : null;
+    },
+    viewOf: (id) => views.get(id),
+    window: () => {
+      const win = getWindow();
+      return win && !win.isDestroyed() ? win : null;
+    },
+    resync: () => {
+      if (lastPayload) api.sync(lastPayload);
+    },
+    shownKey: () =>
+      [...views.keys()]
+        .filter((id) => id !== PEEK_ID)
+        .map((id) => (bounds.get(id) ? `${id}+` : id))
+        .join(","),
+  };
+  managers.add(internals);
+
+  const api = {
     /**
      * Reconciles native views with the UI's layout.
      * @param {unknown} payload SyncPayload from the renderer (validated here).
@@ -374,17 +553,35 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
       if (!payload || typeof payload !== "object") return;
       const { tabs, raised: wantRaised, peek, activeTabId: active } = /** @type {Partial<SyncPayload>} */ (payload);
       if (!Array.isArray(tabs) || tabs.length > MAX_TABS) return;
+      lastPayload = payload;
+      const before = internals.shownKey();
 
       const wanted = new Set();
+      /** @type {string[]} */
+      const elsewhere = [];
       let created = false;
       for (const tab of tabs) {
         if (!tab || typeof tab.id !== "string" || !ID_PATTERN.test(tab.id) || typeof tab.url !== "string") continue;
         wanted.add(tab.id);
+        const rect = toBounds(tab.bounds);
         if (!views.has(tab.id)) {
-          if (!createView(tab.id, tab.url)) continue;
-          created = true;
+          const owner = owners.get(tab.id);
+          if (owner && owner !== internals) {
+            // Another window has this page. It comes here only when wanted on screen and not shown
+            // there; otherwise this window shows a placeholder (it can claim the page).
+            if (!rect || owner.isShown(tab.id)) {
+              if (rect) elsewhere.push(tab.id);
+              continue;
+            }
+            const moved = owner.release(tab.id);
+            if (!moved) continue;
+            adopt(tab.id, moved);
+          } else {
+            if (!createView(tab.id, tab.url)) continue;
+            created = true;
+          }
         }
-        bounds.set(tab.id, toBounds(tab.bounds));
+        bounds.set(tab.id, rect);
         if (tab.squareTop === true) squareTop.add(tab.id);
         else squareTop.delete(tab.id);
       }
@@ -410,36 +607,27 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
       // tab ("No website" in uBlock Origin Lite).
       if (nextActive && (nextActive !== activeTabId || created)) hooks.onActivated?.(nextActive, views.get(nextActive).webContents);
       activeTabId = nextActive;
+
+      const key = elsewhere.join(",");
+      if (key !== elsewhereKey) {
+        elsewhereKey = key;
+        toUi("views:elsewhere", elsewhere);
+      }
+      if (internals.shownKey() !== before) resyncOthers(internals);
     },
 
     /**
-     * Resolves with a tab's page contents once its view exists (the UI creates tabs asynchronously).
-     * @param {string} id Tab id.
-     * @param {number} [timeoutMs] Give up after this delay.
-     * @returns {Promise<Electron.WebContents | null>} Contents, or null on timeout.
+     * Brings a tab's page to this window from the window that has it ("Show here" on the placeholder).
+     * @param {unknown} id Tab id.
      */
-    waitForView(id, timeoutMs = 5000) {
-      const existing = views.get(id);
-      if (existing) return Promise.resolve(existing.webContents);
-      return new Promise((resolve) => {
-        const timer = setTimeout(() => resolve(null), timeoutMs);
-        const list = waiters.get(id) ?? [];
-        list.push((contents) => {
-          clearTimeout(timer);
-          resolve(contents);
-        });
-        waiters.set(id, list);
-      });
-    },
-
-    /**
-     * Finds the tab id owning a page.
-     * @param {Electron.WebContents} contents Page contents.
-     * @returns {string | null} Tab id, or null for unknown contents.
-     */
-    idOf(contents) {
-      for (const [id, view] of views) if (view.webContents === contents) return id;
-      return null;
+    claim(id) {
+      if (typeof id !== "string" || views.has(id)) return;
+      const owner = owners.get(id);
+      const moved = owner && owner !== internals ? owner.release(id) : null;
+      if (!moved) return;
+      adopt(id, moved);
+      if (lastPayload) this.sync(lastPayload);
+      resyncOthers(internals);
     },
 
     bringPeekToFront,
@@ -453,7 +641,8 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
      */
     command(id, command, arg) {
       if (typeof id !== "string") return undefined;
-      const view = views.get(id);
+      // The page may be in another window (this one shows a placeholder for it).
+      const view = views.get(id) ?? owners.get(id)?.viewOf(id);
       if (!view || view.webContents.isDestroyed()) return undefined;
       const contents = view.webContents;
       const history = contents.navigationHistory;
@@ -474,7 +663,8 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
           contents.openDevTools({ mode: "detach" });
           return undefined;
         case "focus":
-          contents.focus();
+          // Never into another window's page: that would bring that window forward.
+          if (views.get(id) === view) contents.focus();
           return undefined;
         case "state":
           return { url: contents.getURL(), canGoBack: history.canGoBack(), canGoForward: history.canGoForward() };
@@ -505,11 +695,17 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
       for (const [tabId, color] of colors) toUi("tab:event", { tabId, type: "color", color });
     },
 
-    /** Closes every page; used when the window goes away. */
+    /**
+     * Closes every page; used when the window goes away. The other windows then load the tabs they
+     * show again.
+     */
     destroyAll() {
+      managers.delete(internals);
       for (const id of [...views.keys()]) destroyView(id);
+      resyncOthers(internals);
     },
   };
+  return api;
 }
 
-module.exports = { createViewManager, PEEK_ID };
+module.exports = { createViewManager, tabIdOf, waitForTab, windowOf, windowOfTab, PEEK_ID };

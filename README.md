@@ -14,6 +14,7 @@ Stack: Electron 43 in its [castLabs ECS](https://github.com/castlabs/electron-re
 | Command bar | One input for URLs, search and switching to an open tab. Title + domain deduplication for Figma, Notion, GitHub… Remembers the result type picked for each query. |
 | Scrollbars | Drawn over the pages (overlay), thin and rounded, shown while scrolling, dark on light sites and light on dark ones; sites that style their own scrollbars keep them. |
 | Split view | 2 to 4 panes, side by side or stacked, draggable dividers, saved as a sidebar item. Drag a sidebar tab onto a page (or onto another tab in the sidebar) to split; each page gets an Arc-style bar in the site's color (navigation, address, a grip to drag the pane, the split controls menu, a cross to take the pane out of the split). |
+| Windows | `Ctrl+N` (or New Window in the menus) opens another window. Spaces, pinned tabs and favorites are shared and synced live; each window has its own today tabs, selected tab, space and layout, and opens empty on the command bar. Closing a window while others stay open archives its today tabs; a relaunch brings back the oldest window's. A pinned tab or favorite lives in one window at a time and moves, without reloading, to the window that shows it; one already on screen elsewhere offers "Show here" and "Go to window". |
 | Peek | Links that open a new window (`target=_blank`) show in a preview, with an "Open in a tab" button. |
 | Archive | Closed or idle today tabs are archived and can be restored. Auto-archive delay: 1 h, 12 h (default), 24 h, 7 d, 30 d or never. |
 | Folders | Create, rename, collapse, drag and drop, nesting. |
@@ -21,7 +22,7 @@ Stack: Electron 43 in its [castLabs ECS](https://github.com/castlabs/electron-re
 | Hidden sidebar and top bar | `Ctrl+S` hides the sidebar; it reappears when hovering the left edge. `Ctrl+Shift+S` (or the lock button) hides the top bar for a full-screen view; it slides down over the pages when the pointer reaches the top edge, and still moves the window (drag it, double-click to maximize). |
 | Site panel | The sliders next to the address open a panel like Arc's: "Share URL", the tracking protection (with the number of requests it blocked on the page; click to turn it off or on for the site), and a footer with the connection ("Secure" opens the site's certificate in the system's certificate window on Windows and macOS), developer tools and "…" (clear the site's cache or cookies, all site settings). |
 | Shield | Blocks ads and trackers like Brave, with Ghostery's adblocker engine (`@ghostery/adblocker-electron`, MPL-2.0) and the EasyList / EasyPrivacy family of lists: blocked requests and hidden ad slots. On for every site by default; the sites it is turned off for are kept in `userData/shield.json`. The compiled engine is cached in `userData/shield-engine.bin` and rebuilt from fresh lists once a week. |
-| Browser menu | The "…" button: account, new tab and private window, downloads, extensions, print, save page as, zoom (kept per site), full screen, settings, developer tools, help, quit. |
+| Browser menu | The "…" button: account, new tab, new window and private window, downloads, extensions, print, save page as, zoom (kept per site), full screen, settings, developer tools, help, quit. |
 | Downloads | The download button lists this session's downloads with their progress, a folder button and a "…" menu (open, copy link, remove, Recycle Bin, pause, cancel); `yzo://downloads` keeps the history by day, with search. Files go to the folder chosen in the settings, or Yzo asks each time. |
 | Settings | `yzo://settings/<section>` ("Settings" in the Yzo menu): account, search engine, tabs, downloads, about. |
 | Extensions page | `yzo://extensions` ("Manage extensions" in the extensions panel): search, one card per extension with details, removal and an on/off switch; `yzo://extensions/<id>` shows, like Arc, its version, size, permission warnings, a pin to the toolbar, its options, Chrome Web Store page and source. Turned-off extensions are not loaded; "Allow in private browsing" lets one run in private windows. Choices in `userData/extension-settings.json`. |
@@ -57,6 +58,7 @@ They also work while a web page has focus: the main process intercepts them befo
 | `Ctrl+Alt+N` | New folder |
 | `Ctrl+Y` | Archive and settings |
 | `Ctrl+Shift+I`, `F12` | Page developer tools |
+| `Ctrl+N` | New window |
 | `Ctrl+Shift+N` | New private window |
 | `Ctrl+J` | Downloads |
 | `Ctrl+P` | Print the page |

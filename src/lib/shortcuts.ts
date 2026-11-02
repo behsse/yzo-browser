@@ -25,6 +25,7 @@ export type ShortcutAction =
   | "newFolder"
   | "openArchive"
   | "devTools"
+  | "newWindow"
   | "privateWindow"
   | "downloads"
   | "print"

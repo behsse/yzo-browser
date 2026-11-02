@@ -3,6 +3,12 @@ import type { SpaceTheme } from "../state/types";
 /** True in a private instance: the main process loads the UI with "?private" (electron/private-mode.cjs). */
 export const IS_PRIVATE = new URLSearchParams(window.location.search).has("private");
 
+/**
+ * True in a window opened with "New window" (the main process loads its UI with "?window=new"): it
+ * shares the sidebar and starts without a tab, on the command bar.
+ */
+export const IS_NEW_WINDOW = new URLSearchParams(window.location.search).get("window") === "new";
+
 /** Near-black look of every private window (Twitch's dark mode greys), whatever the space's own colors. */
 export const PRIVATE_THEME: SpaceTheme = { colors: ["#1f1f23", "#0e0e10"], mode: "dark" };
 

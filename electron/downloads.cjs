@@ -62,10 +62,11 @@ function uniquePath(dir, filename, taken) {
  * @param {Electron.Session} options.session Tabs' session.
  * @param {string} options.profile Normal profile folder (history and settings live there).
  * @param {boolean} options.privateMode Private instance: history in memory, settings read-only.
- * @param {() => Electron.WebContents | null} options.getUi UI renderer, told about every change.
+ * @param {() => Electron.WebContents | null} options.getUi UI of the window used last (a started download opens its panel).
+ * @param {(channel: string, ...args: unknown[]) => void} options.broadcast Tells every window's UI about a change.
  * @param {() => Electron.BaseWindow | null} options.getWindow Parent of the folder picker.
  */
-function setupDownloads({ session, profile, privateMode, getUi, getWindow }) {
+function setupDownloads({ session, profile, privateMode, getUi, broadcast, getWindow }) {
   const historyPath = path.join(profile, HISTORY_FILE);
   const settingsPath = path.join(profile, SETTINGS_FILE);
   const stored = readJson(settingsPath);
@@ -109,7 +110,7 @@ function setupDownloads({ session, profile, privateMode, getUi, getWindow }) {
     exists: record.state !== "completed" || fs.existsSync(record.path),
   });
 
-  const send = (record) => getUi()?.send("downloads:changed", toEntry(record));
+  const send = (record) => broadcast("downloads:changed", toEntry(record));
 
   /**
    * Fills in a finished download's file icon (shown in the panel and the downloads page).
@@ -228,7 +229,7 @@ function setupDownloads({ session, profile, privateMode, getUi, getWindow }) {
           if (item) return false;
           records = records.filter((r) => r.id !== id);
           sessionIds.delete(id);
-          getUi()?.send("downloads:removed", id);
+          broadcast("downloads:removed", id);
           save();
           return true;
       }
@@ -245,7 +246,7 @@ function setupDownloads({ session, profile, privateMode, getUi, getWindow }) {
     clear() {
       records = records.filter((r) => items.has(r.id));
       for (const id of [...sessionIds]) if (!items.has(id)) sessionIds.delete(id);
-      getUi()?.send("downloads:cleared");
+      broadcast("downloads:cleared");
       save();
     },
 

@@ -153,6 +153,9 @@
   "empty.newTab": "new tab",
   "empty.sidebar": "sidebar",
   "empty.split": "split view",
+  "window.elsewhere": "This tab is open in another window.",
+  "window.showHere": "Show here",
+  "window.goToWindow": "Go to window",
 
   "page.openInNewTab": "Open link in new tab",
   "page.cut": "Cut",
@@ -181,7 +184,7 @@
   "appMenu.title": "Yzo menu",
   "appMenu.account": "Yzo account ({email})",
   "appMenu.newTab": "New Tab",
-  "appMenu.newWindow": "New Window (coming soon)",
+  "appMenu.newWindow": "New Window",
   "appMenu.checkUpdates": "Check for Updates",
   "updates.checking": "Checking for updates…",
   "updates.upToDate": "Yzo {version} is up to date",

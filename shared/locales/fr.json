@@ -153,6 +153,9 @@
   "empty.newTab": "nouvel onglet",
   "empty.sidebar": "barre latérale",
   "empty.split": "vue scindée",
+  "window.elsewhere": "Cet onglet est ouvert dans une autre fenêtre.",
+  "window.showHere": "Afficher ici",
+  "window.goToWindow": "Aller à la fenêtre",
 
   "page.openInNewTab": "Ouvrir dans un nouvel onglet",
   "page.cut": "Couper",
@@ -181,7 +184,7 @@
   "appMenu.title": "Menu Yzo",
   "appMenu.account": "Compte Yzo ({email})",
   "appMenu.newTab": "Nouvel onglet",
-  "appMenu.newWindow": "Nouvelle fenêtre (bientôt)",
+  "appMenu.newWindow": "Nouvelle fenêtre",
   "appMenu.checkUpdates": "Rechercher des mises à jour",
   "updates.checking": "Recherche de mises à jour…",
   "updates.upToDate": "Yzo {version} est à jour",

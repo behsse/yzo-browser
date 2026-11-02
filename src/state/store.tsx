@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useReducer, useRef, useState, type Dispatch, type ReactNode } from "react";
+import { IS_NEW_WINDOW } from "../lib/privateMode";
 import { parseState, serializeState } from "./persistence";
-import { createInitialState, reducer, type Action } from "./reducer";
+import { createInitialState, newWindowState, reducer, type Action } from "./reducer";
 import type { AppState } from "./types";
 
 const SAVE_DELAY_MS = 400;
@@ -28,17 +29,44 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!window.yzo) return;
     window.yzo.loadState().then((json) => {
-      const loaded = parseState(json);
+      const parsed = parseState(json);
+      // A new window shares spaces, pinned tabs and favorites, but starts with no today tab.
+      const loaded = parsed && IS_NEW_WINDOW ? newWindowState(parsed, Date.now()) : parsed;
       if (loaded) dispatch({ type: "hydrate", state: loaded });
       setReady(true);
     });
   }, []);
+
+  // Windows share the sidebar: take what another window saved.
+  useEffect(
+    () =>
+      window.yzo?.onSharedState((json) => {
+        const shared = parseState(json);
+        if (shared) dispatch({ type: "applyShared", state: shared, now: Date.now() });
+      }),
+    [],
+  );
 
   useEffect(() => {
     if (!ready || !window.yzo) return;
     window.clearTimeout(saveTimer.current);
     saveTimer.current = window.setTimeout(() => window.yzo?.saveState(serializeState(state)), SAVE_DELAY_MS);
   }, [state, ready]);
+
+  // Closing this window while others stay open: its today tabs go to the archive (the others take the
+  // archive through the saved state), then the window may close.
+  useEffect(
+    () =>
+      window.yzo?.onWindowClosing(async () => {
+        const action: Action = { type: "archiveWindowTabs", now: Date.now() };
+        const next = reducer(stateRef.current, action);
+        dispatch(action);
+        window.clearTimeout(saveTimer.current);
+        await window.yzo?.saveState(serializeState(next));
+        window.yzo?.closeReady();
+      }),
+    [],
+  );
 
   useEffect(() => {
     // Flush pending changes when the window closes.

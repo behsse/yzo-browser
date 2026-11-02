@@ -46,6 +46,10 @@ export type TabTarget = "today" | "pinned" | "favorites" | { parentId: ID; index
 
 export type Action =
   | { type: "hydrate"; state: AppState }
+  /** The state another window saved: its sidebar replaces this one's, but for this window's today tabs and layout. */
+  | { type: "applyShared"; state: AppState; now: number }
+  /** The window is closing while others stay open: its today tabs go to the archive. */
+  | { type: "archiveWindowTabs"; now: number }
   | {
       type: "createTab";
       url: string;
@@ -289,6 +293,96 @@ function loadSelection(draft: AppState, spaceId: ID): void {
 }
 
 /**
+ * Lists an item and everything under it.
+ * @param state App state.
+ * @param id Subtree root.
+ * @returns Ids, root first.
+ */
+function subtreeIds(state: AppState, id: ID): ID[] {
+  const item = state.items[id];
+  return item ? [id, ...item.childrenIds.flatMap((child) => subtreeIds(state, child))] : [];
+}
+
+/**
+ * Puts a window's own "today" tabs into a state saved by another window. Windows share spaces,
+ * pinned tabs and favorites, but each has its own today tabs (like each device in the account sync):
+ * the other window's today tabs are dropped and this window's put back, or an empty today for a
+ * space it has not seen yet. This window's today tabs of a space the other window deleted are archived.
+ * @param shared State saved by the other window (not modified).
+ * @param local This window's state, or null for a new window (empty today everywhere).
+ * @param now Current epoch ms.
+ * @returns The other window's sidebar with this window's today tabs.
+ */
+function withLocalToday(shared: AppState, local: AppState | null, now: number): AppState {
+  const next = structuredClone(shared);
+  for (const spaceId of next.spaceOrder) {
+    const space = next.spaces[spaceId];
+    deleteSubtree(next, space.todayId);
+    const mine = local?.spaces[spaceId]?.todayId;
+    const container = mine ? local!.items[mine] : undefined;
+    if (!local || !mine || !container) {
+      const today = makeItem<ContainerData>({ kind: "container", role: "today", spaceId }, now);
+      next.items[today.id] = today;
+      space.todayId = today.id;
+      continue;
+    }
+    // A tab this window moved out of today (pinned, favorites) belongs to the shared part now.
+    const children = container.childrenIds.filter((child) => !next.items[child]);
+    next.items[mine] = { ...structuredClone(container), childrenIds: children };
+    for (const child of children) for (const id of subtreeIds(local, child)) next.items[id] = structuredClone(local.items[id]);
+    space.todayId = mine;
+  }
+  for (const spaceId of local?.spaceOrder ?? []) {
+    if (next.spaces[spaceId]) continue;
+    for (const tabId of tabsInSubtree(local!, local!.spaces[spaceId].todayId)) {
+      const tab = local!.items[tabId];
+      if (isTab(tab)) pushArchive(next, tab, spaceId, "spaceDeleted", now);
+    }
+  }
+  return next;
+}
+
+/**
+ * Turns the state of the open windows into the state of a new window: same spaces, pinned tabs and
+ * favorites, no today tab and nothing selected.
+ * @param state Latest state saved by the open windows.
+ * @param now Current epoch ms.
+ * @returns State for the new window.
+ */
+export function newWindowState(state: AppState, now: number): AppState {
+  const next = withLocalToday(state, null, now);
+  next.window.selection = {};
+  next.loadedTabIds = [];
+  return next;
+}
+
+/**
+ * Takes the state another window saved: windows share spaces, pinned tabs, favorites, archive,
+ * history, settings and sync bookkeeping, and each keeps its own today tabs, layout, selection and live
+ * pages. A selection pointing at something the other window removed is cleared.
+ * @param state This window's state.
+ * @param shared State saved by the other window.
+ * @param now Current epoch ms.
+ * @returns The merged state.
+ */
+function applySharedState(state: AppState, shared: AppState, now: number): AppState {
+  const merged = withLocalToday(shared, state, now);
+  const layout = structuredClone(state.window);
+  if (!merged.spaces[layout.focusedSpaceId]) layout.focusedSpaceId = merged.spaceOrder[0];
+  for (const [spaceId, selection] of Object.entries(layout.selection)) {
+    if (!merged.spaces[spaceId]) {
+      delete layout.selection[spaceId];
+      continue;
+    }
+    const gone = [selection.itemId, selection.focusedTabId].some((id) => id !== null && !merged.items[id]);
+    if (gone) layout.selection[spaceId] = { itemId: null, focusedTabId: null };
+  }
+  const next: AppState = { ...merged, window: layout, loadedTabIds: state.loadedTabIds.filter((id) => isTab(merged.items[id])) };
+  loadSelection(next, layout.focusedSpaceId);
+  return next;
+}
+
+/**
  * Clears every selection pointing at an item, choosing a neighbour in the same parent when the
  * selection belonged to the focused space so closing a tab lands on the next one like Arc.
  * @param draft Mutable state copy.
@@ -405,6 +499,7 @@ export function reducer(state: AppState, action: Action): AppState {
     loadSelection(hydrated, hydrated.window.focusedSpaceId);
     return hydrated;
   }
+  if (action.type === "applyShared") return applySharedState(state, action.state, action.now);
   const draft = structuredClone(state);
   const focused = draft.window.focusedSpaceId;
 
@@ -761,6 +856,13 @@ export function reducer(state: AppState, action: Action): AppState {
       }
       return changed ? draft : state;
     }
+
+    case "archiveWindowTabs":
+      for (const space of Object.values(draft.spaces)) {
+        for (const childId of [...draft.items[space.todayId].childrenIds]) archiveSubtree(draft, childId, space.id, "manual", action.now);
+        draft.window.selection[space.id] = { itemId: null, focusedTabId: null };
+      }
+      return draft;
 
     case "clearToday": {
       const space = draft.spaces[action.spaceId];

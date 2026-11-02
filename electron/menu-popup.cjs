@@ -56,7 +56,7 @@ function sanitizeEntries(entries) {
  * @param {object} options Wiring provided by the main process.
  * @param {() => Electron.BaseWindow | null} options.getWindow Returns the owning window.
  * @param {() => Electron.WebContents | null} options.getUi Returns the UI renderer's contents.
- * @returns {{ show(entries: unknown, x: unknown, y: unknown): Promise<number | null>, close(): void, updateZoom(index: unknown, value: unknown): void, bringToFront(): void }}
+ * @returns {{ show(entries: unknown, x: unknown, y: unknown): Promise<number | null>, close(): void, updateZoom(index: unknown, value: unknown): void, bringToFront(): void, dispose(): void }}
  */
 function createMenuPopup({ getWindow, getUi }) {
   /** @type {WebContentsView | null} */
@@ -113,7 +113,7 @@ function createMenuPopup({ getWindow, getUi }) {
   /** @param {Electron.IpcMainEvent} event */
   const fromMenu = (event) => Boolean(view) && event.sender === view?.webContents;
 
-  ipcMain.on("menu:resize", (event, forToken, width, height) => {
+  const onResize = (event, forToken, width, height) => {
     if (!fromMenu(event) || !pending || pending.token !== forToken || !view) return;
     const win = getWindow();
     if (!win || win.isDestroyed() || ![width, height].every((n) => Number.isFinite(n) && n > 0)) return finish(forToken, null, false);
@@ -128,19 +128,23 @@ function createMenuPopup({ getWindow, getUi }) {
     view.setVisible(true);
     shown = true;
     view.webContents.focus();
-  });
-  ipcMain.on("menu:select", (event, forToken, index) => {
+  };
+  const onSelect = (event, forToken, index) => {
     if (fromMenu(event) && Number.isInteger(index)) finish(forToken, index, true);
-  });
-  ipcMain.on("menu:close", (event, forToken) => {
+  };
+  const onClose = (event, forToken) => {
     if (fromMenu(event)) finish(forToken, null, true);
-  });
+  };
   // A button of a zoom row: the UI runs it and sends back the new value; the menu stays open.
-  ipcMain.on("menu:act", (event, forToken, index, action) => {
+  const onAct = (event, forToken, index, action) => {
     if (!fromMenu(event) || !pending || pending.token !== forToken || !Number.isInteger(index) || !ZOOM_ACTIONS.has(action)) return;
     getUi()?.send("menu:action", { index, action });
     if (action === "fullscreen") finish(forToken, null, true);
-  });
+  };
+  ipcMain.on("menu:resize", onResize);
+  ipcMain.on("menu:select", onSelect);
+  ipcMain.on("menu:close", onClose);
+  ipcMain.on("menu:act", onAct);
 
   return {
     async show(entries, x, y) {
@@ -175,6 +179,16 @@ function createMenuPopup({ getWindow, getUi }) {
     bringToFront() {
       const win = getWindow();
       if (pending && view && win && !win.isDestroyed()) win.contentView.addChildView(view);
+    },
+    /** Stops listening once the window is closed. */
+    dispose() {
+      if (pending) finish(pending.token, null, false);
+      ipcMain.off("menu:resize", onResize);
+      ipcMain.off("menu:select", onSelect);
+      ipcMain.off("menu:close", onClose);
+      ipcMain.off("menu:act", onAct);
+      if (view && !view.webContents.isDestroyed()) view.webContents.close();
+      view = null;
     },
   };
 }

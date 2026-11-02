@@ -87,6 +87,8 @@ export interface PullResponse {
 
 export interface AccountBridge {
   status(): Promise<AccountResult<AccountStatus>>;
+  /** Fires after a sign-in, sign-out or deletion, in any window. */
+  onChanged(callback: () => void): () => void;
   signUp(serverUrl: string, email: string, password: string): Promise<AccountResult<{ email: string; recoveryKey: string }>>;
   signIn(serverUrl: string, email: string, password: string): Promise<AccountResult<{ email: string; recoveryKey: string | null }>>;
   signOut(): Promise<AccountResult<void>>;
@@ -110,7 +112,20 @@ export interface YzoBridge {
   account: AccountBridge;
   loadState(): Promise<string | null>;
   saveState(json: string): Promise<boolean>;
-  windowControl(action: "minimize" | "maximize" | "fullscreen" | "close"): void;
+  /** The state another window saved (windows share the sidebar). */
+  onSharedState(callback: (json: string) => void): () => void;
+  /** Opens another browser window sharing the sidebar. */
+  newWindow(): void;
+  /** Whether this window runs the account sync (one window does). */
+  isSyncLeader(): Promise<boolean>;
+  /** This window now runs the account sync (the one that did was closed). */
+  onSyncLeader(callback: (leader: boolean) => void): () => void;
+  /** "close" closes this window; "quit" closes every window and quits. */
+  windowControl(action: "minimize" | "maximize" | "fullscreen" | "close" | "quit"): void;
+  /** Fires when this window is closing while others stay open: archive its today tabs, then closeReady(). */
+  onWindowClosing(callback: () => void): () => void;
+  /** The closing window is ready to go. */
+  closeReady(): void;
   /** Hands a press on the floating top bar to the system, which moves the window like from its title bar. */
   windowDrag(): void;
   /** Fires while the window is being moved. */
@@ -134,6 +149,12 @@ export interface YzoBridge {
   /** Manual update check; "dev" outside packaged builds. */
   checkForUpdates(): Promise<{ status: "dev" | "upToDate" | "available" | "error"; version?: string } | null>;
   syncViews(payload: ViewSyncPayload): void;
+  /** Tabs shown in this window whose page another window has on screen. */
+  onViewsElsewhere(callback: (tabIds: string[]) => void): () => void;
+  /** Brings a tab's page to this window from the window that has it. */
+  claimView(tabId: string): void;
+  /** Brings forward the window that has a tab's page. */
+  showViewOwner(tabId: string): void;
   tabCommand(tabId: string, command: TabCommand, arg?: string): Promise<unknown>;
   onTabEvent(callback: (event: TabEvent) => void): () => void;
   onTabCreate(callback: (request: { id: string; url: string; active: boolean }) => void): () => void;

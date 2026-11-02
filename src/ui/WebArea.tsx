@@ -288,7 +288,20 @@ export function WebArea() {
                 <InternalPage url={item.data.url} navigate={(next) => dispatch({ type: "updateTab", id, url: next, now: Date.now() })} />
               </div>
             ) : (
-              <div ref={host.slotRef(id)} className={className} />
+              <div ref={host.slotRef(id)} className={className}>
+                {host.elsewhere.has(id) && (
+                  // The page is on screen in another window; it lives in one window at a time.
+                  <div className="elsewhere-pane">
+                    <p>{t("window.elsewhere")}</p>
+                    <div className="elsewhere-actions">
+                      <button className="primary" onClick={() => window.yzo?.claimView(id)}>
+                        {t("window.showHere")}
+                      </button>
+                      <button onClick={() => window.yzo?.showViewOwner(id)}>{t("window.goToWindow")}</button>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         );

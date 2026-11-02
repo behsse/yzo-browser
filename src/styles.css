@@ -1927,6 +1927,35 @@ ul.ext-row-value {
   color: var(--fg-muted);
 }
 
+/* A tab whose page is on screen in another window. */
+.elsewhere-pane {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 14px;
+  text-align: center;
+  background: var(--pill-bg);
+  color: var(--fg-muted);
+}
+
+.elsewhere-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.elsewhere-actions button {
+  height: 32px;
+  padding: 0 16px;
+  border-radius: 8px;
+}
+
+.elsewhere-actions button:not(.primary) {
+  background: var(--surface);
+  color: var(--fg);
+}
+
 .empty-logo {
   font-size: 44px;
   font-weight: 800;

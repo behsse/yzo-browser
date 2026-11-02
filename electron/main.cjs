@@ -1,10 +1,10 @@
-// Electron main process: owns the frameless window, persistence and every tab page (WebContentsView).
+// Electron main process: owns the frameless windows, persistence and every tab page (WebContentsView).
 const electron = require("electron");
 const { app, BaseWindow, WebContentsView, ipcMain, Menu, clipboard, screen, session } = electron;
 const path = require("node:path");
 const fs = require("node:fs");
 const shortcuts = require("../shared/shortcuts.json");
-const { createViewManager } = require("./views.cjs");
+const { createViewManager, windowOf, windowOfTab } = require("./views.cjs");
 const { createMenuPopup } = require("./menu-popup.cjs");
 const { setupExtensions } = require("./extensions.cjs");
 const { createAccount, AccountError } = require("./account.cjs");
@@ -58,18 +58,34 @@ app.userAgentFallback = USER_AGENT;
 // scrollbars keeps them.
 app.commandLine.appendSwitch("enable-features", "OverlayScrollbar");
 
-/** @type {BaseWindow | null} */
-let mainWindow = null;
 /**
- * The browser UI. It is a view of its own (not the window's built-in contents) so it can be stacked
- * above the tab views while an overlay is open, with a transparent background where the pages are.
- * @type {WebContentsView | null}
+ * One browser window. The UI is a view of its own (not the window's built-in contents) so it can be
+ * stacked above the tab views while an overlay is open, with a transparent background where the pages
+ * are. Windows share the sidebar (one state, see state:save) and each shows its own tab.
+ * @typedef {{
+ *   win: BaseWindow,
+ *   ui: WebContentsView,
+ *   views: ReturnType<typeof createViewManager>,
+ *   menuPopup: ReturnType<typeof createMenuPopup>,
+ *   lastStateJson?: string,
+ *   closing?: boolean,
+ *   closeReady?: boolean,
+ *   closeTimer?: NodeJS.Timeout,
+ * }} BrowserWindowContext
  */
-let uiView = null;
-/** @type {ReturnType<typeof createViewManager> | null} */
-let viewManager = null;
-/** @type {ReturnType<typeof createMenuPopup> | null} */
-let menuPopup = null;
+
+/** Longest wait for a closing window's UI to archive its tabs before it closes anyway. */
+const CLOSE_TIMEOUT_MS = 2000;
+/** Set once the app is quitting: windows then close as they are (their tabs come back next time). */
+let quitting = false;
+
+/** Open windows, oldest first. The oldest runs the account sync. @type {BrowserWindowContext[]} */
+const windows = [];
+/** Window the user used last: extensions and outside requests act in it. @type {BrowserWindowContext | null} */
+let focusedContext = null;
+/** Last state saved by any window, and its part shared by all windows (everything but `window`). */
+let lastStateJson = null;
+let lastSharedJson = null;
 /** @type {Awaited<ReturnType<typeof setupExtensions>> | null} */
 let extensionController = null;
 /** @type {ReturnType<typeof createAccount> | null} */
@@ -122,12 +138,95 @@ function matchShortcut(input) {
 }
 
 /**
- * Tells whether an IPC message comes from the browser UI itself and not from a web page.
+ * Finds the window whose browser UI sent an IPC message.
  * @param {Electron.IpcMainEvent | Electron.IpcMainInvokeEvent} event IPC event.
- * @returns {boolean} True when the sender is the main window's own renderer.
+ * @returns {BrowserWindowContext | null} The window, or null when a web page (or anything else) sent it.
+ */
+function contextOf(event) {
+  return windows.find((ctx) => !ctx.ui.webContents.isDestroyed() && event.sender === ctx.ui.webContents) ?? null;
+}
+
+/**
+ * Tells whether an IPC message comes from a browser UI itself and not from a web page.
+ * @param {Electron.IpcMainEvent | Electron.IpcMainInvokeEvent} event IPC event.
+ * @returns {boolean} True when the sender is one of the windows' own renderer.
  */
 function isTrustedSender(event) {
-  return uiView !== null && event.sender === uiView.webContents;
+  return contextOf(event) !== null;
+}
+
+/**
+ * Finds the context of a native window.
+ * @param {Electron.BaseWindow | null} win Window.
+ * @returns {BrowserWindowContext | null} Its context, or null.
+ */
+function contextOfWindow(win) {
+  return (win && windows.find((ctx) => ctx.win === win)) ?? null;
+}
+
+/**
+ * Window the user used last (falls back to the newest open one).
+ * @returns {BrowserWindowContext | null} Context, or null when no window is open.
+ */
+function currentContext() {
+  return focusedContext && windows.includes(focusedContext) ? focusedContext : (windows.at(-1) ?? null);
+}
+
+/**
+ * UI of the window the user used last.
+ * @returns {Electron.WebContents | null} UI contents.
+ */
+function currentUi() {
+  const ctx = currentContext();
+  return ctx && !ctx.ui.webContents.isDestroyed() ? ctx.ui.webContents : null;
+}
+
+/**
+ * UI of the window a page is in (the window used last for pages not in a window yet).
+ * @param {Electron.WebContents} contents Tab or Peek page.
+ * @returns {Electron.WebContents | null} UI contents.
+ */
+function uiFor(contents) {
+  const ctx = contextOfWindow(windowOf(contents)) ?? currentContext();
+  return ctx && !ctx.ui.webContents.isDestroyed() ? ctx.ui.webContents : null;
+}
+
+/**
+ * Sends a message to every window's UI.
+ * @param {string} channel IPC channel.
+ * @param {...unknown} args Payload.
+ */
+function sendToAllUis(channel, ...args) {
+  for (const ctx of windows) if (!ctx.ui.webContents.isDestroyed()) ctx.ui.webContents.send(channel, ...args);
+}
+
+/**
+ * Part of a saved state that all windows share: everything but the window's own layout, selection and
+ * today tabs (each window has its own, see withLocalToday in src/state/reducer.ts). Comparing it tells
+ * whether the other windows need the state, and keeps them from echoing it back and forth.
+ * @param {string} json Serialized state.
+ * @returns {string | null} Shared part, or null when the JSON is invalid.
+ */
+function sharedPartOf(json) {
+  try {
+    const { window: _window, ...shared } = JSON.parse(json);
+    const items = { ...shared.items };
+    const spaces = {};
+    for (const [id, space] of Object.entries(shared.spaces ?? {})) {
+      const stack = [space.todayId];
+      while (stack.length) {
+        const item = items[stack.pop()];
+        if (!item) continue;
+        stack.push(...item.childrenIds);
+        delete items[item.id];
+      }
+      const { todayId: _today, ...rest } = space;
+      spaces[id] = rest;
+    }
+    return JSON.stringify({ ...shared, items, spaces });
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -162,7 +261,7 @@ function writeState(json) {
  * @returns {Electron.Menu} Menu to pop up.
  */
 function buildPageMenu(guest, params) {
-  const host = uiContents();
+  const host = uiFor(guest);
   /** @type {Electron.MenuItemConstructorOptions[]} */
   const template = [];
   if (params.linkURL && isNavigableUrl(params.linkURL)) {
@@ -191,12 +290,14 @@ function buildPageMenu(guest, params) {
 /**
  * Browser-window options for real popups opened by pages (window.open with features, used by "Sign
  * in with Google" and other OAuth flows). They share the tabs' session so the login lands in the
- * same cookies, and stay above the main window. Size and position come from the page's features.
+ * same cookies, and stay above the window of the page that opened them. Size and position come from
+ * the page's features.
+ * @param {Electron.BaseWindow | null} parent Window of the opening page.
  * @returns {Electron.BrowserWindowConstructorOptions} Popup options.
  */
-function popupWindowOptions() {
+function popupWindowOptions(parent) {
   return {
-    parent: mainWindow ?? undefined,
+    parent: parent ?? currentContext()?.win ?? undefined,
     autoHideMenuBar: true,
     backgroundColor: "#ffffff",
     webPreferences: {
@@ -218,8 +319,8 @@ function popupWindowOptions() {
 function routeWindowOpen(contents) {
   contents.setWindowOpenHandler(({ url, disposition }) => {
     if (!isNavigableUrl(url)) return { action: "deny" };
-    if (disposition === "new-window") return { action: "allow", overrideBrowserWindowOptions: popupWindowOptions() };
-    uiContents()?.send("tab:open", { url, background: disposition === "background-tab" });
+    if (disposition === "new-window") return { action: "allow", overrideBrowserWindowOptions: popupWindowOptions(windowOf(contents)) };
+    uiFor(contents)?.send("tab:open", { url, background: disposition === "background-tab" });
     return { action: "deny" };
   });
   contents.on("did-create-window", (popup) => setupPopup(popup));
@@ -248,7 +349,7 @@ function setupPageContents(guest) {
     const action = matchShortcut(input);
     if (!action) return;
     event.preventDefault();
-    uiContents()?.send("shortcut", action);
+    uiFor(guest)?.send("shortcut", action);
   });
 
   routeWindowOpen(guest);
@@ -258,44 +359,52 @@ function setupPageContents(guest) {
   });
 
   guest.on("context-menu", (_event, params) => {
-    buildPageMenu(guest, params).popup({ window: mainWindow ?? undefined });
+    const win = windowOf(guest) ?? currentContext()?.win;
+    buildPageMenu(guest, params).popup({ window: /** @type {Electron.BaseWindow} */ (win) ?? undefined });
   });
 }
 
 /**
- * Returns the UI renderer's contents while it is alive.
- * @returns {Electron.WebContents | null} UI contents.
- */
-function uiContents() {
-  return uiView && !uiView.webContents.isDestroyed() ? uiView.webContents : null;
-}
-
-/**
- * Stacks the UI above or below the tab views. Below, the pages cover their slots as usual; above
- * (overlay open, floating sidebar, divider drag), the UI draws over live pages through its
+ * Stacks a window's UI above or below its tab views. Below, the pages cover their slots as usual;
+ * above (overlay open, floating sidebar, divider drag), the UI draws over live pages through its
  * transparent slots, so videos keep playing behind command bars, panels and the floating sidebar.
  * Peek and the popup menu stay on top in both cases.
+ * @param {BrowserWindowContext} ctx Window.
  * @param {boolean} raised Whether the UI goes above the pages.
  */
-function stackUi(raised) {
-  const win = mainWindow;
-  if (!win || win.isDestroyed() || !uiView) return;
+function stackUi(ctx, raised) {
+  const { win, ui } = ctx;
+  if (win.isDestroyed()) return;
   if (raised) {
-    win.contentView.addChildView(uiView);
-    viewManager?.bringPeekToFront();
-    menuPopup?.bringToFront();
+    win.contentView.addChildView(ui);
+    ctx.views.bringPeekToFront();
+    ctx.menuPopup.bringToFront();
     // Overlays (command bar, panels) need the keyboard.
-    uiView.webContents.focus();
+    ui.webContents.focus();
   } else {
-    win.contentView.addChildView(uiView, 0);
+    win.contentView.addChildView(ui, 0);
   }
 }
 
 /**
- * Creates the frameless browser window: the UI view at the bottom, tab views above it.
+ * Lets a closing window go, once its UI has archived its tabs (or did not answer in time).
+ * @param {BrowserWindowContext} ctx Closing window.
+ */
+function finishClose(ctx) {
+  clearTimeout(ctx.closeTimer);
+  ctx.closeReady = true;
+  if (!ctx.win.isDestroyed()) ctx.win.close();
+}
+
+/**
+ * Creates a frameless browser window: the UI view at the bottom, tab views above it. The first one
+ * opens the saved state; the next ones ("New window") share its sidebar and start without a tab.
+ * @returns {BrowserWindowContext} The new window.
  */
 function createWindow() {
-  mainWindow = new BaseWindow({
+  const additional = windows.length > 0;
+  const previous = currentContext()?.win;
+  const win = new BaseWindow({
     width: 1400,
     height: 900,
     minWidth: 760,
@@ -305,7 +414,12 @@ function createWindow() {
     show: false,
     ...(PRIVATE && { title: `Yzo (${t("topbar.private")})` }),
   });
-  uiView = new WebContentsView({
+  // A new window opens a little below and right of the one it was opened from, like other browsers.
+  if (additional && previous && !previous.isDestroyed() && !previous.isMaximized() && !previous.isFullScreen()) {
+    const { x, y } = previous.getBounds();
+    win.setPosition(x + 28, y + 28);
+  }
+  const ui = new WebContentsView({
     webPreferences: {
       // Generated from preload.cjs by scripts/build-preload.mjs (adds extension icon support).
       preload: path.join(__dirname, "preload.generated.cjs"),
@@ -318,10 +432,29 @@ function createWindow() {
     },
   });
   // Transparent so that, once stacked above the tabs, the pages show through the UI's empty slots.
-  uiView.setBackgroundColor("#00000000");
+  ui.setBackgroundColor("#00000000");
 
-  const win = mainWindow;
-  const ui = uiView;
+  /** @type {BrowserWindowContext} */
+  const ctx = /** @type {BrowserWindowContext} */ ({ win, ui });
+  ctx.menuPopup = createMenuPopup({ getWindow: () => (win.isDestroyed() ? null : win), getUi: () => (ui.webContents.isDestroyed() ? null : ui.webContents) });
+  ctx.views = createViewManager({
+    getWindow: () => (win.isDestroyed() ? null : win),
+    getUi: () => (ui.webContents.isDestroyed() ? null : ui.webContents),
+    partition: PARTITION,
+    isNavigableUrl,
+    setupContents: setupPageContents,
+    // Every tab page is exposed to extensions as a Chrome tab of the window it is in.
+    hooks: {
+      onCreated: (_id, contents) => extensionController?.addTab(contents, win),
+      onDestroyed: (_id, contents) => extensionController?.removeTab(contents),
+      onMoved: (_id, contents) => extensionController?.moveTab(contents, win),
+      onActivated: (_id, contents) => extensionController?.selectTab(contents),
+      onRaise: (raised) => stackUi(ctx, raised),
+    },
+  });
+  windows.push(ctx);
+  focusedContext = ctx;
+
   const fitUi = () => {
     const { width, height } = win.getContentBounds();
     ui.setBounds({ x: 0, y: 0, width, height });
@@ -330,41 +463,47 @@ function createWindow() {
   fitUi();
   win.on("resize", () => {
     fitUi();
-    viewManager?.relayout();
+    ctx.views.relayout();
+  });
+  win.on("focus", () => {
+    focusedContext = ctx;
   });
   ui.webContents.once("did-finish-load", () => win.show());
   // A reloaded UI lost the pages' colors; the views keep them.
-  ui.webContents.on("did-finish-load", () => viewManager?.resendColors());
+  ui.webContents.on("did-finish-load", () => ctx.views.resendColors());
   win.on("maximize", () => ui.webContents.send("window:maximized", true));
   win.on("unmaximize", () => ui.webContents.send("window:maximized", false));
   win.on("enter-full-screen", () => ui.webContents.send("window:fullscreen", true));
   win.on("leave-full-screen", () => {
     ui.webContents.send("window:fullscreen", false);
-    viewManager?.exitFullScreen();
+    ctx.views.exitFullScreen();
   });
   // Lets the UI keep a revealed top bar open while the user drags the window by it.
   win.on("move", () => ui.webContents.send("window:moved"));
-  win.on("closed", () => {
-    viewManager = null;
-    menuPopup = null;
-    uiView = null;
-    mainWindow = null;
-    if (!ui.webContents.isDestroyed()) ui.webContents.close();
+  // A window closed while others stay open archives its today tabs first (its UI does, then answers
+  // window:closeReady). The last window, or quitting, keeps them for the next launch.
+  win.on("close", (event) => {
+    if (ctx.closeReady || quitting || windows.length <= 1 || ui.webContents.isDestroyed()) return;
+    event.preventDefault();
+    if (ctx.closing) return;
+    ctx.closing = true;
+    ui.webContents.send("window:closing");
+    ctx.closeTimer = setTimeout(() => finishClose(ctx), CLOSE_TIMEOUT_MS);
   });
-  menuPopup = createMenuPopup({ getWindow: () => mainWindow, getUi: uiContents });
-  viewManager = createViewManager({
-    getWindow: () => mainWindow,
-    getUi: uiContents,
-    partition: PARTITION,
-    isNavigableUrl,
-    setupContents: setupPageContents,
-    // Every tab page is exposed to extensions as a Chrome tab of this window.
-    hooks: {
-      onCreated: (_id, contents) => extensionController?.addTab(contents, win),
-      onDestroyed: (_id, contents) => extensionController?.extensions.removeTab(contents),
-      onActivated: (_id, contents) => extensionController?.selectTab(contents),
-      onRaise: stackUi,
-    },
+  win.on("closed", () => {
+    clearTimeout(ctx.closeTimer);
+    const wasLeader = windows[0] === ctx;
+    windows.splice(windows.indexOf(ctx), 1);
+    if (focusedContext === ctx) focusedContext = windows.at(-1) ?? null;
+    ctx.menuPopup.dispose();
+    ctx.views.destroyAll();
+    if (!ui.webContents.isDestroyed()) ui.webContents.close();
+    // The oldest window runs the account sync and writes the state file: the next one takes over.
+    const leader = windows[0];
+    if (wasLeader && leader && !leader.ui.webContents.isDestroyed()) {
+      leader.ui.webContents.send("sync:leader", true);
+      if (leader.lastStateJson && !PRIVATE) writeState(leader.lastStateJson);
+    }
   });
 
   // The UI never navigates or opens windows itself; only guests do.
@@ -381,21 +520,43 @@ function createWindow() {
   // Tabs are native views managed here; the UI is not allowed to embed <webview> guests.
   ui.webContents.on("will-attach-webview", (event) => event.preventDefault());
 
-  // The UI reads "?private" to show the private look and leave out account and import, and "partition"
-  // to reach the extensions of the tabs' session.
-  const query = PRIVATE ? { private: "1", partition: PARTITION } : {};
-  if (DEV_URL) ui.webContents.loadURL(`${DEV_URL}${PRIVATE ? `?${new URLSearchParams(query)}` : ""}`);
+  // The UI reads "?private" to show the private look and leave out account and import, "partition"
+  // to reach the extensions of the tabs' session, and "window=new" to start without a tab.
+  const query = {
+    ...(PRIVATE && { private: "1", partition: PARTITION }),
+    ...(additional && { window: "new" }),
+  };
+  const search = new URLSearchParams(query).toString();
+  if (DEV_URL) ui.webContents.loadURL(`${DEV_URL}${search ? `?${search}` : ""}`);
   else ui.webContents.loadFile(path.join(__dirname, "..", "dist", "index.html"), { query });
+  return ctx;
 }
 
-// A private instance starts from a fresh state and keeps it in memory only.
-ipcMain.handle("state:load", (event) => (isTrustedSender(event) && !PRIVATE ? readState() : null));
+// The first window reads the saved state; the next ones get the latest state of the open windows. A
+// private instance starts from a fresh state and keeps it in memory only.
+ipcMain.handle("state:load", (event) => {
+  if (!isTrustedSender(event)) return null;
+  if (lastStateJson !== null) return lastStateJson;
+  return PRIVATE ? null : readState();
+});
 
+// Every window saves its whole state. When the shared part changed, the other windows take it, so they
+// all show the same spaces, pinned tabs and favorites. Only the oldest window writes the file: its today
+// tabs are the ones a relaunch brings back (the others' are archived when they close).
 ipcMain.handle("state:save", (event, json) => {
-  if (!isTrustedSender(event) || typeof json !== "string" || json.length > MAX_STATE_BYTES) return false;
-  if (PRIVATE) return true;
+  const ctx = contextOf(event);
+  // A window that has archived its tabs and is closing: a late save (page unload) must not undo that.
+  if (!ctx || ctx.closeReady || typeof json !== "string" || json.length > MAX_STATE_BYTES) return false;
+  const shared = sharedPartOf(json);
+  if (shared === null) return false;
+  lastStateJson = json;
+  ctx.lastStateJson = json;
+  if (shared !== lastSharedJson) {
+    lastSharedJson = shared;
+    for (const other of windows) if (other !== ctx && !other.ui.webContents.isDestroyed()) other.ui.webContents.send("state:shared", json);
+  }
+  if (PRIVATE || windows[0] !== ctx) return true;
   try {
-    JSON.parse(json);
     writeState(json);
     return true;
   } catch {
@@ -403,25 +564,44 @@ ipcMain.handle("state:save", (event, json) => {
   }
 });
 
+// The account sync runs in one window only (the oldest), or two windows would push the same changes.
+ipcMain.handle("sync:isLeader", (event) => {
+  const ctx = contextOf(event);
+  return ctx !== null && windows[0] === ctx;
+});
+
+ipcMain.on("app:newWindow", (event) => {
+  if (isTrustedSender(event)) createWindow();
+});
+
+// The closing window's UI archived its today tabs and saved.
+ipcMain.on("window:closeReady", (event) => {
+  const ctx = contextOf(event);
+  if (ctx?.closing) finishClose(ctx);
+});
+
 ipcMain.on("window:control", (event, action) => {
-  if (!isTrustedSender(event) || !mainWindow) return;
-  if (action === "minimize") mainWindow.minimize();
-  else if (action === "maximize") mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize();
-  else if (action === "fullscreen") mainWindow.setFullScreen(!mainWindow.isFullScreen());
-  else if (action === "close") mainWindow.close();
+  const win = contextOf(event)?.win;
+  if (!win || win.isDestroyed()) return;
+  if (action === "minimize") win.minimize();
+  else if (action === "maximize") win.isMaximized() ? win.unmaximize() : win.maximize();
+  else if (action === "fullscreen") win.setFullScreen(!win.isFullScreen());
+  else if (action === "close") win.close();
+  else if (action === "quit") app.quit();
 });
 
 // Floating top bar pressed: Windows moves the window like from its title bar (electron/window-drag.cjs).
 ipcMain.on("window:drag", (event) => {
-  if (!isTrustedSender(event) || !mainWindow || mainWindow.isDestroyed()) return;
+  const win = contextOf(event)?.win;
+  if (!win || win.isDestroyed()) return;
   const cursor = screen.dipToScreenPoint(screen.getCursorScreenPoint());
-  startNativeWindowDrag(mainWindow, cursor);
+  startNativeWindowDrag(win, cursor);
 });
 
 // Menus are drawn above the live pages (electron/menu-popup.cjs); resolves to the picked index or null.
-ipcMain.handle("menu:popup", (event, entries, x, y) => (isTrustedSender(event) && menuPopup ? menuPopup.show(entries, x, y) : null));
+ipcMain.handle("menu:popup", (event, entries, x, y) => contextOf(event)?.menuPopup.show(entries, x, y) ?? null);
 ipcMain.on("menu:updateZoom", (event, index, value) => {
-  if (isTrustedSender(event)) menuPopup?.updateZoom(index, value);
+  contextOf(event)?.menuPopup.updateZoom(index, value);
 });
 
 /**
@@ -432,7 +612,7 @@ ipcMain.on("menu:updateZoom", (event, index, value) => {
  */
 async function importFromArc() {
   const arc = readArc();
-  const win = mainWindow;
+  const win = currentContext()?.win;
   if (!arc || !win) return { status: "notFound" };
   const installed = new Set((await extensionController?.list())?.map((ext) => ext.id) ?? []);
   const extensions = arc.extensions.filter((id) => EXTENSION_ID.test(id) && !installed.has(id));
@@ -459,20 +639,33 @@ ipcMain.handle("favicon:resolve", (event, url) => (isTrustedSender(event) ? reso
 
 ipcMain.handle("arc:import", (event) => (isTrustedSender(event) && !PRIVATE ? importFromArc() : null));
 
-ipcMain.handle("window:isMaximized", (event) => isTrustedSender(event) && Boolean(mainWindow?.isMaximized()));
-ipcMain.handle("window:isFullScreen", (event) => isTrustedSender(event) && Boolean(mainWindow?.isFullScreen()));
+ipcMain.handle("window:isMaximized", (event) => Boolean(contextOf(event)?.win.isMaximized()));
+ipcMain.handle("window:isFullScreen", (event) => Boolean(contextOf(event)?.win.isFullScreen()));
 
 // Cursor position relative to the window content, in DIPs. Used by the floating sidebar because
 // pointer events over a webview are delivered to the guest process, not to the UI.
 ipcMain.handle("window:cursor", (event) => {
-  if (!isTrustedSender(event) || !mainWindow) return null;
+  const win = contextOf(event)?.win;
+  if (!win || win.isDestroyed()) return null;
   const point = screen.getCursorScreenPoint();
-  const bounds = mainWindow.getContentBounds();
+  const bounds = win.getContentBounds();
   return { x: point.x - bounds.x, y: point.y - bounds.y, width: bounds.width, height: bounds.height };
 });
 
 ipcMain.on("views:sync", (event, payload) => {
-  if (isTrustedSender(event)) viewManager?.sync(payload);
+  contextOf(event)?.views.sync(payload);
+});
+
+// Placeholder of a tab whose page another window shows: bring the page here, or go to that window.
+ipcMain.on("views:claim", (event, tabId) => {
+  contextOf(event)?.views.claim(tabId);
+});
+ipcMain.on("views:showOwner", (event, tabId) => {
+  if (!isTrustedSender(event) || typeof tabId !== "string") return;
+  const win = windowOfTab(tabId);
+  if (!win) return;
+  if (win.isMinimized()) win.restore();
+  win.focus();
 });
 
 
@@ -511,16 +704,30 @@ function handleAccount(channel, handler) {
   });
 }
 
+/**
+ * Runs an account change, then tells every window (the one that syncs may not be the one used).
+ * @template T
+ * @param {() => Promise<T>} change Sign-in, sign-out…
+ * @returns {Promise<T>} Its result.
+ */
+async function changeAccount(change) {
+  try {
+    return await change();
+  } finally {
+    sendToAllUis("account:changed");
+  }
+}
+
 handleAccount("account:status", () => account.status());
-handleAccount("account:signUp", (serverUrl, email, password) => account.signUp(serverUrl, email, password));
-handleAccount("account:signIn", (serverUrl, email, password) => account.signIn(serverUrl, email, password));
-handleAccount("account:signOut", () => account.signOut());
-handleAccount("account:delete", () => account.deleteAccount());
+handleAccount("account:signUp", (serverUrl, email, password) => changeAccount(() => account.signUp(serverUrl, email, password)));
+handleAccount("account:signIn", (serverUrl, email, password) => changeAccount(() => account.signIn(serverUrl, email, password)));
+handleAccount("account:signOut", () => changeAccount(() => account.signOut()));
+handleAccount("account:delete", () => changeAccount(() => account.deleteAccount()));
 handleAccount("sync:push", (records) => account.push(records));
 handleAccount("sync:pull", (since) => account.pull(since));
 
 ipcMain.handle("tab:command", (event, tabId, command, arg) =>
-  isTrustedSender(event) ? (viewManager?.command(tabId, command, arg) ?? null) : null,
+  contextOf(event)?.views.command(tabId, command, arg) ?? null,
 );
 
 /**
@@ -591,7 +798,7 @@ ipcMain.handle("site:setShield", (event, url, enabled) =>
 );
 
 ipcMain.handle("site:certificate", (event, host) =>
-  isTrustedSender(event) && typeof host === "string" && mainWindow ? (siteInfo?.showCertificate(mainWindow, host) ?? false) : false,
+  typeof host === "string" && contextOf(event) ? (siteInfo?.showCertificate(contextOf(event).win, host) ?? false) : false,
 );
 
 ipcMain.handle("site:clear", (event, url, kind) =>
@@ -633,8 +840,9 @@ app.whenReady().then(async () => {
     session: tabsSession,
     profile: PRIVATE ? mainProfilePath() : app.getPath("userData"),
     privateMode: PRIVATE,
-    getUi: uiContents,
-    getWindow: () => mainWindow,
+    getUi: currentUi,
+    broadcast: sendToAllUis,
+    getWindow: () => currentContext()?.win ?? null,
   });
   // A private instance uses the normal profile's engine and site choices, but writes neither.
   shield = setupShield({ session: tabsSession, dataPath: PRIVATE ? mainProfilePath() : app.getPath("userData"), readOnly: PRIVATE });
@@ -645,9 +853,9 @@ app.whenReady().then(async () => {
     try {
       extensionController = await setupExtensions({
         session: tabsSession,
-        getWindow: () => mainWindow,
-        getUi: uiContents,
-        getViews: () => viewManager,
+        getWindow: () => currentContext()?.win ?? null,
+        getUi: currentUi,
+        getUiOf: (win) => contextOfWindow(win)?.ui.webContents ?? null,
         profile: mainProfilePath(),
         privateMode: true,
       });
@@ -662,9 +870,9 @@ app.whenReady().then(async () => {
   try {
     extensionController = await setupExtensions({
       session: tabsSession,
-      getWindow: () => mainWindow,
-      getUi: uiContents,
-      getViews: () => viewManager,
+      getWindow: () => currentContext()?.win ?? null,
+      getUi: currentUi,
+      getUiOf: (win) => contextOfWindow(win)?.ui.webContents ?? null,
       profile: app.getPath("userData"),
     });
   } catch (error) {
@@ -675,6 +883,9 @@ app.whenReady().then(async () => {
 });
 
 app.on("window-all-closed", () => app.quit());
+app.on("before-quit", () => {
+  quitting = true;
+});
 
 // A private window with extensions browsed in an on-disk session: wipe it before quitting.
 let privateSessionWiped = false;

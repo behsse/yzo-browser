@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cursorOnTopEdge, floatingSidebarDecision, floatingTopBarDecision } from "./lib/floatingSidebar";
 import { t } from "./lib/i18n";
 import { matchShortcut, type ShortcutAction } from "./lib/shortcuts";
-import { displayTheme } from "./lib/privateMode";
+import { displayTheme, IS_NEW_WINDOW } from "./lib/privateMode";
 import { resolveAppearance, sidebarBackground } from "./lib/theme";
 import { PEEK_ID, tabCommand } from "./lib/tabs";
 import { useStore } from "./state/store";
@@ -48,7 +48,8 @@ const TOP_BAR_HEIGHT_PX = 32;
  */
 export function App() {
   const { state, dispatch } = useStore();
-  const [commandBar, setCommandBar] = useState<CommandBarMode | null>(null);
+  // A new window starts without a tab, on the command bar (like Arc's).
+  const [commandBar, setCommandBar] = useState<CommandBarMode | null>(IS_NEW_WINDOW ? "new" : null);
   const [peekUrl, setPeekUrl] = useState<string | null>(null);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState<AccountMode | null>(null);
@@ -149,6 +150,9 @@ export function App() {
         case "devTools":
           void tabCommand(focusedId, "devtools");
           break;
+        case "newWindow":
+          window.yzo?.newWindow();
+          break;
         case "privateWindow":
           window.yzo?.openPrivateWindow();
           break;
@@ -168,7 +172,7 @@ export function App() {
           void tabCommand(focusedId, "zoom", "reset");
           break;
         case "quit":
-          window.yzo?.windowControl("close");
+          window.yzo?.windowControl("quit");
           break;
       }
     },
