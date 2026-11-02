@@ -11,6 +11,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 ### Fixed
 
 - Full-screen videos now fill the whole screen like in other browsers: the window goes full screen and the page covers the sidebar and the top bar, with square corners and no black bands. Escape, F11 or switching tabs leaves full screen.
+- The selected pane of a split no longer jumps back and forth while its pages load (at startup): a pane is now selected when it is clicked or tapped, not whenever its page takes focus.
 
 ## [0.9.0] - 2026-10-27
 

@@ -13,6 +13,8 @@ const PEEK_ID = "__peek__";
 const ID_PATTERN = /^[\w-]{1,64}$/;
 const MAX_TABS = 500;
 const VIEW_RADIUS = 10;
+/** Input events by which the user picks a page (see the "input-event" listener in createView). */
+const POINTER_DOWN_EVENTS = new Set(["mouseDown", "touchStart", "gestureTapDown"]);
 
 /**
  * @typedef {{ x: number, y: number, width: number, height: number }} Bounds
@@ -196,7 +198,11 @@ function createViewManager({ getWindow, getUi, partition, isNavigableUrl, setupC
     });
     contents.on("page-title-updated", (_e, title) => toUi("tab:event", { tabId: id, type: "title", title, url: contents.getURL() }));
     contents.on("page-favicon-updated", (_e, favicons) => toUi("tab:event", { tabId: id, type: "favicon", favicon: favicons[0] ?? null }));
-    contents.on("focus", () => toUi("tab:event", { tabId: id, type: "focus" }));
+    // A pane becomes the selected one when the user clicks or taps it, not when it takes focus: pages
+    // loading side by side grab focus in turn, which made the selection jump between them.
+    contents.on("input-event", (_e, input) => {
+      if (POINTER_DOWN_EVENTS.has(input.type)) toUi("tab:event", { tabId: id, type: "focus" });
+    });
     if (id !== PEEK_ID) {
       contents.on("did-stop-loading", () => scheduleColor(id));
       contents.on("did-navigate-in-page", () => scheduleColor(id));
