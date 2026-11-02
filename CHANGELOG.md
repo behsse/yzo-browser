@@ -4,6 +4,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ## [Unreleased]
 
+### Changed
+
+- Releases publish themselves: once the Windows, macOS and Linux builds have all uploaded to the draft release, the workflow publishes it with `release-notes-<version>.md` as its text. A release published by hand too early missed the Windows and macOS files, so installed Yzo could not find the update.
+
 ## [0.10.0] - 2026-11-02
 
 ### Added

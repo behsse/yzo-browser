@@ -135,7 +135,7 @@ pnpm dist:linux
 | macOS | DMG + ZIP (the ZIP is used for updates), hardened runtime | x64, arm64 |
 | Linux | AppImage, .deb | x64 |
 
-macOS can only be built on a Mac. The easiest path is pushing a tag: the [.github/workflows/release.yml](.github/workflows/release.yml) workflow builds all three systems and publishes a draft GitHub release. Once published, installed builds pick it up.
+macOS can only be built on a Mac. The easiest path is pushing a tag: the [.github/workflows/release.yml](.github/workflows/release.yml) workflow builds all three systems into a draft GitHub release, then publishes it once every build succeeded, with `release-notes-<version>.md` (committed before tagging) as its text. Installed builds then pick it up. If a build fails (a macOS runner unavailable, for instance), the release stays a draft: re-run the failed job. Do not publish the draft by hand before every build finished: electron-builder does not upload to a published release, so its files would be missing.
 
 ```bash
 git tag v0.6.0

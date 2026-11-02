@@ -1,6 +1,11 @@
 # Builds Yzo for Windows, macOS and Linux and publishes the installers to a GitHub release
 # (electron-updater reads them from there). Triggered by pushing a tag such as v0.6.0.
 #
+# The builds upload to a draft release; once all three succeeded, the publish job makes it public with
+# release-notes-<version>.md as its text. Installed builds only see published releases, and a release
+# published by hand before every build finished would miss their files (electron-builder does not
+# upload to a published release).
+#
 # Optional repository secrets:
 #   EVS_ACCOUNT_NAME / EVS_PASSWD  castLabs EVS account, enables production VMP signing (Netflix-class DRM)
 #   CSC_LINK / CSC_KEY_PASSWORD    code-signing certificate (Windows .pfx or macOS .p12, base64)
@@ -76,3 +81,23 @@ jobs:
           fi
           [ -z "$APPLE_ID" ] && unset APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
           pnpm build && pnpm exec electron-builder ${{ matrix.target }} "${extra[@]}" --publish always
+
+  publish:
+    # Runs only when every build succeeded: a failed one leaves the draft for a re-run.
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish the release
+        shell: bash
+        run: |
+          notes="release-notes-${GITHUB_REF_NAME#v}.md"
+          args=(--draft=false)
+          if [ -f "$notes" ]; then
+            args+=(--notes-file "$notes")
+          else
+            echo "::warning::$notes not found: the release is published without notes."
+          fi
+          gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" "${args[@]}"
